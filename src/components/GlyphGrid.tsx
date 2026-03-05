@@ -1,6 +1,6 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview } from '../store'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey } from '../store'
 import { Eye } from 'lucide-preact'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
@@ -78,6 +78,25 @@ export function GlyphGrid({ font }: Props) {
   const count = glyphCount(font)
   const zoomLevel = font.gridZoom.value
   const tileSize = 8 * zoomLevel
+  // Jump to glyph when typing a character (document-level, only when this font is active)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (activeFontId.value !== font.id) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+
+      const charCode = charCodeFromKey(e.key)
+      if (charCode === null) return
+
+      const idx = charCode - font.startChar.value
+      if (idx >= 0 && idx < count) {
+        selectGlyph(font, idx, false, false)
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [font, count])
 
   const tiles = []
   for (let i = 0; i < count; i++) {

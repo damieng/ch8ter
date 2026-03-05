@@ -268,6 +268,20 @@ export function charLabel(charCode: number): string {
   return ''
 }
 
+// Reverse lookup: given a typed character, find its char code in the font.
+// In ZX mode, maps £→0x60, ↑→0x5E, ©→0x7F. Otherwise uses charCodeAt.
+export function charCodeFromKey(ch: string): number | null {
+  if (ch.length !== 1) return null
+  if (charset.value === 'zx') {
+    for (const [code, label] of Object.entries(ZX_OVERRIDES)) {
+      if (label === ch) return parseInt(code)
+    }
+  }
+  const code = ch.charCodeAt(0)
+  if (code >= 32 && code <= 126) return code
+  return null
+}
+
 function markDirty(font: FontInstance) {
   const a = font.fontData.value
   const b = font.savedSnapshot.value
