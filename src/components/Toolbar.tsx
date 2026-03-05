@@ -4,24 +4,13 @@ import {
   Save
 } from 'lucide-preact'
 import { CenterHIcon } from './CenterHIcon'
+import { IconBtn } from './IconBtn'
 import {
   type FontInstance,
   activeFlipX, activeFlipY, activeInvert, activeRotateCW, activeRotateCCW,
   activeShiftUp, activeShiftDown, activeShiftLeft, activeShiftRight, activeCenterH,
   saveFont
 } from '../store'
-
-function IconBtn({ onClick, children, title }: { onClick: () => void; children: any; title?: string }) {
-  return (
-    <button
-      class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
-      onClick={onClick}
-      title={title}
-    >
-      {children}
-    </button>
-  )
-}
 
 const ICON = 18
 

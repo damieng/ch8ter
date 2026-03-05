@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef } from 'preact/hooks'
 import { ChevronDown, MousePointer } from 'lucide-preact'
 import {
   type FontInstance,
   selectNumbers, selectUppercase, selectLowercase, selectSymbols
 } from '../store'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16
 
@@ -11,15 +12,7 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+  useClickOutside(ref, () => setOpen(false))
 
   function item(label: string, fn: () => void) {
     return (

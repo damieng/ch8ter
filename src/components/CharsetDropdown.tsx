@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef } from 'preact/hooks'
 import { ChevronDown, Type } from 'lucide-preact'
 import { charset } from '../store'
 import type { Charset } from '../store'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16
 
@@ -14,15 +15,7 @@ export function CharsetDropdown() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+  useClickOutside(ref, () => setOpen(false))
 
   const current = OPTIONS.find(o => o.value === charset.value)!
 

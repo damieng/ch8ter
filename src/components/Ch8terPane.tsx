@@ -1,5 +1,6 @@
 import { FilePlus, FolderOpen } from 'lucide-preact'
 import { createFont, addFont, loadFont } from '../store'
+import { IconBtn } from './IconBtn'
 
 const ICON = 18
 
@@ -47,20 +48,12 @@ export function Ch8terPane() {
 
   return (
     <div class="flex items-center gap-3 px-3 py-2">
-      <button
-        class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
-        onClick={handleNew}
-        title="New font"
-      >
+      <IconBtn onClick={handleNew} title="New font">
         <FilePlus size={ICON} />
-      </button>
-      <button
-        class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
-        onClick={handleOpen}
-        title="Open .ch8 file"
-      >
+      </IconBtn>
+      <IconBtn onClick={handleOpen} title="Open .ch8 file">
         <FolderOpen size={ICON} />
-      </button>
+      </IconBtn>
       <span class="w-px h-6 bg-gray-300 mx-0.5" />
       <div class="flex flex-col">
         <span class="text-sm text-gray-600">ZX Spectrum Font Editor</span>

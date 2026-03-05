@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef } from 'preact/hooks'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
@@ -11,6 +11,7 @@ import {
   copyUpperToLower, copyLowerToUpper, createBoldVariant, createOutlineVariant
 } from '../store'
 import { ObliqueDialog } from './ObliqueDialog'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16
 
@@ -19,15 +20,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
   const [obliqueOpen, setObliqueOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+  useClickOutside(ref, () => setOpen(false))
 
   function iconBtn(icon: any, title: string, fn: () => void) {
     return (
