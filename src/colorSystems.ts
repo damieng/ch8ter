@@ -113,7 +113,7 @@ export const COLOR_SYSTEMS: ColorSystem[] = [
   },
   {
     name: 'SAM Coup\u00e9',
-    fg: '#ffffff', bg: '#000049',
+    fg: '#ffffff', bg: '#000000',
     palette: (() => {
       const norm = [0, 73, 146, 255]
       const colors: string[] = []

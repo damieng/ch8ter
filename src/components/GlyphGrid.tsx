@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
-import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText } from '../store'
+import { ZoomIn, Eye } from 'lucide-preact'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
 import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
-import { Eye } from 'lucide-preact'
+import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
@@ -41,33 +41,23 @@ function ZoomDropdown({ font }: { font: FontInstance }) {
   )
 }
 
-function PreviewDropdown({ font }: { font: FontInstance }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useClickOutside(ref, () => setOpen(false))
+function PreviewButton({ font }: { font: FontInstance }) {
+  function handleClick() {
+    const cs = CHARSETS[charset.value]
+    const sysIdx = cs?.colorSystem
+      ? COLOR_SYSTEMS.findIndex(s => s.name === cs.colorSystem)
+      : -1
+    openPreview(font.id, sysIdx >= 0 ? sysIdx : undefined)
+  }
 
   return (
-    <div class="relative" ref={ref}>
-      <button
-        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
-        onClick={() => setOpen(!open)}
-      >
-        <Eye size={16} />
-        Preview
-        <ChevronDown size={14} />
-      </button>
-      {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-32">
-          <button
-            class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
-            onClick={() => { openPreview(font.id); setOpen(false) }}
-          >
-            Text
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
+      onClick={handleClick}
+    >
+      <Eye size={16} />
+      Preview
+    </button>
   )
 }
 
@@ -169,7 +159,7 @@ export function GlyphGrid({ font }: Props) {
         <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs selected</span>
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
-        <PreviewDropdown font={font} />
+        <PreviewButton font={font} />
         <div class="ml-auto">
           <ZoomDropdown font={font} />
         </div>

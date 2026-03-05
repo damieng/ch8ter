@@ -214,9 +214,12 @@ let nextPreviewId = 1
 export const previews = signal<PreviewInstance[]>([])
 export const lastOpenedPreviewId = signal<string | null>(null)
 
-export function openPreview(fontId: string) {
+export function openPreview(fontId: string, systemIdx?: number) {
   const id = `preview-${nextPreviewId++}`
   previews.value = [...previews.value, { id, fontId }]
+  if (systemIdx !== undefined) {
+    updatePreviewSettings(id, { fontId, systemIdx })
+  }
   lastOpenedPreviewId.value = id
 }
 
@@ -256,46 +259,47 @@ effect(() => {
 interface CharsetDef {
   label: string
   overrides: Record<number, string>
+  colorSystem?: string // matches name in COLOR_SYSTEMS for preview default
 }
 
 export const CHARSETS: Record<string, CharsetDef> = {
   ascii: { label: 'ASCII', overrides: {} },
-  zx: { label: 'ZX Spectrum', overrides: {
+  zx: { label: 'ZX Spectrum', colorSystem: 'ZX Spectrum', overrides: {
     0x5E: '\u2191', // ↑ (up arrow instead of caret)
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
-  bbc: { label: 'BBC Micro', overrides: {
+  bbc: { label: 'BBC Micro', colorSystem: 'Acorn BBC Micro', overrides: {
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
-  c64: { label: 'Commodore 64', overrides: {
+  c64: { label: 'Commodore 64', colorSystem: 'Commodore 64', overrides: {
     0x5C: '\u00A3', // £ (pound instead of backslash)
     0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
     0x5F: '\u2190', // ← (left arrow instead of underscore)
     0x7F: '\u03C0', // π (pi)
   }},
-  atari: { label: 'Atari 8-bit', overrides: {
+  atari: { label: 'Atari 8-bit', colorSystem: 'Atari 8-bit (NTSC)', overrides: {
     // ATASCII: 0x7B-0x7F are control codes, not printable
     0x7B: '\u2666', // ♦ (spade-like in Atari set)
     0x7D: '\u2503', // clear screen (box drawing as placeholder)
     0x7E: '\u25C0', // delete char
     0x7F: '\u25B6', // tab
   }},
-  cpc: { label: 'Amstrad CPC', overrides: {
+  cpc: { label: 'Amstrad CPC', colorSystem: 'Amstrad CPC', overrides: {
     0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
     0x7F: '\u00A9', // © (copyright)
   }},
-  cga: { label: 'IBM CGA', overrides: {
+  cga: { label: 'IBM CGA', colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂ (house, CP437)
   }},
-  msx: { label: 'MSX', overrides: {
+  msx: { label: 'MSX', colorSystem: 'MSX (TMS9918)', overrides: {
     0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
   }},
-  topaz: { label: 'Amiga Topaz', overrides: {
+  topaz: { label: 'Amiga Topaz', colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂
   }},
-  sam: { label: 'SAM Coupe', overrides: {
+  sam: { label: 'SAM Coupe', colorSystem: 'SAM Coup\u00e9', overrides: {
     0x60: '\u00A3', // £ (pound, inherited from Spectrum)
     0x7F: '\u00A9', // © (copyright)
   }},
