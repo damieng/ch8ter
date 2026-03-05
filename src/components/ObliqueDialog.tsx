@@ -9,9 +9,12 @@ const PREVIEW_GLYPHS = [
 function PreviewGrid({ font, angle }: { font: FontInstance; angle: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const start = font.startChar.value
-  const count = font.fontData.value.length / 8
+  const gw = font.glyphWidth.value
+  const gh = font.glyphHeight.value
+  const bpr = Math.ceil(gw / 8)
+  const bpg = gh * bpr
+  const count = bpg > 0 ? Math.floor(font.fontData.value.length / bpg) : 0
 
-  // Pick glyphs that exist in this font
   const indices = PREVIEW_GLYPHS
     .map(c => c - start)
     .filter(i => i >= 0 && i < count)
@@ -20,10 +23,11 @@ function PreviewGrid({ font, angle }: { font: FontInstance; angle: number }) {
   const cols = Math.min(indices.length, 8)
   const rows = Math.ceil(indices.length / cols)
   const scale = 4
-  const cellSize = 8 * scale
+  const cellW = gw * scale
+  const cellH = gh * scale
   const gap = 2
-  const w = cols * (cellSize + gap) - gap
-  const h = rows * (cellSize + gap) - gap
+  const w = cols * (cellW + gap) - gap
+  const h = rows * (cellH + gap) - gap
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -35,19 +39,20 @@ function PreviewGrid({ font, angle }: { font: FontInstance; angle: number }) {
     indices.forEach((glyphIdx, i) => {
       const col = i % cols
       const row = Math.floor(i / cols)
-      const ox = col * (cellSize + gap)
-      const oy = row * (cellSize + gap)
-      const offset = glyphIdx * 8
-      const bytes = font.fontData.value.slice(offset, offset + 8)
-      const sheared = shearGlyphBytes(bytes, angle)
+      const ox = col * (cellW + gap)
+      const oy = row * (cellH + gap)
+      const offset = glyphIdx * bpg
+      const bytes = font.fontData.value.slice(offset, offset + bpg)
+      const sheared = shearGlyphBytes(bytes, angle, gw, gh)
 
       ctx.fillStyle = '#e2e8f0'
-      ctx.fillRect(ox, oy, cellSize, cellSize)
+      ctx.fillRect(ox, oy, cellW, cellH)
 
       ctx.fillStyle = '#1e293b'
-      for (let y = 0; y < 8; y++) {
-        for (let x = 0; x < 8; x++) {
-          if (sheared[y] & (0x80 >> x)) {
+      for (let y = 0; y < gh; y++) {
+        for (let x = 0; x < gw; x++) {
+          const byteIdx = y * bpr + Math.floor(x / 8)
+          if (sheared[byteIdx] & (0x80 >> (x % 8))) {
             ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale)
           }
         }

@@ -141,21 +141,24 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     })
   }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, proportional, lineHeight])
 
+  const gw = font?.glyphWidth.value ?? 8
+  const gh = font?.glyphHeight.value ?? 8
+
   const [cols, setCols] = useState(32)
 
   useEffect(() => {
     function updateCols() {
       if (containerRef.current) {
-        const w = containerRef.current.clientWidth - 24
-        const cellSize = 8 * zoom
-        setCols(Math.max(10, Math.floor(w / cellSize)))
+        const cw = containerRef.current.clientWidth - 24
+        const cellSize = gw * zoom
+        setCols(Math.max(10, Math.floor(cw / cellSize)))
       }
     }
     updateCols()
     const obs = new ResizeObserver(updateCols)
     if (containerRef.current) obs.observe(containerRef.current)
     return () => obs.disconnect()
-  }, [zoom])
+  }, [zoom, gw])
 
   useEffect(() => {
     if (!focused) return
@@ -182,15 +185,17 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     }
     const data = font?.fontData.value
     const start = font?.startChar.value ?? 32
-    const gc = data ? data.length / 8 : 0
+    const bpr = Math.ceil(gw / 8)
+    const bpg = gh * bpr
+    const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
     const eIdx = 'e'.charCodeAt(0) - start
-    const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx).width || 4) : 4
+    const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
     const gap = 1
-    const maxPixelWidth = cols * 8
+    const maxPixelWidth = cols * gw
     return wrapTextProportional(text, maxPixelWidth, (ch) =>
-      data ? propCharAdvance(ch, data, start, gc, eWidth, gap) : 8
+      data ? propCharAdvance(ch, data, start, gc, eWidth, gap, gw, gh) : gw
     )
-  }, [text, cols, proportional, font?.fontData.value, font?.startChar.value])
+  }, [text, cols, proportional, font?.fontData.value, font?.startChar.value, gw, gh])
 
   const { lines: wrappedLines, offsets } = wrapResult
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
@@ -216,7 +221,7 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     if (wrappedLines.length === 0) return 0
 
     if (!proportional) {
-      const clickCol = Math.floor(clickX / (8 * zoom))
+      const clickCol = Math.floor(clickX / (gw * zoom))
       const col = Math.min(Math.max(0, clickCol), offsets[row]?.length ?? 0)
       if (col < (offsets[row]?.length ?? 0)) {
         return offsets[row][col]
@@ -226,14 +231,16 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     } else {
       const data = font?.fontData.value
       const start = font?.startChar.value ?? 32
-      const gc = data ? data.length / 8 : 0
+      const bpr = Math.ceil(gw / 8)
+      const bpg = gh * bpr
+      const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
       const eIdx = 'e'.charCodeAt(0) - start
-      const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx).width || 4) : 4
+      const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
       const gap = 1
       const line = wrappedLines[row]
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const advance = (data ? propCharAdvance(line[col], data, start, gc, eWidth, gap) : 8) * zoom
+        const advance = (data ? propCharAdvance(line[col], data, start, gc, eWidth, gap, gw, gh) : gw) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break

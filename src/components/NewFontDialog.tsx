@@ -6,9 +6,11 @@ const TILE_SCALE = 3
 const PREVIEW_TEXT = 'Abc'
 const START_CHAR = 32
 
-function renderText(ctx: CanvasRenderingContext2D, data: Uint8Array, text: string, scale: number, fg: string) {
-  const w = text.length * 8 * scale
-  const h = 8 * scale
+function renderText(ctx: CanvasRenderingContext2D, data: Uint8Array, text: string, scale: number, fg: string, gw = 8, gh = 8) {
+  const bpr = Math.ceil(gw / 8)
+  const bpg = gh * bpr
+  const w = text.length * gw * scale
+  const h = gh * scale
   ctx.canvas.width = w
   ctx.canvas.height = h
   ctx.fillStyle = '#e2e8f0'
@@ -16,12 +18,13 @@ function renderText(ctx: CanvasRenderingContext2D, data: Uint8Array, text: strin
   ctx.fillStyle = fg
   for (let c = 0; c < text.length; c++) {
     const glyphIdx = text.charCodeAt(c) - START_CHAR
-    if (glyphIdx < 0 || glyphIdx >= data.length / 8) continue
-    const offset = glyphIdx * 8
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) {
-        if (data[offset + y] & (0x80 >> x)) {
-          ctx.fillRect(c * 8 * scale + x * scale, y * scale, scale, scale)
+    if (glyphIdx < 0 || glyphIdx >= data.length / bpg) continue
+    const offset = glyphIdx * bpg
+    for (let y = 0; y < gh; y++) {
+      for (let x = 0; x < gw; x++) {
+        const byteIdx = offset + y * bpr + Math.floor(x / 8)
+        if (data[byteIdx] & (0x80 >> (x % 8))) {
+          ctx.fillRect(c * gw * scale + x * scale, y * scale, scale, scale)
         }
       }
     }
@@ -55,6 +58,7 @@ function FontTile({ name, data, selected, onClick }: {
         />
       ) : (
         <div class="flex items-center justify-center" style={{ width: PREVIEW_TEXT.length * 8 * TILE_SCALE, height: 8 * TILE_SCALE }}>
+
           <span class="text-xs text-gray-400">...</span>
         </div>
       )}

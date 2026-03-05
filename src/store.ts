@@ -6,6 +6,8 @@ import { UndoHistory } from './undoHistory'
 export interface FontInstance {
   id: string
   fontData: Signal<Uint8Array>
+  glyphWidth: Signal<number>
+  glyphHeight: Signal<number>
   startChar: Signal<number>
   fileName: Signal<string>
   selectedGlyphs: Signal<Set<number>>
@@ -16,14 +18,28 @@ export interface FontInstance {
   undoHistory: UndoHistory
 }
 
+export function bytesPerRow(font: FontInstance): number {
+  return Math.ceil(font.glyphWidth.value / 8)
+}
+
+export function bytesPerGlyph(font: FontInstance): number {
+  return font.glyphHeight.value * bytesPerRow(font)
+}
+
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number): FontInstance {
+export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number): FontInstance {
   const id = `font-${nextFontId++}`
-  const initial = data ?? new Uint8Array(96 * 8)
+  const w = width ?? 8
+  const h = height ?? 8
+  const bpr = Math.ceil(w / 8)
+  const bpg = h * bpr
+  const initial = data ?? new Uint8Array(96 * bpg)
   return {
     id,
     fontData: signal(initial),
+    glyphWidth: signal(w),
+    glyphHeight: signal(h),
     startChar: signal(start ?? 32),
     fileName: signal(name ?? 'untitled.ch8'),
     selectedGlyphs: signal<Set<number>>(new Set([0])),
@@ -44,6 +60,8 @@ interface StoredFont {
   fileName: string
   startChar: number
   fontData: string // base64
+  glyphWidth?: number
+  glyphHeight?: number
 }
 
 // --- Window layout persistence ---
@@ -140,7 +158,7 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar)
+      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       return font
@@ -155,6 +173,8 @@ function saveToStorage() {
     fileName: f.fileName.value,
     startChar: f.startChar.value,
     fontData: toBase64(f.fontData.value),
+    glyphWidth: f.glyphWidth.value,
+    glyphHeight: f.glyphHeight.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -173,6 +193,8 @@ effect(() => {
     f.fontData.value
     f.fileName.value
     f.startChar.value
+    f.glyphWidth.value
+    f.glyphHeight.value
   }
   saveToStorage()
 })
@@ -345,22 +367,30 @@ function markDirty(font: FontInstance) {
 // --- Per-font helpers ---
 
 export function glyphCount(font: FontInstance): number {
-  return font.fontData.value.length / 8
+  const bpg = bytesPerGlyph(font)
+  return bpg > 0 ? Math.floor(font.fontData.value.length / bpg) : 0
 }
 
 export function getPixel(font: FontInstance, glyphIndex: number, x: number, y: number): boolean {
-  const offset = glyphIndex * 8 + y
-  return (font.fontData.value[offset] & (0x80 >> x)) !== 0
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
+  const offset = glyphIndex * bpg + y * bpr + Math.floor(x / 8)
+  return (font.fontData.value[offset] & (0x80 >> (x % 8))) !== 0
 }
 
 export function glyphToText(font: FontInstance, glyphIndex: number): string {
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
   const data = font.fontData.value
-  const offset = glyphIndex * 8
+  const base = glyphIndex * bpg
   const rows: string[] = []
-  for (let y = 0; y < 8; y++) {
+  for (let y = 0; y < h; y++) {
     let row = ''
-    for (let x = 0; x < 8; x++) {
-      row += (data[offset + y] & (0x80 >> x)) ? '*' : ' '
+    for (let x = 0; x < w; x++) {
+      const byteIdx = base + y * bpr + Math.floor(x / 8)
+      row += (data[byteIdx] & (0x80 >> (x % 8))) ? '*' : ' '
     }
     rows.push(row)
   }
@@ -368,12 +398,15 @@ export function glyphToText(font: FontInstance, glyphIndex: number): string {
 }
 
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
   const data = new Uint8Array(font.fontData.value)
-  const offset = glyphIndex * 8 + y
+  const offset = glyphIndex * bpg + y * bpr + Math.floor(x / 8)
+  const bit = 0x80 >> (x % 8)
   if (on) {
-    data[offset] |= (0x80 >> x)
+    data[offset] |= bit
   } else {
-    data[offset] &= ~(0x80 >> x)
+    data[offset] &= ~bit
   }
   font.fontData.value = data
   markDirty(font)
@@ -452,203 +485,230 @@ export function selectSymbols(font: FontInstance) {
 
 // --- Transformations ---
 
-export function flipXBytes(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    let reversed = 0
-    for (let x = 0; x < 8; x++) {
-      if (bytes[y] & (0x80 >> x)) reversed |= (1 << x)
-    }
-    out[y] = reversed
-  }
+// --- Generic pixel helpers for transform functions ---
+// These work on raw glyph byte arrays with given dimensions.
+
+function getBit(bytes: Uint8Array, bpr: number, x: number, y: number): boolean {
+  return (bytes[y * bpr + Math.floor(x / 8)] & (0x80 >> (x % 8))) !== 0
+}
+
+function setBit(bytes: Uint8Array, bpr: number, x: number, y: number) {
+  bytes[y * bpr + Math.floor(x / 8)] |= (0x80 >> (x % 8))
+}
+
+export function flipXBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, w - 1 - x, y)
   return out
 }
 
-export function flipYBytes(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) out[y] = bytes[7 - y]
+export function flipYBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, x, h - 1 - y)
   return out
 }
 
-export function invertBytes(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) out[y] = bytes[y] ^ 0xFF
+export function invertBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (!getBit(bytes, bpr, x, y)) setBit(out, bpr, x, y)
   return out
 }
 
-export function rotateCWBytes(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
-      if (bytes[y] & (0x80 >> x)) {
-        out[x] |= (1 << y)
+export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  // Rotate CW: (x,y) -> (h-1-y, x) — output is w×h but transposed
+  // For non-square, output dims swap but we keep same bpg for simplicity
+  // Only works cleanly for square glyphs; for non-square, use same dims
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) {
+        const nx = h - 1 - y, ny = x
+        if (nx < w && ny < h) setBit(out, bpr, nx, ny)
       }
-    }
-  }
   return out
 }
 
-export function rotateCCWBytes(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
-      if (bytes[y] & (0x80 >> x)) {
-        out[7 - x] |= (0x80 >> y)
+export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) {
+        const nx = y, ny = w - 1 - x
+        if (nx < w && ny < h) setBit(out, bpr, nx, ny)
       }
-    }
+  return out
+}
+
+export function shiftUp(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++) {
+    const srcY = (y + 1) % h
+    for (let i = 0; i < bpr; i++) out[y * bpr + i] = bytes[srcY * bpr + i]
   }
   return out
 }
 
-export function shiftUp(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 7; y++) out[y] = bytes[y + 1]
-  out[7] = bytes[0]
-  return out
-}
-
-export function shiftDown(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 1; y < 8; y++) out[y] = bytes[y - 1]
-  out[0] = bytes[7]
-  return out
-}
-
-export function shiftLeft(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    out[y] = ((bytes[y] << 1) | (bytes[y] >> 7)) & 0xFF
+export function shiftDown(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++) {
+    const srcY = (y - 1 + h) % h
+    for (let i = 0; i < bpr; i++) out[y * bpr + i] = bytes[srcY * bpr + i]
   }
   return out
 }
 
-export function shiftRight(bytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    out[y] = ((bytes[y] >> 1) | ((bytes[y] & 1) << 7)) & 0xFF
-  }
+export function shiftLeft(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, (x - 1 + w) % w, y)
   return out
 }
 
-export function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
-  // Count blank columns on left
+export function shiftRight(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, (x + 1) % w, y)
+  return out
+}
+
+export function centerHorizontalBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
   let leftBlank = 0
-  for (let x = 0; x < 8; x++) {
+  for (let x = 0; x < w; x++) {
     let used = false
-    for (let y = 0; y < 8; y++) {
-      if (bytes[y] & (0x80 >> x)) { used = true; break }
-    }
+    for (let y = 0; y < h; y++) if (getBit(bytes, bpr, x, y)) { used = true; break }
     if (used) break
     leftBlank++
   }
-  // Count blank columns on right
   let rightBlank = 0
-  for (let x = 7; x >= 0; x--) {
+  for (let x = w - 1; x >= 0; x--) {
     let used = false
-    for (let y = 0; y < 8; y++) {
-      if (bytes[y] & (0x80 >> x)) { used = true; break }
-    }
+    for (let y = 0; y < h; y++) if (getBit(bytes, bpr, x, y)) { used = true; break }
     if (used) break
     rightBlank++
   }
   if (leftBlank === 0 && rightBlank === 0) return new Uint8Array(bytes)
-  if (leftBlank + rightBlank >= 8) return new Uint8Array(8) // empty glyph
-  // Target: equal blanks, or left one more than right if odd
+  if (leftBlank + rightBlank >= w) return new Uint8Array(h * bpr)
   const total = leftBlank + rightBlank
   const targetLeft = Math.ceil(total / 2)
-  const shift = leftBlank - targetLeft // positive = shift left, negative = shift right
+  const shift = leftBlank - targetLeft
   if (shift === 0) return new Uint8Array(bytes)
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    if (shift > 0) {
-      out[y] = (bytes[y] << shift) & 0xFF
-    } else {
-      out[y] = bytes[y] >> -shift
-    }
-  }
+  const out = new Uint8Array(h * bpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getBit(bytes, bpr, x, y)) {
+        const nx = x - shift
+        if (nx >= 0 && nx < w) setBit(out, bpr, nx, y)
+      }
   return out
 }
 
-// Create bold variant — OR each row with itself shifted right by 1
-// If the rightmost column is used, shift the glyph left first to make room
+// Create bold variant — OR each pixel with its right neighbour
 export function createBoldVariant(font: FontInstance) {
   const src = font.fontData.value
-  const count = src.length / 8
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
+  const count = glyphCount(font)
   const bold = new Uint8Array(src.length)
   for (let g = 0; g < count; g++) {
-    const offset = g * 8
-    // Check if rightmost bit (bit 0) is set on any row
-    let rightUsed = false
-    // Check if leftmost bit (bit 7) is free on all rows
-    let leftFree = true
-    for (let y = 0; y < 8; y++) {
-      if (src[offset + y] & 0x01) rightUsed = true
-      if (src[offset + y] & 0x80) leftFree = false
+    const offset = g * bpg
+    const bytes = src.slice(offset, offset + bpg)
+    let rightUsed = false, leftFree = true
+    for (let y = 0; y < h; y++) {
+      if (getBit(bytes, bpr, w - 1, y)) rightUsed = true
+      if (getBit(bytes, bpr, 0, y)) leftFree = false
     }
-    for (let y = 0; y < 8; y++) {
-      let row = src[offset + y]
-      if (rightUsed && leftFree) {
-        // Shift glyph left 1px to make room on the right
-        row = (row << 1) & 0xFF
+    const glyphBold = new Uint8Array(bpg)
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let srcX = x
+        if (rightUsed && leftFree) srcX = x + 1
+        const on = (srcX < w && getBit(bytes, bpr, srcX, y)) ||
+                   (srcX > 0 && srcX - 1 < w && getBit(bytes, bpr, srcX - 1, y))
+        if (on) setBit(glyphBold, bpr, x, y)
       }
-      bold[offset + y] = row | (row >> 1)
-    }
+    bold.set(glyphBold, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
-  const newFont = createFont(bold, name, font.startChar.value)
+  const newFont = createFont(bold, name, font.startChar.value, w, h)
   addFont(newFont)
 }
 
 // Outline variant — set pixels become the border of the original shape
 export function createOutlineVariant(font: FontInstance) {
   const src = font.fontData.value
-  const count = src.length / 8
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
+  const count = glyphCount(font)
   const outline = new Uint8Array(src.length)
   for (let g = 0; g < count; g++) {
-    const offset = g * 8
-    const bytes = src.slice(offset, offset + 8)
-    // Expand: OR each pixel with its 4 neighbours
-    const expanded = new Uint8Array(8)
-    for (let y = 0; y < 8; y++) {
-      expanded[y] = bytes[y] | ((bytes[y] << 1) & 0xFF) | (bytes[y] >> 1)
-      if (y > 0) expanded[y] |= bytes[y - 1]
-      if (y < 7) expanded[y] |= bytes[y + 1]
-    }
-    // Outline = expanded XOR original (border pixels only)
-    for (let y = 0; y < 8; y++) {
-      outline[offset + y] = expanded[y] ^ bytes[y]
-    }
+    const offset = g * bpg
+    const bytes = src.slice(offset, offset + bpg)
+    const glyphOut = new Uint8Array(bpg)
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const orig = getBit(bytes, bpr, x, y)
+        if (orig) continue // outline = only border pixels
+        // Check if any neighbour is set
+        const hasNeighbour =
+          (x > 0 && getBit(bytes, bpr, x - 1, y)) ||
+          (x < w - 1 && getBit(bytes, bpr, x + 1, y)) ||
+          (y > 0 && getBit(bytes, bpr, x, y - 1)) ||
+          (y < h - 1 && getBit(bytes, bpr, x, y + 1))
+        if (hasNeighbour) setBit(glyphOut, bpr, x, y)
+      }
+    outline.set(glyphOut, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-outline$1')
-  const newFont = createFont(outline, name, font.startChar.value)
+  const newFont = createFont(outline, name, font.startChar.value, w, h)
   addFont(newFont)
 }
 
 // Oblique variant — shear via float-precision transform + Bresenham re-rasterize
 // For each original pixel, compute exact sheared position. Then draw Bresenham
 // lines between all pairs of originally 8-connected pixels to preserve strokes.
-export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number): Uint8Array {
+export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number, w: number, h: number): Uint8Array {
+  const bpr = Math.ceil(w / 8)
   const tan = Math.tan((angleDegrees * Math.PI) / 180)
 
-  // Collect original set pixels
   const orig: { x: number; y: number }[] = []
   const isSet = (x: number, y: number) =>
-    x >= 0 && x < 8 && y >= 0 && y < 8 && (bytes[y] & (0x80 >> x)) !== 0
+    x >= 0 && x < w && y >= 0 && y < h && getBit(bytes, bpr, x, y)
 
-  for (let y = 0; y < 8; y++)
-    for (let x = 0; x < 8; x++)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
       if (isSet(x, y)) orig.push({ x, y })
 
-  if (orig.length === 0) return new Uint8Array(8)
+  if (orig.length === 0) return new Uint8Array(h * bpr)
 
-  // Compute exact sheared x for each pixel (y stays the same)
+  const midY = (h - 1) / 2
   const shearedFloat = orig.map(p => ({
-    x: p.x + tan * (3.5 - p.y),
+    x: p.x + tan * (midY - p.y),
     y: p.y,
     ox: p.x, oy: p.y,
   }))
 
-  // Auto-center: find bounds and adjust
   let minX = Infinity, maxX = -Infinity
   for (const p of shearedFloat) {
     if (p.x < minX) minX = p.x
@@ -656,46 +716,36 @@ export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number): Uint8A
   }
   let adjust = 0
   if (minX < 0) adjust = -minX
-  if (maxX + adjust > 7) adjust = 7 - maxX
+  if (maxX + adjust > w - 1) adjust = w - 1 - maxX
   if (minX + adjust < 0) adjust = -minX
 
-  // Round to integer grid
   const rounded = shearedFloat.map(p => ({
-    x: Math.max(0, Math.min(7, Math.round(p.x + adjust))),
+    x: Math.max(0, Math.min(w - 1, Math.round(p.x + adjust))),
     y: p.y,
     ox: p.ox, oy: p.oy,
   }))
 
-  // Build lookup: original (x,y) → rounded (x,y)
   const posMap = new Map<string, { x: number; y: number }>()
-  for (const p of rounded) {
-    posMap.set(`${p.ox},${p.oy}`, { x: p.x, y: p.y })
-  }
+  for (const p of rounded) posMap.set(`${p.ox},${p.oy}`, { x: p.x, y: p.y })
 
-  const out = new Uint8Array(8)
+  const out = new Uint8Array(h * bpr)
   function plot(x: number, y: number) {
-    if (x >= 0 && x < 8 && y >= 0 && y < 8) out[y] |= (0x80 >> x)
+    if (x >= 0 && x < w && y >= 0 && y < h) setBit(out, bpr, x, y)
   }
 
-  // Plot all transformed pixels
   for (const p of rounded) plot(p.x, p.y)
 
-  // For each pair of 8-connected original pixels, draw Bresenham line
-  // between their sheared positions to maintain connectivity
   for (const p of orig) {
     const from = posMap.get(`${p.x},${p.y}`)!
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dy === 0 && dx === 0) continue
-        // Only process each pair once: neighbor with higher key
         const nx = p.x + dx, ny = p.y + dy
-        if (ny < 0 || ny > 7 || nx < 0 || nx > 7) continue
+        if (ny < 0 || ny >= h || nx < 0 || nx >= w) continue
         if (ny < p.y || (ny === p.y && nx < p.x)) continue
         if (!isSet(nx, ny)) continue
         const to = posMap.get(`${nx},${ny}`)!
-        // Already 8-connected? Skip
         if (Math.abs(from.x - to.x) <= 1 && Math.abs(from.y - to.y) <= 1) continue
-        // Bresenham between from and to
         let x0 = from.x, y0 = from.y, x1 = to.x, y1 = to.y
         const sdx = Math.abs(x1 - x0), sdy = Math.abs(y1 - y0)
         const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1
@@ -716,28 +766,83 @@ export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number): Uint8A
 
 export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
   const src = font.fontData.value
-  const count = src.length / 8
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpg = bytesPerGlyph(font)
+  const count = glyphCount(font)
   const oblique = new Uint8Array(src.length)
   for (let g = 0; g < count; g++) {
-    const offset = g * 8
-    const bytes = src.slice(offset, offset + 8)
-    oblique.set(shearGlyphBytes(bytes, angleDegrees), offset)
+    const offset = g * bpg
+    const bytes = src.slice(offset, offset + bpg)
+    oblique.set(shearGlyphBytes(bytes, angleDegrees, w, h), offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
-  const newFont = createFont(oblique, name, font.startChar.value)
+  const newFont = createFont(oblique, name, font.startChar.value, w, h)
   addFont(newFont)
 }
 
 // File I/O
 export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer)
-  const count = Math.floor(bytes.length / 8)
-  const data = bytes.slice(0, count * 8)
+  const bpg = bytesPerGlyph(font)
+  const count = bpg > 0 ? Math.floor(bytes.length / bpg) : 0
+  const data = bytes.slice(0, count * bpg)
   font.fontData.value = data
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   font.selectedGlyphs.value = new Set([0])
   font.lastClickedGlyph.value = 0
+  font.undoHistory.clear()
+}
+
+// Resize all glyphs in a font to new dimensions
+export function resizeFont(
+  font: FontInstance,
+  newW: number, newH: number,
+  anchorX: 'left' | 'center' | 'right',
+  anchorY: 'top' | 'center' | 'bottom',
+) {
+  const oldW = font.glyphWidth.value
+  const oldH = font.glyphHeight.value
+  if (newW === oldW && newH === oldH) return
+
+  const oldBpr = Math.ceil(oldW / 8)
+  const oldBpg = oldH * oldBpr
+  const newBpr = Math.ceil(newW / 8)
+  const newBpg = newH * newBpr
+  const count = glyphCount(font)
+  const src = font.fontData.value
+  const dst = new Uint8Array(count * newBpg)
+
+  // Compute pixel offsets based on anchor
+  const dx = anchorX === 'left' ? 0 : anchorX === 'right' ? newW - oldW : Math.floor((newW - oldW) / 2)
+  const dy = anchorY === 'top' ? 0 : anchorY === 'bottom' ? newH - oldH : Math.floor((newH - oldH) / 2)
+
+  for (let g = 0; g < count; g++) {
+    const srcOff = g * oldBpg
+    const dstOff = g * newBpg
+    const srcBytes = src.slice(srcOff, srcOff + oldBpg)
+    const dstBytes = new Uint8Array(newBpg)
+
+    for (let y = 0; y < oldH; y++) {
+      const ny = y + dy
+      if (ny < 0 || ny >= newH) continue
+      for (let x = 0; x < oldW; x++) {
+        const nx = x + dx
+        if (nx < 0 || nx >= newW) continue
+        if (getBit(srcBytes, oldBpr, x, y)) {
+          setBit(dstBytes, newBpr, nx, ny)
+        }
+      }
+    }
+    dst.set(dstBytes, dstOff)
+  }
+
+  font.glyphWidth.value = newW
+  font.glyphHeight.value = newH
+  font.fontData.value = dst
+  font.savedSnapshot.value = new Uint8Array(dst)
+  font.dirty.value = true
   font.undoHistory.clear()
 }
 

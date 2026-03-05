@@ -25,37 +25,39 @@ export function renderText({
   const ctx = canvas.getContext('2d')!
   const data = font.fontData.value
   const startChar = font.startChar.value
-  const gc = data.length / 8
-  const cellW = 8 * scale
+  const gw = font.glyphWidth.value
+  const gh = font.glyphHeight.value
+  const bpr = Math.ceil(gw / 8)
+  const bpg = gh * bpr
+  const gc = bpg > 0 ? Math.floor(data.length / bpg) : 0
+  const cellW = gw * scale
   const rowH = lineHeight * scale
-  const glyphYOff = Math.floor((lineHeight - 8) / 2) * scale
+  const glyphYOff = Math.floor((lineHeight - gh) / 2) * scale
 
   const rowCount = Math.max(1, lines.length)
 
-  // Draw a single glyph at pixel position, clipped to row bounds
   function drawGlyph(glyphIdx: number, gx: number, rowY: number) {
-    const byteOffset = glyphIdx * 8
-    for (let y = 0; y < 8; y++) {
+    const base = glyphIdx * bpg
+    for (let y = 0; y < gh; y++) {
       const py = rowY + glyphYOff + y * scale
       if (py + scale <= rowY || py >= rowY + rowH) continue
-      const byte = data[byteOffset + y]
-      for (let x = 0; x < 8; x++) {
-        if (byte & (0x80 >> x)) {
+      for (let x = 0; x < gw; x++) {
+        const byteIdx = base + y * bpr + Math.floor(x / 8)
+        if (data[byteIdx] & (0x80 >> (x % 8))) {
           ctx.fillRect(gx + x * scale, py, scale, scale)
         }
       }
     }
   }
 
-  // Draw a proportional glyph shifted left to remove leading blank columns
   function drawGlyphProp(glyphIdx: number, gx: number, rowY: number, boundsLeft: number, charW: number) {
-    const byteOffset = glyphIdx * 8
-    for (let y = 0; y < 8; y++) {
+    const base = glyphIdx * bpg
+    for (let y = 0; y < gh; y++) {
       const py = rowY + glyphYOff + y * scale
       if (py + scale <= rowY || py >= rowY + rowH) continue
-      const byte = data[byteOffset + y]
-      for (let x = 0; x < 8; x++) {
-        if (byte & (0x80 >> x)) {
+      for (let x = 0; x < gw; x++) {
+        const byteIdx = base + y * bpr + Math.floor(x / 8)
+        if (data[byteIdx] & (0x80 >> (x % 8))) {
           const px = (x - boundsLeft) * scale
           if (px >= 0 && px < charW) {
             ctx.fillRect(gx + px, py, scale, scale)
@@ -101,12 +103,12 @@ export function renderText({
     }
   } else {
     const eIdx = 'e'.charCodeAt(0) - startChar
-    const eWidth = (eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx).width || 4) : 4
+    const eWidth = (eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
     const gap = 1
     function adv(ch: string) {
       if (ch === ' ') return eWidth + gap
       const gi = ch.charCodeAt(0) - startChar
-      if (gi >= 0 && gi < gc) return (glyphBounds(data, gi).width || 1) + gap
+      if (gi >= 0 && gi < gc) return (glyphBounds(data, gi, gw, gh).width || 1) + gap
       return 1 + gap
     }
 

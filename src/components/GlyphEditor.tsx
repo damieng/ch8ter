@@ -29,9 +29,11 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   }, [])
 
   const idx = font.lastClickedGlyph.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
   const cells = []
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       const on = getPixel(font, idx, x, y)
       cells.push(
         <div
@@ -52,8 +54,8 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
       ref={containerRef}
       class="w-full h-full grid select-none"
       style={{
-        gridTemplateColumns: 'repeat(8, 1fr)',
-        gridTemplateRows: 'repeat(8, 1fr)',
+        gridTemplateColumns: `repeat(${w}, 1fr)`,
+        gridTemplateRows: `repeat(${h}, 1fr)`,
         gap: '1px',
         backgroundColor: '#94a3b8',
         padding: '1px',

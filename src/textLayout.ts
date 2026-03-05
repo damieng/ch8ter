@@ -140,14 +140,16 @@ export function selectedCells(offsets: number[][], selStart: number, selEnd: num
   return set
 }
 
-// Find the leftmost and rightmost set pixel columns (0-7) in a glyph.
-export function glyphBounds(data: Uint8Array, glyphIdx: number): { left: number; width: number } {
-  const offset = glyphIdx * 8
-  let minX = 8, maxX = -1
-  for (let y = 0; y < 8; y++) {
-    const byte = data[offset + y]
-    for (let x = 0; x < 8; x++) {
-      if (byte & (0x80 >> x)) {
+// Find the leftmost and rightmost set pixel columns in a glyph.
+export function glyphBounds(data: Uint8Array, glyphIdx: number, w = 8, h = 8): { left: number; width: number } {
+  const bpr = Math.ceil(w / 8)
+  const bpg = h * bpr
+  const offset = glyphIdx * bpg
+  let minX = w, maxX = -1
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const byteIdx = offset + y * bpr + Math.floor(x / 8)
+      if (data[byteIdx] & (0x80 >> (x % 8))) {
         if (x < minX) minX = x
         if (x > maxX) maxX = x
       }
@@ -159,12 +161,12 @@ export function glyphBounds(data: Uint8Array, glyphIdx: number): { left: number;
 
 // Compute proportional character advance in raw pixels (width + gap).
 export function propCharAdvance(
-  ch: string, data: Uint8Array, startChar: number, glyphCount: number, eWidth: number, gap: number,
+  ch: string, data: Uint8Array, startChar: number, glyphCount: number, eWidth: number, gap: number, w = 8, h = 8,
 ): number {
   if (ch === ' ') return eWidth + gap
   const glyphIdx = ch.charCodeAt(0) - startChar
   if (glyphIdx >= 0 && glyphIdx < glyphCount) {
-    return (glyphBounds(data, glyphIdx).width || 1) + gap
+    return (glyphBounds(data, glyphIdx, w, h).width || 1) + gap
   }
   return 1 + gap
 }
