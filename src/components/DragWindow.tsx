@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'preact/hooks'
+import { useRef, useEffect, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import { windowLayouts, updateWindowLayout } from '../store'
 
@@ -27,15 +27,19 @@ export function DragWindow({
   const [pos, setPos] = useState({ x: stored?.x ?? initialX, y: stored?.y ?? initialY })
   const [size, setSize] = useState({ w: stored?.w ?? (initialW ?? 0), h: stored?.h ?? (initialH ?? 0) })
 
-  const saveLayout = useCallback(() => {
+  // Save on mount
+  useEffect(() => {
     if (windowId) {
       updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: size.w, h: size.h })
     }
-  }, [windowId, pos.x, pos.y, size.w, size.h])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { saveLayout() }, [saveLayout])
   const dragging = useRef(false)
   const resizing = useRef(false)
+  const posRef = useRef(pos)
+  const sizeRef = useRef(size)
+  posRef.current = pos
+  sizeRef.current = size
   const offset = useRef({ x: 0, y: 0 })
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 })
   const titleRef = useRef<HTMLDivElement>(null)
@@ -81,8 +85,13 @@ export function DragWindow({
       }
     }
     function onMouseUp() {
+      const wasDragging = dragging.current || resizing.current
       dragging.current = false
       resizing.current = false
+      if (wasDragging && windowId) {
+        const p = posRef.current, s = sizeRef.current
+        updateWindowLayout(windowId, { x: p.x, y: p.y, w: s.w, h: s.h })
+      }
     }
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)

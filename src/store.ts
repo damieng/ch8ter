@@ -61,6 +61,8 @@ export interface StoredPreview {
   systemIdx?: number
   fg?: string
   bg?: string
+  proportional?: boolean
+  lineHeight?: number
 }
 
 interface StoredLayout {
@@ -191,10 +193,9 @@ export function addFont(font: FontInstance) {
 
 export function removeFont(id: string) {
   const remaining = fonts.value.filter(f => f.id !== id)
-  if (remaining.length === 0) return // don't remove last font
   fonts.value = remaining
   if (activeFontId.value === id) {
-    activeFontId.value = remaining[0].id
+    activeFontId.value = remaining.length > 0 ? remaining[0].id : ''
   }
 }
 
@@ -236,13 +237,15 @@ if (restoredPreviews.length > 0) {
 }
 
 // Auto-save layout
+let layoutTimer: ReturnType<typeof setTimeout> | null = null
 effect(() => {
   // Track window layouts and preview state
   windowLayouts.value
   previews.value
   storedPreviews.value
   storedFocusedId.value
-  saveLayout()
+  if (layoutTimer) clearTimeout(layoutTimer)
+  layoutTimer = setTimeout(saveLayout, 300)
 })
 
 // --- Charset (global display preference) ---

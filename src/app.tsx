@@ -1,6 +1,6 @@
 import './app.css'
 import { Fragment } from 'preact'
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { GlyphEditor } from './components/GlyphEditor'
 import { GlyphGrid } from './components/GlyphGrid'
 import { Toolbar } from './components/Toolbar'
@@ -11,19 +11,27 @@ import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId, storedFocusedId, storedPreviews } from './store'
 import { PreviewWindow } from './components/PreviewWindow'
+import { sampleTexts } from './sampleTexts'
 
 export function App() {
   const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
 
   const currentActiveId = activeFontId.value
+  const initialActiveId = useRef(currentActiveId)
   useEffect(() => {
+    // Skip the initial mount — restored focusedId takes precedence
+    if (currentActiveId === initialActiveId.current) return
+    initialActiveId.current = null
     if (currentActiveId && fonts.value.some(f => f.id === currentActiveId)) {
       setFocus(currentActiveId)
     }
   }, [currentActiveId])
 
   const lastPreview = lastOpenedPreviewId.value
+  const initialPreview = useRef(lastPreview)
   useEffect(() => {
+    if (lastPreview === initialPreview.current) return
+    initialPreview.current = null
     if (lastPreview) setFocus(lastPreview)
   }, [lastPreview])
 
@@ -109,7 +117,7 @@ export function App() {
             statusBar={<FontStatusBar />}
             zIndex={getZIndex(font.id)}
             onFocus={() => focusFont(font.id)}
-            onClose={allFonts.length > 1 ? () => handleClose(font.id) : undefined}
+            onClose={() => handleClose(font.id)}
           >
             <div class="p-3">
               <GlyphGrid font={font} />
@@ -119,10 +127,16 @@ export function App() {
       ))}
 
       {/* Preview windows */}
-      {previews.value.map((p, i) => (
+      {previews.value.map((p, i) => {
+        const sp = storedPreviews.value.find(s => s.id === p.id)
+        const pFont = allFonts.find(f => f.id === (sp?.selectedFontId ?? p.fontId))
+        const [gi, ii] = (sp?.textKey ?? '0-0').split('-').map(Number)
+        const sampleName = sampleTexts[gi]?.items[ii]?.name ?? ''
+        const previewTitle = `Preview Text — ${sampleName} — ${pFont?.fileName.value ?? ''}`
+        return (
         <DragWindow
           key={p.id}
-          title="Preview"
+          title={previewTitle}
           windowId={p.id}
           initialX={200 + i * 30}
           initialY={100 + i * 30}
@@ -135,7 +149,8 @@ export function App() {
         >
           <PreviewWindow previewId={p.id} initialFontId={p.fontId} />
         </DragWindow>
-      ))}
+        )
+      })}
     </div>
   )
 }

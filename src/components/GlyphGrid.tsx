@@ -29,10 +29,9 @@ function ZoomDropdown({ font }: { font: FontInstance }) {
       >
         <ZoomIn size={16} />
         {font.gridZoom.value * 100}%
-        <ChevronDown size={14} />
       </button>
       {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-2 px-3 flex items-center gap-2">
+        <div class="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-2 px-3 flex items-center gap-2">
           <input
             type="range"
             min={1}
