@@ -9,15 +9,21 @@ interface Props {
 export function SizeDialog({ font, onClose }: Props) {
   const [width, setWidth] = useState(font.glyphWidth.value)
   const [height, setHeight] = useState(font.glyphHeight.value)
+  const [baseline, setBaseline] = useState(font.baseline.value)
   const [anchorX, setAnchorX] = useState<'left' | 'center' | 'right'>('center')
   const [anchorY, setAnchorY] = useState<'top' | 'center' | 'bottom'>('center')
 
   function handleApply() {
-    resizeFont(font, width, height, anchorX, anchorY)
+    if (width !== font.glyphWidth.value || height !== font.glyphHeight.value) {
+      resizeFont(font, width, height, anchorX, anchorY)
+    }
+    if (baseline !== font.baseline.value) {
+      font.baseline.value = baseline
+    }
     onClose()
   }
 
-  const changed = width !== font.glyphWidth.value || height !== font.glyphHeight.value
+  const changed = width !== font.glyphWidth.value || height !== font.glyphHeight.value || baseline !== font.baseline.value
 
   return (
     <div
@@ -73,6 +79,18 @@ export function SizeDialog({ font, onClose }: Props) {
                 </button>
               ))}
             </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm w-14">Baseline</span>
+            <input
+              type="number"
+              min={0}
+              max={height - 1}
+              value={baseline}
+              onInput={(e) => setBaseline(Math.max(0, Math.min(height - 1, parseInt((e.target as HTMLInputElement).value) || 0)))}
+              class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+            />
+            <span class="text-xs text-gray-500">row from top (0 = hidden)</span>
           </div>
         </div>
 

@@ -23,6 +23,7 @@ export interface BdfParseResult {
   fontData: Uint8Array
   meta: FontMeta
   encodings: number[] // per-glyph Unicode codepoint (index -> codepoint)
+  baseline?: number   // row index (0-based from top)
 }
 
 // Fast hex nibble lookup
@@ -181,6 +182,9 @@ export function parseBdf(text: string): BdfParseResult {
     i++
   }
 
+  // Baseline: fontAscent rows from top (0-indexed)
+  const baseline = meta.fontAscent != null ? meta.fontAscent : undefined
+
   return {
     glyphWidth: cellW,
     glyphHeight: cellH,
@@ -188,5 +192,6 @@ export function parseBdf(text: string): BdfParseResult {
     fontData,
     meta,
     encodings,
+    baseline,
   }
 }

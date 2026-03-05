@@ -15,6 +15,7 @@ export interface FontInstance {
   encodings: Signal<number[] | null>
   selectedGlyphs: Signal<Set<number>>
   lastClickedGlyph: Signal<number>
+  baseline: Signal<number>
   gridZoom: Signal<number>
   dirty: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
@@ -31,7 +32,7 @@ export function bytesPerGlyph(font: FontInstance): number {
 
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[]): FontInstance {
+export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
@@ -49,6 +50,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     encodings: signal<number[] | null>(encodings ?? null),
     selectedGlyphs: signal<Set<number>>(new Set([0])),
     lastClickedGlyph: signal(0),
+    baseline: signal(baselineOverride ?? h - 1),
     gridZoom: signal(5),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
@@ -67,6 +69,7 @@ interface StoredFont {
   fontData: string // base64
   glyphWidth?: number
   glyphHeight?: number
+  baseline?: number
   meta?: FontMeta | null
   encodings?: number[] | null
 }
@@ -169,7 +172,7 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined)
+      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       return font
@@ -186,6 +189,7 @@ function saveToStorage() {
     fontData: toBase64(f.fontData.value),
     glyphWidth: f.glyphWidth.value,
     glyphHeight: f.glyphHeight.value,
+    baseline: f.baseline.value,
     meta: f.meta.value,
     encodings: f.encodings.value,
   }))
@@ -862,6 +866,8 @@ export function resizeFont(
     dst.set(dstBytes, dstOff)
   }
 
+  // Adjust baseline by the same vertical offset as the pixels
+  font.baseline.value = Math.max(0, Math.min(newH - 1, font.baseline.value + dy))
   font.glyphWidth.value = newW
   font.glyphHeight.value = newH
   font.fontData.value = dst

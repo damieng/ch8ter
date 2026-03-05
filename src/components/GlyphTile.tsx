@@ -43,7 +43,15 @@ export function GlyphTile({ font, index, size, selected, active, onClick }: Prop
         }
       }
     }
-  }, [font.fontData.value, index, size, w, h])
+
+    // Baseline indicator
+    const bl = font.baseline.value
+    if (bl > 0 && bl < h) {
+      const lineY = Math.round(bl * scaleY)
+      ctx.fillStyle = '#ef4444'
+      ctx.fillRect(0, lineY, canvasW, Math.max(1, Math.round(scaleY / 4)))
+    }
+  }, [font.fontData.value, font.baseline.value, index, size, w, h])
 
   const charCode = font.startChar.value + index
   const label = charLabel(charCode, font)

@@ -69,10 +69,17 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const gridW = cellSize * w + gap * (w + 1)
   const gridH = cellSize * h + gap * (h + 1)
 
+  const baseline = font.baseline.value
+  // Baseline line sits between row (baseline-1) and row (baseline)
+  // Y position: padding + baseline rows * (cellSize + gap)
+  const baselineY = baseline > 0 && baseline < h
+    ? gap + baseline * (cellSize + gap) - gap
+    : -1
+
   return (
     <div ref={containerRef} class="w-full h-full flex items-center justify-center">
       <div
-        class="grid select-none"
+        class="relative grid select-none"
         style={{
           width: `${gridW}px`,
           height: `${gridH}px`,
@@ -84,6 +91,19 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
         }}
       >
         {cells}
+        {baselineY >= 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: `${baselineY}px`,
+              height: `${gap}px`,
+              backgroundColor: '#ef4444',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
       </div>
     </div>
   )
