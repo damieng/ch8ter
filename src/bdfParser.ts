@@ -121,7 +121,7 @@ export function parseBdf(text: string): BdfParseResult {
 
     if (line.startsWith('STARTCHAR ')) {
       let encoding = -1
-      let bbxW = fontBBW, bbxH = fontBBH, bbxOffX = fontBBOffX, bbxOffY = fontBBOffY
+      let bbxH = fontBBH, bbxOffX = fontBBOffX, bbxOffY = fontBBOffY
       i++
 
       // Parse glyph header
@@ -132,7 +132,6 @@ export function parseBdf(text: string): BdfParseResult {
           encoding = parseInt(gl.substring(9))
         } else if (gl.startsWith('BBX ')) {
           const parts = gl.split(/\s+/)
-          bbxW = parseInt(parts[1])
           bbxH = parseInt(parts[2])
           bbxOffX = parseInt(parts[3])
           bbxOffY = parseInt(parts[4])

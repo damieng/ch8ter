@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import { ZoomIn, Eye, Maximize2 } from 'lucide-preact'
 import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
 import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
