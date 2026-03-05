@@ -9,11 +9,13 @@ import {
   selShiftUp, selShiftDown, selShiftLeft, selShiftRight,
   copyUpperToLower, copyLowerToUpper, createBoldVariant
 } from '../store'
+import { ObliqueDialog } from './ObliqueDialog'
 
 const ICON = 16
 
 export function ToolsDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
+  const [obliqueOpen, setObliqueOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,8 +27,6 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
-
-  const selCount = font.selectedGlyphs.value.size
 
   function iconBtn(icon: any, title: string, fn: () => void) {
     return (
@@ -58,7 +58,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
         onClick={() => setOpen(!open)}
       >
         <Wrench size={ICON} />
-        Tools ({selCount})
+        Tools
         <ChevronDown size={14} />
       </button>
       {open && (
@@ -80,8 +80,12 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}
           {menuItem('Copy Lower to Upper', () => copyLowerToUpper(font))}
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Create Bold Variant', () => createBoldVariant(font))}
+          {menuItem('Create Bold', () => createBoldVariant(font))}
+          {menuItem('Create Oblique...', () => setObliqueOpen(true))}
         </div>
+      )}
+      {obliqueOpen && (
+        <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />
       )}
     </div>
   )

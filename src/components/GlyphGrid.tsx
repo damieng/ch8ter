@@ -5,7 +5,6 @@ import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
 import { SelectDropdown } from './SelectDropdown'
-import { CharsetDropdown } from './CharsetDropdown'
 
 function ZoomDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
@@ -79,10 +78,12 @@ export function GlyphGrid({ font }: Props) {
     <div>
       <div class="flex items-center gap-4 mb-3 flex-wrap">
         <SaveBar font={font} />
-        <ZoomDropdown font={font} />
+        <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs selected</span>
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
-        <CharsetDropdown />
+        <div class="ml-auto">
+          <ZoomDropdown font={font} />
+        </div>
       </div>
       <div class="flex flex-wrap gap-0.5 p-1">
         {tiles}

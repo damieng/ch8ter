@@ -21,8 +21,6 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const selCount = font.selectedGlyphs.value.size
-
   function item(label: string, fn: () => void) {
     return (
       <button
@@ -41,7 +39,7 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
         onClick={() => setOpen(!open)}
       >
         <MousePointer size={ICON} />
-        Select ({selCount})
+        Select
         <ChevronDown size={14} />
       </button>
       {open && (

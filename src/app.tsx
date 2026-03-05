@@ -1,4 +1,5 @@
 import './app.css'
+import { Fragment } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { GlyphEditor } from './components/GlyphEditor'
 import { GlyphGrid } from './components/GlyphGrid'
@@ -64,9 +65,8 @@ export function App() {
 
       {/* Per-font: Glyph Editor + Font windows */}
       {allFonts.map((font, i) => (
-        <>
+        <Fragment key={font.id}>
           <DragWindow
-            key={`editor-${font.id}`}
             title={<EditorTitle font={font} />}
             initialX={16 + i * 30}
             initialY={120 + i * 30}
@@ -86,14 +86,13 @@ export function App() {
           </DragWindow>
 
           <DragWindow
-            key={font.id}
             title={<CharSetTitle font={font} />}
             initialX={420 + i * 30}
             initialY={16 + i * 30}
             initialW={700}
             initialH={600}
             resizable
-            statusBar={<FontStatusBar font={font} />}
+            statusBar={<FontStatusBar />}
             zIndex={getZIndex(font.id)}
             onFocus={() => focusFont(font.id)}
             onClose={allFonts.length > 1 ? () => handleClose(font.id) : undefined}
@@ -102,7 +101,7 @@ export function App() {
               <GlyphGrid font={font} />
             </div>
           </DragWindow>
-        </>
+        </Fragment>
       ))}
     </div>
   )

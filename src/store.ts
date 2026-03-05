@@ -358,6 +358,84 @@ export function createBoldVariant(font: FontInstance) {
   addFont(newFont)
 }
 
+// Oblique variant — shear each glyph horizontally based on angle
+// Auto-shifts glyph left/right if shearing would clip set pixels
+// Fills gaps between adjacent rows to preserve stroke continuity
+export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number): Uint8Array {
+  const tan = Math.tan((angleDegrees * Math.PI) / 180)
+  const shifts: number[] = []
+  for (let y = 0; y < 8; y++) {
+    shifts.push(Math.round(tan * (3.5 - y)))
+  }
+
+  // Find leftmost and rightmost set pixel across all rows after shear
+  let minBit = 8, maxBit = -1
+  for (let y = 0; y < 8; y++) {
+    if (bytes[y] === 0) continue
+    for (let x = 0; x < 8; x++) {
+      if (bytes[y] & (0x80 >> x)) {
+        const newX = x - shifts[y]
+        if (newX < minBit) minBit = newX
+        if (newX > maxBit) maxBit = newX
+      }
+    }
+  }
+
+  // Calculate centering offset to keep glyph within 0-7
+  let adjust = 0
+  if (minBit < 0) adjust = -minBit
+  if (maxBit > 7) adjust = 7 - maxBit
+  if (minBit + adjust < 0) adjust = -minBit
+
+  const totalShifts: number[] = shifts.map(s => s - adjust)
+
+  // Basic shear
+  const out = new Uint8Array(8)
+  for (let y = 0; y < 8; y++) {
+    const s = totalShifts[y]
+    if (s > 0) {
+      out[y] = (bytes[y] << s) & 0xFF
+    } else if (s < 0) {
+      out[y] = bytes[y] >> -s
+    } else {
+      out[y] = bytes[y]
+    }
+  }
+
+  // Fill gaps: where adjacent rows both had a pixel at the same original x,
+  // fill horizontal gaps created by shift differences > 1
+  for (let y = 0; y < 7; y++) {
+    if (Math.abs(totalShifts[y] - totalShifts[y + 1]) <= 1) continue
+    for (let x = 0; x < 8; x++) {
+      if (!(bytes[y] & (0x80 >> x)) || !(bytes[y + 1] & (0x80 >> x))) continue
+      const x1 = x - totalShifts[y]
+      const x2 = x - totalShifts[y + 1]
+      const lo = Math.max(0, Math.min(x1, x2))
+      const hi = Math.min(7, Math.max(x1, x2))
+      for (let fx = lo; fx <= hi; fx++) {
+        out[y] |= (0x80 >> fx)
+        out[y + 1] |= (0x80 >> fx)
+      }
+    }
+  }
+
+  return out
+}
+
+export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
+  const src = font.fontData.value
+  const count = src.length / 8
+  const oblique = new Uint8Array(src.length)
+  for (let g = 0; g < count; g++) {
+    const offset = g * 8
+    const bytes = src.slice(offset, offset + 8)
+    oblique.set(shearGlyphBytes(bytes, angleDegrees), offset)
+  }
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
+  const newFont = createFont(oblique, name, font.startChar.value)
+  addFont(newFont)
+}
+
 // File I/O
 export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer)
