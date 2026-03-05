@@ -300,7 +300,7 @@ interface CharsetDef {
   colorSystem?: string // matches name in COLOR_SYSTEMS for preview default
 }
 
-export const CHARSETS: Record<string, CharsetDef> = {
+const CHARSETS_DEF = {
   ascii: { label: 'ASCII', overrides: {} },
   zx: { label: 'ZX Spectrum', colorSystem: 'ZX Spectrum', overrides: {
     0x5E: '\u2191', // ↑ (up arrow instead of caret)
@@ -344,7 +344,8 @@ export const CHARSETS: Record<string, CharsetDef> = {
   imported: { label: 'Imported', overrides: {} },
 }
 
-export type Charset = keyof typeof CHARSETS
+export type Charset = keyof typeof CHARSETS_DEF
+export const CHARSETS: Record<Charset, CharsetDef> = CHARSETS_DEF
 export const charset = signal<Charset>('zx')
 
 export function charLabel(charCode: number, font?: FontInstance): string {

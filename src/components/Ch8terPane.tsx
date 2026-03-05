@@ -45,6 +45,9 @@ export function Ch8terPane() {
           loadFont(font, buf)
           font.fileName.value = file.name
           addFont(font)
+          if (file.name.toLowerCase().endsWith('.ch8')) {
+            charset.value = 'zx'
+          }
         })
       }
     }
