@@ -1,13 +1,13 @@
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  FilePlus, FolderOpen, Save
+  Save
 } from 'lucide-preact'
 import {
+  type FontInstance,
   activeFlipX, activeFlipY, activeInvert, activeRotateCW, activeRotateCCW,
   activeShiftUp, activeShiftDown, activeShiftLeft, activeShiftRight,
-  loadFont, saveFont, startChar,
-  fontData, glyphCount
+  saveFont
 } from '../store'
 
 function IconBtn({ onClick, children, title }: { onClick: () => void; children: any; title?: string }) {
@@ -24,77 +24,38 @@ function IconBtn({ onClick, children, title }: { onClick: () => void; children: 
 
 const ICON = 18
 
-export function FileBar() {
-  function handleLoad() {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.ch8,.bin'
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (!file) return
-      file.arrayBuffer().then(buf => {
-        loadFont(buf)
-      })
-    }
-    input.click()
-  }
-
+export function SaveBar({ font }: { font: FontInstance }) {
   function handleSave() {
-    const data = saveFont()
+    const data = saveFont(font)
     const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'font.ch8'
+    a.download = font.fileName.value
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  function handleNew() {
-    const countStr = prompt('Number of glyphs (default 96):', '96')
-    if (!countStr) return
-    const count = parseInt(countStr, 10)
-    if (isNaN(count) || count < 1) return
-    const startStr = prompt('Start character code (default 32):', '32')
-    if (startStr === null) return
-    const start = parseInt(startStr, 10)
-    if (isNaN(start) || start < 0) return
-    startChar.value = start
-    fontData.value = new Uint8Array(count * 8)
-  }
-
   return (
     <div class="flex items-center gap-1">
-      <IconBtn onClick={handleNew} title="New font"><FilePlus size={ICON} /></IconBtn>
-      <IconBtn onClick={handleLoad} title="Load .ch8"><FolderOpen size={ICON} /></IconBtn>
       <IconBtn onClick={handleSave} title="Save .ch8"><Save size={ICON} /></IconBtn>
     </div>
   )
 }
 
-export function FontInfo() {
-  const total = glyphCount.value
+export function Toolbar({ font }: { font: FontInstance }) {
   return (
-    <span>{total} glyphs, start char {startChar.value}</span>
-  )
-}
-
-export function Toolbar() {
-  return (
-    <div class="flex flex-col gap-1">
-      <div class="flex flex-wrap gap-1">
-        <IconBtn onClick={activeFlipX} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
-        <IconBtn onClick={activeFlipY} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
-        <IconBtn onClick={activeInvert} title="Invert"><Contrast size={ICON} /></IconBtn>
-        <IconBtn onClick={activeRotateCW} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
-        <IconBtn onClick={activeRotateCCW} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
-      </div>
-      <div class="flex flex-wrap gap-1">
-        <IconBtn onClick={activeShiftUp} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
-        <IconBtn onClick={activeShiftDown} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
-        <IconBtn onClick={activeShiftLeft} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
-        <IconBtn onClick={activeShiftRight} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
-      </div>
+    <div class="flex flex-wrap gap-1">
+      <IconBtn onClick={() => activeFlipX(font)} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeFlipY(font)} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeInvert(font)} title="Invert"><Contrast size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeRotateCW(font)} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeRotateCCW(font)} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
+      <span class="w-px h-6 bg-gray-300 self-center mx-0.5" />
+      <IconBtn onClick={() => activeShiftUp(font)} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeShiftDown(font)} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeShiftLeft(font)} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeShiftRight(font)} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
     </div>
   )
 }

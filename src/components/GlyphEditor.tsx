@@ -1,64 +1,64 @@
 import { useRef, useEffect } from 'preact/hooks'
-import { fontData, activeGlyph, getPixel, setPixel, startChar, editorZoom, charLabel } from '../store'
+import { type FontInstance, getPixel, setPixel } from '../store'
 
+// Fixed canvas size: 8 cells of 40px + 9 grid lines of 1px = 329
+const CELL = 40
 const LINE = 1
+const STEP = CELL + LINE
+const CANVAS = LINE + 8 * STEP
 
-export function GlyphEditor() {
+export function GlyphEditor({ font }: { font: FontInstance }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const painting = useRef<boolean | null>(null)
-
-  const cell = editorZoom.value * 4
-  const step = cell + LINE
-  const size = LINE + 8 * step
 
   function draw() {
     const canvas = canvasRef.current
     if (!canvas) return
-    canvas.width = size
-    canvas.height = size
     const ctx = canvas.getContext('2d')!
-    const idx = activeGlyph.value
+    const idx = font.lastClickedGlyph.value
 
     ctx.fillStyle = '#94a3b8'
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, CANVAS, CANVAS)
 
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
-        const px = LINE + x * step
-        const py = LINE + y * step
-        ctx.fillStyle = getPixel(idx, x, y) ? '#1e293b' : '#e2e8f0'
-        ctx.fillRect(px, py, cell, cell)
+        const px = LINE + x * STEP
+        const py = LINE + y * STEP
+        ctx.fillStyle = getPixel(font, idx, x, y) ? '#1e293b' : '#e2e8f0'
+        ctx.fillRect(px, py, CELL, CELL)
       }
     }
   }
 
   useEffect(() => {
     draw()
-  }, [fontData.value, activeGlyph.value, editorZoom.value])
+  }, [font.fontData.value, font.lastClickedGlyph.value])
 
   function getCellCoords(e: MouseEvent) {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
-    const canvasX = e.clientX - rect.left
-    const canvasY = e.clientY - rect.top
-    const x = Math.floor((canvasX - LINE) / step)
-    const y = Math.floor((canvasY - LINE) / step)
+    const scaleX = CANVAS / rect.width
+    const scaleY = CANVAS / rect.height
+    const canvasX = (e.clientX - rect.left) * scaleX
+    const canvasY = (e.clientY - rect.top) * scaleY
+    const x = Math.floor((canvasX - LINE) / STEP)
+    const y = Math.floor((canvasY - LINE) / STEP)
     return { x: Math.max(0, Math.min(7, x)), y: Math.max(0, Math.min(7, y)) }
   }
 
   function onMouseDown(e: MouseEvent) {
     e.preventDefault()
     const { x, y } = getCellCoords(e)
-    const idx = activeGlyph.value
-    const current = getPixel(idx, x, y)
+    const idx = font.lastClickedGlyph.value
+    const current = getPixel(font, idx, x, y)
     painting.current = !current
-    setPixel(idx, x, y, !current)
+    setPixel(font, idx, x, y, !current)
   }
 
   function onMouseMove(e: MouseEvent) {
     if (painting.current === null) return
     const { x, y } = getCellCoords(e)
-    setPixel(activeGlyph.value, x, y, painting.current)
+    setPixel(font, font.lastClickedGlyph.value, x, y, painting.current)
   }
 
   function onMouseUp() {
@@ -70,38 +70,15 @@ export function GlyphEditor() {
     return () => document.removeEventListener('mouseup', onMouseUp)
   }, [])
 
-  const charCode = startChar.value + activeGlyph.value
-  const label = charLabel(charCode)
-  const labelStr = label ? ` "${label}"` : ''
-
   return (
-    <div>
-      <div class="flex items-center gap-2 mb-2">
-        <span>Zoom:</span>
-        <input
-          type="range"
-          min={4}
-          max={20}
-          value={editorZoom.value}
-          onInput={(e) => { editorZoom.value = parseInt((e.target as HTMLInputElement).value) }}
-          class="w-32"
-        />
-        <span>{editorZoom.value * 100}%</span>
-      </div>
-      <div class="flex items-center gap-3 mb-2">
-        <span class="font-bold">
-          Glyph {activeGlyph.value} — Char {charCode} (0x{charCode.toString(16).toUpperCase()}){labelStr}
-        </span>
-      </div>
-      <canvas
-        ref={canvasRef}
-        width={size}
-        height={size}
-        class="block cursor-crosshair border border-gray-400"
-        style={{ width: size, height: size }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-      />
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={CANVAS}
+      height={CANVAS}
+      class="block cursor-crosshair w-full h-full"
+      style={{ imageRendering: 'pixelated' }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+    />
   )
 }

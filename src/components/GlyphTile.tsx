@@ -1,7 +1,8 @@
 import { useRef, useEffect } from 'preact/hooks'
-import { fontData, startChar, charLabel } from '../store'
+import { type FontInstance, charLabel } from '../store'
 
 interface Props {
+  font: FontInstance
   index: number
   size: number
   selected?: boolean
@@ -9,14 +10,14 @@ interface Props {
   onClick?: (e: MouseEvent) => void
 }
 
-export function GlyphTile({ index, size, selected, active, onClick }: Props) {
+export function GlyphTile({ font, index, size, selected, active, onClick }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    const data = fontData.value
+    const data = font.fontData.value
     const offset = index * 8
     const scale = size / 8
 
@@ -34,9 +35,9 @@ export function GlyphTile({ index, size, selected, active, onClick }: Props) {
         }
       }
     }
-  }, [fontData.value, index, size])
+  }, [font.fontData.value, index, size])
 
-  const charCode = startChar.value + index
+  const charCode = font.startChar.value + index
   const label = charLabel(charCode)
 
   let borderColor = 'border-gray-300'

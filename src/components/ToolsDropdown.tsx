@@ -4,15 +4,15 @@ import {
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
 } from 'lucide-preact'
 import {
+  type FontInstance,
   selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
   selShiftUp, selShiftDown, selShiftLeft, selShiftRight,
-  copyUpperToLower, copyLowerToUpper,
-  selectedGlyphs
+  copyUpperToLower, copyLowerToUpper
 } from '../store'
 
 const ICON = 16
 
-export function ToolsDropdown() {
+export function ToolsDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -26,7 +26,7 @@ export function ToolsDropdown() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const selCount = selectedGlyphs.value.size
+  const selCount = font.selectedGlyphs.value.size
 
   function iconBtn(icon: any, title: string, fn: () => void) {
     return (
@@ -64,21 +64,21 @@ export function ToolsDropdown() {
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto">
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', selFlipX)}
-            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', selFlipY)}
-            {iconBtn(<Contrast size={ICON} />, 'Invert', selInvert)}
-            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', selRotateCW)}
-            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', selRotateCCW)}
+            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', () => selFlipX(font))}
+            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', () => selFlipY(font))}
+            {iconBtn(<Contrast size={ICON} />, 'Invert', () => selInvert(font))}
+            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', () => selRotateCW(font))}
+            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => selRotateCCW(font))}
           </div>
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', selShiftUp)}
-            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', selShiftDown)}
-            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', selShiftLeft)}
-            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', selShiftRight)}
+            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => selShiftUp(font))}
+            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => selShiftDown(font))}
+            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => selShiftLeft(font))}
+            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => selShiftRight(font))}
           </div>
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Copy Upper to Lower', copyUpperToLower)}
-          {menuItem('Copy Lower to Upper', copyLowerToUpper)}
+          {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}
+          {menuItem('Copy Lower to Upper', () => copyLowerToUpper(font))}
         </div>
       )}
     </div>

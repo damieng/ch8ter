@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { ChevronDown, MousePointer } from 'lucide-preact'
 import {
-  selectNumbers, selectUppercase, selectLowercase, selectSymbols,
-  selectedGlyphs
+  type FontInstance,
+  selectNumbers, selectUppercase, selectLowercase, selectSymbols
 } from '../store'
 
 const ICON = 16
 
-export function SelectDropdown() {
+export function SelectDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -21,7 +21,7 @@ export function SelectDropdown() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const selCount = selectedGlyphs.value.size
+  const selCount = font.selectedGlyphs.value.size
 
   function item(label: string, fn: () => void) {
     return (
@@ -46,10 +46,10 @@ export function SelectDropdown() {
       </button>
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-40">
-          {item('Numbers 0-9', selectNumbers)}
-          {item('Uppercase A-Z', selectUppercase)}
-          {item('Lowercase a-z', selectLowercase)}
-          {item('Symbols', selectSymbols)}
+          {item('Numbers 0-9', () => selectNumbers(font))}
+          {item('Uppercase A-Z', () => selectUppercase(font))}
+          {item('Lowercase a-z', () => selectLowercase(font))}
+          {item('Symbols', () => selectSymbols(font))}
         </div>
       )}
     </div>

@@ -1,0 +1,127 @@
+import { useRef, useEffect, useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
+
+interface Props {
+  title: string | ComponentChildren
+  children: ComponentChildren
+  statusBar?: ComponentChildren
+  initialX: number
+  initialY: number
+  initialW?: number
+  initialH?: number
+  resizable?: boolean
+  aspectRatio?: number // e.g. 1 for 1:1
+  onFocus?: () => void
+  onClose?: () => void
+  zIndex?: number
+}
+
+export function DragWindow({
+  title, children, statusBar, initialX, initialY,
+  initialW, initialH, resizable, aspectRatio,
+  onFocus, onClose, zIndex = 1
+}: Props) {
+  const [pos, setPos] = useState({ x: initialX, y: initialY })
+  const [size, setSize] = useState({ w: initialW ?? 0, h: initialH ?? 0 })
+  const dragging = useRef(false)
+  const resizing = useRef(false)
+  const offset = useRef({ x: 0, y: 0 })
+  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 })
+  const titleRef = useRef<HTMLDivElement>(null)
+
+  function onTitleMouseDown(e: MouseEvent) {
+    e.preventDefault()
+    dragging.current = true
+    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+    onFocus?.()
+  }
+
+  function onResizeMouseDown(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    resizing.current = true
+    resizeStart.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h }
+    onFocus?.()
+  }
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (dragging.current) {
+        setPos({
+          x: e.clientX - offset.current.x,
+          y: e.clientY - offset.current.y,
+        })
+      }
+      if (resizing.current) {
+        const dx = e.clientX - resizeStart.current.x
+        const dy = e.clientY - resizeStart.current.y
+        let newW = Math.max(150, resizeStart.current.w + dx)
+        let newH = Math.max(100, resizeStart.current.h + dy)
+        if (aspectRatio) {
+          // Use the larger delta to drive both dimensions
+          const titleH = titleRef.current?.offsetHeight ?? 30
+          const contentW = newW
+          const contentH = newH - titleH
+          const driven = Math.max(contentW, contentH)
+          newW = driven
+          newH = driven + titleH
+        }
+        setSize({ w: newW, h: newH })
+      }
+    }
+    function onMouseUp() {
+      dragging.current = false
+      resizing.current = false
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [aspectRatio])
+
+  return (
+    <div
+      class="absolute rounded-lg shadow-xl border border-gray-300 bg-white overflow-hidden flex flex-col"
+      style={{ left: pos.x, top: pos.y, zIndex, width: size.w || undefined, height: size.h || undefined }}
+      onMouseDown={() => onFocus?.()}
+    >
+      <div
+        ref={titleRef}
+        class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border-b border-gray-300 cursor-move select-none shrink-0"
+        onMouseDown={onTitleMouseDown}
+      >
+        <span class="font-bold text-sm flex-1">{title}</span>
+        {onClose && (
+          <button
+            class="ml-auto text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+            title="Close"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <div class="overflow-auto flex-1">
+        {children}
+      </div>
+      {statusBar && (
+        <div class="flex items-center justify-between px-3 py-1 bg-gray-50 border-t border-gray-300 text-xs text-gray-500 shrink-0">
+          {statusBar}
+        </div>
+      )}
+      {resizable && (
+        <div
+          class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
+          onMouseDown={onResizeMouseDown}
+        >
+          <svg viewBox="0 0 16 16" class="w-4 h-4 text-gray-400">
+            <path d="M14 14L8 14L14 8Z" fill="currentColor" />
+            <path d="M14 14L11 14L14 11Z" fill="currentColor" opacity="0.5" />
+          </svg>
+        </div>
+      )}
+    </div>
+  )
+}

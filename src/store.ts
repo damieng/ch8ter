@@ -1,26 +1,61 @@
-import { signal, computed } from '@preact/signals'
+import { signal, type Signal } from '@preact/signals'
 
-const DEFAULT_START = 32
-const DEFAULT_COUNT = 96
+// --- Font Instance ---
 
-export const fontData = signal<Uint8Array>(new Uint8Array(DEFAULT_COUNT * 8))
-export const startChar = signal(DEFAULT_START)
-export const glyphCount = computed(() => fontData.value.length / 8)
+export interface FontInstance {
+  id: string
+  fontData: Signal<Uint8Array>
+  startChar: Signal<number>
+  fileName: Signal<string>
+  selectedGlyphs: Signal<Set<number>>
+  lastClickedGlyph: Signal<number>
+  gridZoom: Signal<number>
+  dirty: Signal<boolean>
+  savedSnapshot: Signal<Uint8Array>
+}
 
-export const selectedGlyphs = signal<Set<number>>(new Set([0]))
-export const lastClickedGlyph = signal(0)
-export const activeGlyph = computed(() => lastClickedGlyph.value)
+let nextFontId = 1
 
-export const gridZoom = signal(5) // right-side grid: 1-10 (x100%)
-export const editorZoom = signal(8) // editor: 4-20 (x100%)
+export function createFont(data?: Uint8Array, name?: string, start?: number): FontInstance {
+  const id = `font-${nextFontId++}`
+  const initial = data ?? new Uint8Array(96 * 8)
+  return {
+    id,
+    fontData: signal(initial),
+    startChar: signal(start ?? 32),
+    fileName: signal(name ?? 'untitled.ch8'),
+    selectedGlyphs: signal<Set<number>>(new Set([0])),
+    lastClickedGlyph: signal(0),
+    gridZoom: signal(5),
+    dirty: signal(false),
+    savedSnapshot: signal(new Uint8Array(initial)),
+  }
+}
+
+// --- Global state ---
+
+export const fonts = signal<FontInstance[]>([createFont()])
+export const activeFontId = signal<string>(fonts.value[0].id)
+
+export function addFont(font: FontInstance) {
+  fonts.value = [...fonts.value, font]
+  activeFontId.value = font.id
+}
+
+export function removeFont(id: string) {
+  const remaining = fonts.value.filter(f => f.id !== id)
+  if (remaining.length === 0) return // don't remove last font
+  fonts.value = remaining
+  if (activeFontId.value === id) {
+    activeFontId.value = remaining[0].id
+  }
+}
+
+// --- Charset (global display preference) ---
 
 export type Charset = 'zx' | 'ascii'
 export const charset = signal<Charset>('zx')
 
-// ZX Spectrum charset differs from ASCII at three code points:
-// 0x5E (94): ↑ instead of ^
-// 0x60 (96): £ instead of `
-// 0x7F (127): © instead of DEL
 const ZX_OVERRIDES: Record<number, string> = {
   0x5E: '\u2191', // ↑
   0x60: '\u00A3', // £
@@ -31,59 +66,72 @@ export function charLabel(charCode: number): string {
   if (charset.value === 'zx' && ZX_OVERRIDES[charCode]) {
     return ZX_OVERRIDES[charCode]
   }
-  if (charCode === 0x7F) return '' // DEL in ASCII mode — no printable label
+  if (charCode === 0x7F) return ''
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
   return ''
 }
 
-export function getPixel(glyphIndex: number, x: number, y: number): boolean {
-  const offset = glyphIndex * 8 + y
-  return (fontData.value[offset] & (0x80 >> x)) !== 0
+function markDirty(font: FontInstance) {
+  const a = font.fontData.value
+  const b = font.savedSnapshot.value
+  if (a.length !== b.length) { font.dirty.value = true; return }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) { font.dirty.value = true; return }
+  }
+  font.dirty.value = false
 }
 
-export function setPixel(glyphIndex: number, x: number, y: number, on: boolean) {
-  const data = new Uint8Array(fontData.value)
+// --- Per-font helpers ---
+
+export function glyphCount(font: FontInstance): number {
+  return font.fontData.value.length / 8
+}
+
+export function getPixel(font: FontInstance, glyphIndex: number, x: number, y: number): boolean {
+  const offset = glyphIndex * 8 + y
+  return (font.fontData.value[offset] & (0x80 >> x)) !== 0
+}
+
+export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
+  const data = new Uint8Array(font.fontData.value)
   const offset = glyphIndex * 8 + y
   if (on) {
     data[offset] |= (0x80 >> x)
   } else {
     data[offset] &= ~(0x80 >> x)
   }
-  fontData.value = data
+  font.fontData.value = data
+  markDirty(font)
 }
 
-export function togglePixel(glyphIndex: number, x: number, y: number) {
-  setPixel(glyphIndex, x, y, !getPixel(glyphIndex, x, y))
-}
-
-export function selectGlyph(index: number, shift: boolean, ctrl: boolean) {
-  const count = glyphCount.value
+export function selectGlyph(font: FontInstance, index: number, shift: boolean, ctrl: boolean) {
+  const count = glyphCount(font)
   if (index < 0 || index >= count) return
 
   if (shift) {
-    const from = Math.min(lastClickedGlyph.value, index)
-    const to = Math.max(lastClickedGlyph.value, index)
-    const next = new Set(selectedGlyphs.value)
+    const from = Math.min(font.lastClickedGlyph.value, index)
+    const to = Math.max(font.lastClickedGlyph.value, index)
+    const next = new Set(font.selectedGlyphs.value)
     for (let i = from; i <= to; i++) next.add(i)
-    selectedGlyphs.value = next
+    font.selectedGlyphs.value = next
   } else if (ctrl) {
-    const next = new Set(selectedGlyphs.value)
+    const next = new Set(font.selectedGlyphs.value)
     if (next.has(index)) {
       next.delete(index)
       if (next.size === 0) next.add(index)
     } else {
       next.add(index)
     }
-    selectedGlyphs.value = next
+    font.selectedGlyphs.value = next
   } else {
-    selectedGlyphs.value = new Set([index])
+    font.selectedGlyphs.value = new Set([index])
   }
-  lastClickedGlyph.value = index
+  font.lastClickedGlyph.value = index
 }
 
-function charRange(from: number, to: number): Set<number> {
-  const s = startChar.value
-  const count = glyphCount.value
+function charRange(font: FontInstance, from: number, to: number): Set<number> {
+  const s = font.startChar.value
+  const count = glyphCount(font)
   const result = new Set<number>()
   for (let c = from; c <= to; c++) {
     const idx = c - s
@@ -92,24 +140,24 @@ function charRange(from: number, to: number): Set<number> {
   return result
 }
 
-export function selectNumbers() {
-  selectedGlyphs.value = charRange(48, 57)
-  const first = 48 - startChar.value
-  if (first >= 0) lastClickedGlyph.value = first
+export function selectNumbers(font: FontInstance) {
+  font.selectedGlyphs.value = charRange(font, 48, 57)
+  const first = 48 - font.startChar.value
+  if (first >= 0) font.lastClickedGlyph.value = first
 }
-export function selectUppercase() {
-  selectedGlyphs.value = charRange(65, 90)
-  const first = 65 - startChar.value
-  if (first >= 0) lastClickedGlyph.value = first
+export function selectUppercase(font: FontInstance) {
+  font.selectedGlyphs.value = charRange(font, 65, 90)
+  const first = 65 - font.startChar.value
+  if (first >= 0) font.lastClickedGlyph.value = first
 }
-export function selectLowercase() {
-  selectedGlyphs.value = charRange(97, 122)
-  const first = 97 - startChar.value
-  if (first >= 0) lastClickedGlyph.value = first
+export function selectLowercase(font: FontInstance) {
+  font.selectedGlyphs.value = charRange(font, 97, 122)
+  const first = 97 - font.startChar.value
+  if (first >= 0) font.lastClickedGlyph.value = first
 }
-export function selectSymbols() {
-  const s = startChar.value
-  const count = glyphCount.value
+export function selectSymbols(font: FontInstance) {
+  const s = font.startChar.value
+  const count = glyphCount(font)
   const result = new Set<number>()
   for (let i = 0; i < count; i++) {
     const c = s + i
@@ -122,12 +170,13 @@ export function selectSymbols() {
     }
   }
   if (result.size > 0) {
-    selectedGlyphs.value = result
-    lastClickedGlyph.value = Math.min(...result)
+    font.selectedGlyphs.value = result
+    font.lastClickedGlyph.value = Math.min(...result)
   }
 }
 
-// Transformations
+// --- Transformations ---
+
 function flipXBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
@@ -206,51 +255,53 @@ function shiftRight(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function applyToGlyph(index: number, fn: (b: Uint8Array) => Uint8Array) {
-  const data = new Uint8Array(fontData.value)
+function applyToGlyph(font: FontInstance, index: number, fn: (b: Uint8Array) => Uint8Array) {
+  const data = new Uint8Array(font.fontData.value)
   const offset = index * 8
   const bytes = data.slice(offset, offset + 8)
   data.set(fn(bytes), offset)
-  fontData.value = data
+  font.fontData.value = data
+  markDirty(font)
 }
 
-function applyToSelected(fn: (b: Uint8Array) => Uint8Array) {
-  const data = new Uint8Array(fontData.value)
-  for (const idx of selectedGlyphs.value) {
+function applyToSelected(font: FontInstance, fn: (b: Uint8Array) => Uint8Array) {
+  const data = new Uint8Array(font.fontData.value)
+  for (const idx of font.selectedGlyphs.value) {
     const offset = idx * 8
     const bytes = data.slice(offset, offset + 8)
     data.set(fn(bytes), offset)
   }
-  fontData.value = data
+  font.fontData.value = data
+  markDirty(font)
 }
 
-// Single active glyph transforms (left panel editor)
-export const activeFlipX = () => applyToGlyph(activeGlyph.value, flipXBytes)
-export const activeFlipY = () => applyToGlyph(activeGlyph.value, flipYBytes)
-export const activeInvert = () => applyToGlyph(activeGlyph.value, invertBytes)
-export const activeRotateCW = () => applyToGlyph(activeGlyph.value, rotateCWBytes)
-export const activeRotateCCW = () => applyToGlyph(activeGlyph.value, rotateCCWBytes)
-export const activeShiftUp = () => applyToGlyph(activeGlyph.value, shiftUp)
-export const activeShiftDown = () => applyToGlyph(activeGlyph.value, shiftDown)
-export const activeShiftLeft = () => applyToGlyph(activeGlyph.value, shiftLeft)
-export const activeShiftRight = () => applyToGlyph(activeGlyph.value, shiftRight)
+// Active glyph transforms (editor toolbar)
+export const activeFlipX = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, flipXBytes)
+export const activeFlipY = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, flipYBytes)
+export const activeInvert = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, invertBytes)
+export const activeRotateCW = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, rotateCWBytes)
+export const activeRotateCCW = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, rotateCCWBytes)
+export const activeShiftUp = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftUp)
+export const activeShiftDown = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftDown)
+export const activeShiftLeft = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftLeft)
+export const activeShiftRight = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftRight)
 
-// Selection transforms (right panel Tools dropdown)
-export const selFlipX = () => applyToSelected(flipXBytes)
-export const selFlipY = () => applyToSelected(flipYBytes)
-export const selInvert = () => applyToSelected(invertBytes)
-export const selRotateCW = () => applyToSelected(rotateCWBytes)
-export const selRotateCCW = () => applyToSelected(rotateCCWBytes)
-export const selShiftUp = () => applyToSelected(shiftUp)
-export const selShiftDown = () => applyToSelected(shiftDown)
-export const selShiftLeft = () => applyToSelected(shiftLeft)
-export const selShiftRight = () => applyToSelected(shiftRight)
+// Selection transforms (Tools dropdown)
+export const selFlipX = (font: FontInstance) => applyToSelected(font, flipXBytes)
+export const selFlipY = (font: FontInstance) => applyToSelected(font, flipYBytes)
+export const selInvert = (font: FontInstance) => applyToSelected(font, invertBytes)
+export const selRotateCW = (font: FontInstance) => applyToSelected(font, rotateCWBytes)
+export const selRotateCCW = (font: FontInstance) => applyToSelected(font, rotateCCWBytes)
+export const selShiftUp = (font: FontInstance) => applyToSelected(font, shiftUp)
+export const selShiftDown = (font: FontInstance) => applyToSelected(font, shiftDown)
+export const selShiftLeft = (font: FontInstance) => applyToSelected(font, shiftLeft)
+export const selShiftRight = (font: FontInstance) => applyToSelected(font, shiftRight)
 
-// Copy case: copies glyph data from one ASCII range to another
-function copyRange(srcStart: number, srcEnd: number, dstStart: number) {
-  const s = startChar.value
-  const count = glyphCount.value
-  const data = new Uint8Array(fontData.value)
+// Copy case
+function copyRange(font: FontInstance, srcStart: number, srcEnd: number, dstStart: number) {
+  const s = font.startChar.value
+  const count = glyphCount(font)
+  const data = new Uint8Array(font.fontData.value)
   for (let c = srcStart; c <= srcEnd; c++) {
     const srcIdx = c - s
     const dstIdx = (dstStart + (c - srcStart)) - s
@@ -258,21 +309,28 @@ function copyRange(srcStart: number, srcEnd: number, dstStart: number) {
       data.set(data.slice(srcIdx * 8, srcIdx * 8 + 8), dstIdx * 8)
     }
   }
-  fontData.value = data
+  font.fontData.value = data
+  markDirty(font)
 }
 
-export const copyUpperToLower = () => copyRange(65, 90, 97)
-export const copyLowerToUpper = () => copyRange(97, 122, 65)
+export const copyUpperToLower = (font: FontInstance) => copyRange(font, 65, 90, 97)
+export const copyLowerToUpper = (font: FontInstance) => copyRange(font, 97, 122, 65)
 
 // File I/O
-export function loadFont(buffer: ArrayBuffer) {
+export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer)
   const count = Math.floor(bytes.length / 8)
-  fontData.value = bytes.slice(0, count * 8)
-  selectedGlyphs.value = new Set([0])
-  lastClickedGlyph.value = 0
+  const data = bytes.slice(0, count * 8)
+  font.fontData.value = data
+  font.savedSnapshot.value = new Uint8Array(data)
+  font.dirty.value = false
+  font.selectedGlyphs.value = new Set([0])
+  font.lastClickedGlyph.value = 0
 }
 
-export function saveFont(): Uint8Array {
-  return new Uint8Array(fontData.value)
+export function saveFont(font: FontInstance): Uint8Array {
+  const data = new Uint8Array(font.fontData.value)
+  font.savedSnapshot.value = new Uint8Array(data)
+  font.dirty.value = false
+  return data
 }

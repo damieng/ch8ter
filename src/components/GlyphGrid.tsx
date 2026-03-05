@@ -1,15 +1,60 @@
-import {
-  glyphCount, selectedGlyphs, activeGlyph, selectGlyph, gridZoom
-} from '../store'
+import { useState, useRef, useEffect } from 'preact/hooks'
+import { ChevronDown, ZoomIn } from 'lucide-preact'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId } from '../store'
 import { GlyphTile } from './GlyphTile'
-import { FontInfo } from './Toolbar'
+import { SaveBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
 import { SelectDropdown } from './SelectDropdown'
 import { CharsetDropdown } from './CharsetDropdown'
 
-export function GlyphGrid() {
-  const count = glyphCount.value
-  const zoomLevel = gridZoom.value
+function ZoomDropdown({ font }: { font: FontInstance }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div class="relative" ref={ref}>
+      <button
+        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
+        onClick={() => setOpen(!open)}
+      >
+        <ZoomIn size={16} />
+        {font.gridZoom.value * 100}%
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-2 px-3 flex items-center gap-2">
+          <input
+            type="range"
+            min={1}
+            max={10}
+            value={font.gridZoom.value}
+            onInput={(e) => { font.gridZoom.value = parseInt((e.target as HTMLInputElement).value) }}
+            class="w-40"
+          />
+          <span class="text-sm whitespace-nowrap">{font.gridZoom.value * 100}%</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Props {
+  font: FontInstance
+}
+
+export function GlyphGrid({ font }: Props) {
+  const count = glyphCount(font)
+  const zoomLevel = font.gridZoom.value
   const tileSize = 8 * zoomLevel
 
   const tiles = []
@@ -17,11 +62,15 @@ export function GlyphGrid() {
     tiles.push(
       <GlyphTile
         key={i}
+        font={font}
         index={i}
         size={tileSize}
-        selected={selectedGlyphs.value.has(i)}
-        active={i === activeGlyph.value}
-        onClick={(e: MouseEvent) => selectGlyph(i, e.shiftKey, e.ctrlKey || e.metaKey)}
+        selected={font.selectedGlyphs.value.has(i)}
+        active={i === font.lastClickedGlyph.value}
+        onClick={(e: MouseEvent) => {
+          selectGlyph(font, i, e.shiftKey, e.ctrlKey || e.metaKey)
+          activeFontId.value = font.id
+        }}
       />
     )
   }
@@ -29,29 +78,13 @@ export function GlyphGrid() {
   return (
     <div>
       <div class="flex items-center gap-4 mb-3 flex-wrap">
-        <div class="flex items-center gap-2">
-          <span class="font-bold">Zoom:</span>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={gridZoom.value}
-            onInput={(e) => { gridZoom.value = parseInt((e.target as HTMLInputElement).value) }}
-            class="w-40"
-          />
-          <span>{gridZoom.value * 100}%</span>
-        </div>
-        <SelectDropdown />
-        <ToolsDropdown />
+        <SaveBar font={font} />
+        <ZoomDropdown font={font} />
+        <SelectDropdown font={font} />
+        <ToolsDropdown font={font} />
         <CharsetDropdown />
-        <div class="ml-auto">
-          <FontInfo />
-        </div>
       </div>
-      <div class="text-sm mb-2">
-        Click to select, Shift+click for range, Ctrl+click to toggle
-      </div>
-      <div class="flex flex-wrap gap-0.5 max-h-[calc(100vh-120px)] overflow-y-auto p-1">
+      <div class="flex flex-wrap gap-0.5 p-1">
         {tiles}
       </div>
     </div>
