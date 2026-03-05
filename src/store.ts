@@ -37,8 +37,20 @@ export function createFont(data?: Uint8Array, name?: string, start?: number): Fo
 export const fonts = signal<FontInstance[]>([createFont()])
 export const activeFontId = signal<string>(fonts.value[0].id)
 
+function isEmptyUntitled(f: FontInstance): boolean {
+  if (f.dirty.value) return false
+  if (f.fileName.value !== 'untitled.ch8') return false
+  return f.fontData.value.every(b => b === 0)
+}
+
 export function addFont(font: FontInstance) {
-  fonts.value = [...fonts.value, font]
+  // If the only open font is an empty untitled, replace it
+  const current = fonts.value
+  if (current.length === 1 && isEmptyUntitled(current[0])) {
+    fonts.value = [font]
+  } else {
+    fonts.value = [...current, font]
+  }
   activeFontId.value = font.id
 }
 
@@ -315,6 +327,36 @@ function copyRange(font: FontInstance, srcStart: number, srcEnd: number, dstStar
 
 export const copyUpperToLower = (font: FontInstance) => copyRange(font, 65, 90, 97)
 export const copyLowerToUpper = (font: FontInstance) => copyRange(font, 97, 122, 65)
+
+// Create bold variant — OR each row with itself shifted right by 1
+// If the rightmost column is used, shift the glyph left first to make room
+export function createBoldVariant(font: FontInstance) {
+  const src = font.fontData.value
+  const count = src.length / 8
+  const bold = new Uint8Array(src.length)
+  for (let g = 0; g < count; g++) {
+    const offset = g * 8
+    // Check if rightmost bit (bit 0) is set on any row
+    let rightUsed = false
+    // Check if leftmost bit (bit 7) is free on all rows
+    let leftFree = true
+    for (let y = 0; y < 8; y++) {
+      if (src[offset + y] & 0x01) rightUsed = true
+      if (src[offset + y] & 0x80) leftFree = false
+    }
+    for (let y = 0; y < 8; y++) {
+      let row = src[offset + y]
+      if (rightUsed && leftFree) {
+        // Shift glyph left 1px to make room on the right
+        row = (row << 1) & 0xFF
+      }
+      bold[offset + y] = row | (row >> 1)
+    }
+  }
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
+  const newFont = createFont(bold, name, font.startChar.value)
+  addFont(newFont)
+}
 
 // File I/O
 export function loadFont(font: FontInstance, buffer: ArrayBuffer) {

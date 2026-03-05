@@ -7,7 +7,7 @@ import {
   type FontInstance,
   selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
   selShiftUp, selShiftDown, selShiftLeft, selShiftRight,
-  copyUpperToLower, copyLowerToUpper
+  copyUpperToLower, copyLowerToUpper, createBoldVariant
 } from '../store'
 
 const ICON = 16
@@ -79,6 +79,8 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}
           {menuItem('Copy Lower to Upper', () => copyLowerToUpper(font))}
+          <div class="border-t border-gray-200 my-1" />
+          {menuItem('Create Bold Variant', () => createBoldVariant(font))}
         </div>
       )}
     </div>
