@@ -4,16 +4,7 @@ import { createFont, addFont, loadFont } from '../store'
 const ICON = 18
 
 export function Ch8terTitle() {
-  return (
-    <span
-      class="font-black tracking-tight"
-      style={{
-        background: 'linear-gradient(90deg, #d70000, #d7d700, #00d700, #00d7d7, #0000d7, #d700d7)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-      }}
-    >Ch8ter</span>
-  )
+  return <span class="font-black tracking-tight">Ch8ter</span>
 }
 
 export function Ch8terPane() {
