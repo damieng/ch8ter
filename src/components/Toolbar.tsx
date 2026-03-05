@@ -51,7 +51,6 @@ export function Toolbar({ font }: { font: FontInstance }) {
       <IconBtn onClick={() => activeInvert(font)} title="Invert"><Contrast size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeRotateCW(font)} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeRotateCCW(font)} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
-      <span class="w-px h-6 bg-gray-300 self-center mx-0.5" />
       <IconBtn onClick={() => activeShiftUp(font)} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeShiftDown(font)} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeShiftLeft(font)} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>

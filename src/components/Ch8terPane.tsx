@@ -3,8 +3,15 @@ import { createFont, addFont, loadFont } from '../store'
 
 const ICON = 18
 
+const BUILD_DATE = __BUILD_DATE__
+
 export function Ch8terTitle() {
-  return <span class="font-black tracking-tight">Ch8ter</span>
+  return (
+    <span class="flex items-center w-full">
+      <span class="font-black tracking-tight">Ch8ter</span>
+      <span class="ml-auto font-normal text-xs text-gray-400">{BUILD_DATE}</span>
+    </span>
+  )
 }
 
 export function Ch8terPane() {

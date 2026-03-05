@@ -57,6 +57,7 @@ export function App() {
         title={<Ch8terTitle />}
         initialX={16}
         initialY={16}
+        initialW={380}
         zIndex={getZIndex('ch8ter')}
         onFocus={() => setFocusedFontId(null)}
       >

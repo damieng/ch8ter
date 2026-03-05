@@ -268,19 +268,32 @@ function shiftRight(bytes: Uint8Array): Uint8Array {
 }
 
 function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
-  let minX = 8, maxX = -1
-  for (let y = 0; y < 8; y++) {
-    if (bytes[y] === 0) continue
-    for (let x = 0; x < 8; x++) {
-      if (bytes[y] & (0x80 >> x)) {
-        if (x < minX) minX = x
-        if (x > maxX) maxX = x
-      }
+  // Count blank columns on left
+  let leftBlank = 0
+  for (let x = 0; x < 8; x++) {
+    let used = false
+    for (let y = 0; y < 8; y++) {
+      if (bytes[y] & (0x80 >> x)) { used = true; break }
     }
+    if (used) break
+    leftBlank++
   }
-  if (maxX < 0) return new Uint8Array(8) // empty glyph
-  const currentCenter = (minX + maxX) / 2
-  const shift = Math.round(3.5 - currentCenter)
+  // Count blank columns on right
+  let rightBlank = 0
+  for (let x = 7; x >= 0; x--) {
+    let used = false
+    for (let y = 0; y < 8; y++) {
+      if (bytes[y] & (0x80 >> x)) { used = true; break }
+    }
+    if (used) break
+    rightBlank++
+  }
+  if (leftBlank === 0 && rightBlank === 0) return new Uint8Array(bytes)
+  if (leftBlank + rightBlank >= 8) return new Uint8Array(8) // empty glyph
+  // Target: equal blanks, or left one more than right if odd
+  const total = leftBlank + rightBlank
+  const targetLeft = Math.ceil(total / 2)
+  const shift = leftBlank - targetLeft // positive = shift left, negative = shift right
   if (shift === 0) return new Uint8Array(bytes)
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
