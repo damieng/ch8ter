@@ -110,6 +110,12 @@ export function GlyphGrid({ font }: Props) {
         return
       }
 
+      if (e.key === 'Delete') {
+        clearGlyph(font, active)
+        e.preventDefault()
+        return
+      }
+
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
       const charCode = charCodeFromKey(e.key)
