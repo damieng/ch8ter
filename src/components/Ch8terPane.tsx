@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { FilePlus, FolderOpen } from 'lucide-preact'
-import { createFont, addFont, loadFont } from '../store'
+import { createFont, addFont, loadFont, charset } from '../store'
+import { parseBdf } from '../bdfParser'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
 
@@ -23,16 +24,29 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.bin'
+    input.accept = '.ch8,.bin,.bdf'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
-      file.arrayBuffer().then(buf => {
-        const font = createFont()
-        loadFont(font, buf)
-        font.fileName.value = file.name
-        addFont(font)
-      })
+      if (file.name.toLowerCase().endsWith('.bdf')) {
+        file.text().then(text => {
+          try {
+            const result = parseBdf(text)
+            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings)
+            addFont(font)
+            charset.value = 'imported'
+          } catch (e) {
+            alert(`Failed to parse BDF: ${(e as Error).message}`)
+          }
+        })
+      } else {
+        file.arrayBuffer().then(buf => {
+          const font = createFont()
+          loadFont(font, buf)
+          font.fileName.value = file.name
+          addFont(font)
+        })
+      }
     }
     input.click()
   }
@@ -43,7 +57,7 @@ export function Ch8terPane() {
         <FilePlus size={ICON} />
       </IconBtn>
       {showNewDialog && <NewFontDialog onClose={() => setShowNewDialog(false)} />}
-      <IconBtn onClick={handleOpen} title="Open .ch8 file">
+      <IconBtn onClick={handleOpen} title="Open font file">
         <FolderOpen size={ICON} />
       </IconBtn>
       <span class="w-px h-6 bg-gray-300 mx-0.5" />

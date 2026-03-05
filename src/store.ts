@@ -1,5 +1,6 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
+import type { FontMeta } from './bdfParser'
 
 // --- Font Instance ---
 
@@ -10,6 +11,8 @@ export interface FontInstance {
   glyphHeight: Signal<number>
   startChar: Signal<number>
   fileName: Signal<string>
+  meta: Signal<FontMeta | null>
+  encodings: Signal<number[] | null>
   selectedGlyphs: Signal<Set<number>>
   lastClickedGlyph: Signal<number>
   gridZoom: Signal<number>
@@ -28,7 +31,7 @@ export function bytesPerGlyph(font: FontInstance): number {
 
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number): FontInstance {
+export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[]): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
@@ -42,6 +45,8 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     glyphHeight: signal(h),
     startChar: signal(start ?? 32),
     fileName: signal(name ?? 'untitled.ch8'),
+    meta: signal<FontMeta | null>(meta ?? null),
+    encodings: signal<number[] | null>(encodings ?? null),
     selectedGlyphs: signal<Set<number>>(new Set([0])),
     lastClickedGlyph: signal(0),
     gridZoom: signal(5),
@@ -62,6 +67,8 @@ interface StoredFont {
   fontData: string // base64
   glyphWidth?: number
   glyphHeight?: number
+  meta?: FontMeta | null
+  encodings?: number[] | null
 }
 
 // --- Window layout persistence ---
@@ -138,9 +145,13 @@ export function updatePreviewSettings(id: string, settings: Partial<StoredPrevie
 }
 
 function toBase64(data: Uint8Array): string {
-  let binary = ''
-  for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i])
-  return btoa(binary)
+  // Build binary string in chunks to avoid O(n²) string concat
+  const chunks: string[] = []
+  const CHUNK = 8192
+  for (let i = 0; i < data.length; i += CHUNK) {
+    chunks.push(String.fromCharCode(...data.subarray(i, Math.min(i + CHUNK, data.length))))
+  }
+  return btoa(chunks.join(''))
 }
 
 function fromBase64(b64: string): Uint8Array {
@@ -158,7 +169,7 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8)
+      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       return font
@@ -175,12 +186,13 @@ function saveToStorage() {
     fontData: toBase64(f.fontData.value),
     glyphWidth: f.glyphWidth.value,
     glyphHeight: f.glyphHeight.value,
+    meta: f.meta.value,
+    encodings: f.encodings.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
 
 // --- Global state ---
-
 const restored = loadFromStorage()
 export const fonts = signal<FontInstance[]>(restored ?? [createFont()])
 export const activeFontId = signal<string>(fonts.value[0].id)
@@ -325,12 +337,24 @@ export const CHARSETS: Record<string, CharsetDef> = {
     0x60: '\u00A3', // £ (pound, inherited from Spectrum)
     0x7F: '\u00A9', // © (copyright)
   }},
+  imported: { label: 'Imported', overrides: {} },
 }
 
 export type Charset = keyof typeof CHARSETS
 export const charset = signal<Charset>('zx')
 
-export function charLabel(charCode: number): string {
+export function charLabel(charCode: number, font?: FontInstance): string {
+  if (charset.value === 'imported' && font) {
+    const enc = font.encodings.value
+    if (enc) {
+      const idx = charCode - font.startChar.value
+      const cp = idx >= 0 && idx < enc.length ? enc[idx] : -1
+      if (cp > 32 && cp !== 0x7F) {
+        try { return String.fromCodePoint(cp) } catch { /* invalid codepoint */ }
+      }
+      return ''
+    }
+  }
   const overrides = CHARSETS[charset.value]?.overrides
   if (overrides && overrides[charCode]) {
     return overrides[charCode]

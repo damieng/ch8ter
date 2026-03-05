@@ -118,7 +118,7 @@ export function App() {
             onFocus={() => focusFont(font.id)}
             onClose={() => handleClose(font.id)}
           >
-            <div class="p-3">
+            <div class="p-3 h-full flex flex-col overflow-hidden">
               <GlyphGrid font={font} />
             </div>
           </DragWindow>

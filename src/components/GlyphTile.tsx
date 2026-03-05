@@ -46,7 +46,7 @@ export function GlyphTile({ font, index, size, selected, active, onClick }: Prop
   }, [font.fontData.value, index, size, w, h])
 
   const charCode = font.startChar.value + index
-  const label = charLabel(charCode)
+  const label = charLabel(charCode, font)
 
   let borderColor = 'border-gray-300'
   if (active) borderColor = 'border-amber-500'
