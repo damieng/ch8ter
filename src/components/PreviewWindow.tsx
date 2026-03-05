@@ -1,25 +1,171 @@
+import type preact from 'preact'
+import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
 import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, fonts } from '../store'
+import { type FontInstance, fonts, storedPreviews, updatePreviewSettings } from '../store'
 import { sampleTexts } from '../sampleTexts'
 
-const COLOR_SCHEMES = [
-  { name: 'ZX Spectrum', fg: '#c8d0dc', bg: '#1e293b' },
-  { name: 'Green screen', fg: '#33ff33', bg: '#0a1a0a' },
-  { name: 'Amber', fg: '#ffb000', bg: '#1a0e00' },
-  { name: 'White on blue', fg: '#ffffff', bg: '#0000aa' },
-  { name: 'Paper', fg: '#1a1a1a', bg: '#e8e0d0' },
-  { name: 'C64', fg: '#7b71d5', bg: '#3a34a2' },
-  { name: 'Apple II', fg: '#33ff33', bg: '#000000' },
-  { name: 'BBC Micro', fg: '#ffffff', bg: '#000000' },
-  { name: 'Teletext', fg: '#ffffff', bg: '#000080' },
-  { name: 'CPC', fg: '#ffff00', bg: '#000080' },
-  { name: 'TRS-80', fg: '#00ff00', bg: '#000000' },
-  { name: 'Atari ST', fg: '#000000', bg: '#ffffff' },
-  { name: 'MSX', fg: '#ffffff', bg: '#3a34a2' },
-  { name: 'VT100', fg: '#00ff00', bg: '#1a1a1a' },
-  { name: 'Minitel', fg: '#ffffff', bg: '#333333' },
-  { name: 'QL', fg: '#00ff00', bg: '#000000' },
+interface ColorSystem {
+  name: string
+  fg: string
+  bg: string
+  palette?: string[] // if provided, show swatches (up to 128)
+}
+
+const SYSTEMS: ColorSystem[] = [
+  {
+    name: 'Apple II',
+    fg: '#33ff33', bg: '#000000',
+    palette: [
+      '#000000', '#dd0033', '#000099', '#dd22dd',
+      '#007722', '#555555', '#2222ff', '#6699ff',
+      '#885500', '#ff6600', '#aaaaaa', '#ff9988',
+      '#11dd00', '#ffff00', '#44ff99', '#ffffff',
+    ],
+  },
+  {
+    name: 'Atari 8-bit (NTSC)',
+    fg: '#c5a3ff', bg: '#3311cc',
+    palette: [
+      // 16 hues × 8 luminances (GTIA NTSC)
+      '#000000', '#1a1a1a', '#393939', '#5b5b5b', '#7e7e7e', '#a2a2a2', '#c7c7c7', '#ededed',
+      '#190000', '#3a1300', '#5c3200', '#7e5400', '#a17700', '#c59b00', '#eac000', '#ffe600',
+      '#2b0000', '#4c0000', '#6e1100', '#903300', '#b35600', '#d77a00', '#fc9f17', '#ffc53c',
+      '#350000', '#560000', '#780000', '#9a1100', '#bd3400', '#e15800', '#ff7d21', '#ffa346',
+      '#350006', '#56000e', '#780024', '#9a0040', '#bd1063', '#e13487', '#ff59ac', '#ff7fd1',
+      '#2b0032', '#4c0050', '#6e006f', '#90008e', '#b31aae', '#d73ed0', '#fc63f0', '#ff89ff',
+      '#190054', '#3a0072', '#5c0091', '#7e11b0', '#a134ce', '#c558ec', '#ea7dff', '#ffa3ff',
+      '#06006a', '#270088', '#4900a7', '#6b11c6', '#8e34e4', '#b258ff', '#d77dff', '#fca3ff',
+      '#000070', '#00008e', '#1100ad', '#3311cc', '#5634ea', '#7a58ff', '#9f7dff', '#c5a3ff',
+      '#000064', '#000082', '#0011a1', '#1133c0', '#3456de', '#587afc', '#7d9fff', '#a3c5ff',
+      '#00004a', '#000e68', '#003287', '#0054a6', '#1077c4', '#349be2', '#59c0ff', '#7fe6ff',
+      '#000826', '#002244', '#004163', '#006382', '#0086a1', '#1eaac0', '#43cfde', '#68f4fc',
+      '#001000', '#002a18', '#004937', '#006b56', '#008e75', '#22b294', '#47d7b3', '#6cfcd2',
+      '#001c00', '#003600', '#005500', '#007700', '#1a9a00', '#3ebe10', '#63e335', '#88ff5a',
+      '#002000', '#003a00', '#005900', '#0e7b00', '#319e00', '#55c200', '#7ae700', '#a0ff24',
+      '#001800', '#003200', '#0c5100', '#2e7300', '#519600', '#75ba00', '#9adf00', '#c0ff1a',
+    ],
+  },
+  {
+    name: 'Atari 8-bit (PAL)',
+    fg: '#a3c5ff', bg: '#1133c0',
+    palette: [
+      // 16 hues × 8 luminances (GTIA PAL)
+      '#000000', '#1a1a1a', '#393939', '#5b5b5b', '#7e7e7e', '#a2a2a2', '#c7c7c7', '#ededed',
+      '#001800', '#003200', '#0c5100', '#2e7300', '#519600', '#75ba00', '#9adf00', '#c0ff1a',
+      '#002a00', '#004b00', '#006a00', '#0e8c00', '#31af00', '#55d300', '#7af817', '#a0ff3c',
+      '#001c00', '#003600', '#005500', '#007700', '#1a9a00', '#3ebe10', '#63e335', '#88ff5a',
+      '#001000', '#002a18', '#004937', '#006b56', '#008e75', '#22b294', '#47d7b3', '#6cfcd2',
+      '#000826', '#002244', '#004163', '#006382', '#0086a1', '#1eaac0', '#43cfde', '#68f4fc',
+      '#00004a', '#000e68', '#003287', '#0054a6', '#1077c4', '#349be2', '#59c0ff', '#7fe6ff',
+      '#000064', '#000082', '#0011a1', '#1133c0', '#3456de', '#587afc', '#7d9fff', '#a3c5ff',
+      '#000070', '#00008e', '#1100ad', '#3311cc', '#5634ea', '#7a58ff', '#9f7dff', '#c5a3ff',
+      '#06006a', '#270088', '#4900a7', '#6b11c6', '#8e34e4', '#b258ff', '#d77dff', '#fca3ff',
+      '#190054', '#3a0072', '#5c0091', '#7e11b0', '#a134ce', '#c558ec', '#ea7dff', '#ffa3ff',
+      '#2b0032', '#4c0050', '#6e006f', '#90008e', '#b31aae', '#d73ed0', '#fc63f0', '#ff89ff',
+      '#350006', '#56000e', '#780024', '#9a0040', '#bd1063', '#e13487', '#ff59ac', '#ff7fd1',
+      '#350000', '#560000', '#780000', '#9a1100', '#bd3400', '#e15800', '#ff7d21', '#ffa346',
+      '#2b0000', '#4c0000', '#6e1100', '#903300', '#b35600', '#d77a00', '#fc9f17', '#ffc53c',
+      '#190000', '#3a1300', '#5c3200', '#7e5400', '#a17700', '#c59b00', '#eac000', '#ffe600',
+    ],
+  },
+  {
+    name: 'Acorn BBC Micro',
+    fg: '#ffffff', bg: '#000000',
+    palette: [
+      '#000000', '#ff0000', '#00ff00', '#ffff00',
+      '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
+    ],
+  },
+  {
+    name: 'Commodore 64',
+    fg: '#7b71d5', bg: '#3a34a2',
+    palette: [
+      '#000000', '#ffffff', '#880000', '#aaffee',
+      '#cc44cc', '#00cc55', '#0000aa', '#eeee77',
+      '#dd8855', '#664400', '#ff7777', '#333333',
+      '#777777', '#aaff66', '#0088ff', '#bbbbbb',
+    ],
+  },
+  {
+    name: 'Amstrad CPC',
+    fg: '#ffff00', bg: '#000080',
+    palette: [
+      '#000000', '#000080', '#0000ff', '#800000',
+      '#800080', '#8000ff', '#ff0000', '#ff0080',
+      '#ff00ff', '#008000', '#008080', '#0080ff',
+      '#808000', '#808080', '#8080ff', '#ff8000',
+      '#ff8080', '#ff80ff', '#00ff00', '#00ff80',
+      '#00ffff', '#80ff00', '#80ff80', '#80ffff',
+      '#ffff00', '#ffff80', '#ffffff',
+    ],
+  },
+  {
+    name: 'MSX (TMS9918)',
+    fg: '#ffffff', bg: '#3a34a2',
+    palette: [
+      '#000000', '#000000', '#3eb849', '#74d07d',
+      '#5955e0', '#8076f1', '#b95e51', '#65dbef',
+      '#db6559', '#ff897d', '#ccc35e', '#ded087',
+      '#3aa241', '#b766b5', '#cccccc', '#ffffff',
+    ],
+  },
+  {
+    name: 'Sinclair QL',
+    fg: '#00ff00', bg: '#000000',
+    palette: [
+      '#000000', '#ff0000', '#00ff00', '#ffff00',
+      '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
+    ],
+  },
+  {
+    name: 'SAM Coupé',
+    fg: '#00ff00', bg: '#000000',
+    palette: (() => {
+      // 128 colors: BRIGHT bit + 2 bits each R, G, B
+      // Normal levels: 0, 73, 146, 255. Bright adds 36 (capped at 255)
+      const norm = [0, 73, 146, 255]
+      const colors: string[] = []
+      for (const bright of [0, 36]) {
+        for (let r = 0; r < 4; r++) {
+          for (let g = 0; g < 4; g++) {
+            for (let b = 0; b < 4; b++) {
+              const rv = Math.min(255, norm[r] + bright)
+              const gv = Math.min(255, norm[g] + bright)
+              const bv = Math.min(255, norm[b] + bright)
+              colors.push(`#${rv.toString(16).padStart(2, '0')}${gv.toString(16).padStart(2, '0')}${bv.toString(16).padStart(2, '0')}`)
+            }
+          }
+        }
+      }
+      return colors
+    })(),
+  },
+  {
+    name: 'Commodore VIC-20',
+    fg: '#ffffff', bg: '#000000',
+    palette: [
+      '#000000', '#ffffff', '#782922', '#87d6dd',
+      '#aa5fb6', '#55a049', '#40318d', '#bfce72',
+      '#aa7449', '#eab489', '#b86962', '#c7ffff',
+      '#eaa7f6', '#94e089', '#8071cc', '#ffffb2',
+    ],
+  },
+  {
+    name: 'ZX Spectrum',
+    fg: '#000000', bg: '#ffffff',
+    palette: [
+      '#000000', '#0000c0', '#c00000', '#c000c0',
+      '#00c000', '#00c0c0', '#c0c000', '#c0c0c0',
+      '#000000', '#0000ff', '#ff0000', '#ff00ff',
+      '#00ff00', '#00ffff', '#ffff00', '#ffffff',
+    ],
+  },
+  {
+    name: 'Custom',
+    fg: '#000000', bg: '#ffffff',
+    // No palette — uses native color picker
+  },
 ]
 
 // Wrap text into lines, returning wrapped lines and a mapping from
@@ -171,19 +317,99 @@ function renderText(
   }
 }
 
+function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, title }: {
+  chipRef: preact.RefObject<HTMLDivElement | null>
+  popupRef: preact.RefObject<HTMLDivElement | null>
+  color: string
+  open: boolean
+  palette?: string[]
+  onToggle: () => void
+  onPick: (c: string) => void
+  title: string
+}) {
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const nativeRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (open && chipRef.current) {
+      const rect = chipRef.current.getBoundingClientRect()
+      setPos({ x: rect.left, y: rect.bottom + 4 })
+    }
+  }, [open])
+
+  function handleClick() {
+    if (palette) {
+      onToggle()
+    } else {
+      nativeRef.current?.click()
+    }
+  }
+
+  return (
+    <div ref={chipRef}>
+      <button
+        class="w-6 h-6 rounded border-2 border-gray-400 hover:border-gray-600"
+        style={{ backgroundColor: color }}
+        onClick={handleClick}
+        title={title}
+      />
+      {!palette && (
+        <input
+          ref={nativeRef}
+          type="color"
+          value={color}
+          onInput={(e) => onPick((e.target as HTMLInputElement).value)}
+          class="absolute opacity-0 pointer-events-none"
+          style={{ width: 0, height: 0 }}
+        />
+      )}
+      {open && palette && createPortal(
+        <div
+          ref={popupRef}
+          class="fixed bg-white border border-gray-300 rounded shadow-lg p-2"
+          style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
+        >
+          <div class="grid gap-1" style={{ gridTemplateColumns: `repeat(${palette.length > 16 ? 16 : Math.min(8, palette.length)}, 1fr)` }}>
+            {palette.map((c, i) => (
+              <button
+                key={i}
+                class={`w-5 h-5 rounded border ${c === color ? 'border-blue-500 border-2' : 'border-gray-300'}`}
+                style={{ backgroundColor: c }}
+                onClick={() => onPick(c)}
+              />
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
 interface Props {
+  previewId: string
   initialFontId: string
 }
 
-export function PreviewWindow({ initialFontId }: Props) {
-  const [selectedFontId, setSelectedFontId] = useState(initialFontId)
-  const [textKey, setTextKey] = useState('0-0')
-  const [zoom, setZoom] = useState(2)
+export function PreviewWindow({ previewId, initialFontId }: Props) {
+  const stored = storedPreviews.value.find(s => s.id === previewId)
+  const [selectedFontId, setSelectedFontId] = useState(stored?.selectedFontId ?? initialFontId)
+  const [textKey, setTextKey] = useState(stored?.textKey ?? '0-0')
+  const [zoom, setZoom] = useState(stored?.zoom ?? 2)
   const [zoomOpen, setZoomOpen] = useState(false)
-  const [colorIdx, setColorIdx] = useState(0)
+  const initSysIdx = stored?.systemIdx ?? SYSTEMS.findIndex(s => s.name === 'ZX Spectrum')
+  const [systemIdx, setSystemIdx] = useState(initSysIdx >= 0 ? initSysIdx : 0)
+  const [fg, setFg] = useState(stored?.fg ?? SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].fg)
+  const [bg, setBg] = useState(stored?.bg ?? SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
+  const [fgPickerOpen, setFgPickerOpen] = useState(false)
+  const [bgPickerOpen, setBgPickerOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<HTMLDivElement>(null)
+  const fgRef = useRef<HTMLDivElement>(null)
+  const bgRef = useRef<HTMLDivElement>(null)
+  const fgPopupRef = useRef<HTMLDivElement>(null)
+  const bgPopupRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
@@ -195,6 +421,7 @@ export function PreviewWindow({ initialFontId }: Props) {
 
   const allFonts = fonts.value
   const font = allFonts.find(f => f.id === selectedFontId) ?? allFonts[0]
+  const system = SYSTEMS[systemIdx]
 
   const initialText = useMemo(() => {
     const [gi, ii] = textKey.split('-').map(Number)
@@ -213,7 +440,13 @@ export function PreviewWindow({ initialFontId }: Props) {
     }
   }, [initialText])
 
-  const scheme = COLOR_SCHEMES[colorIdx]
+  // Persist preview settings
+  useEffect(() => {
+    updatePreviewSettings(previewId, {
+      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId,
+    })
+  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg])
+
   const [cols, setCols] = useState(32)
 
   useEffect(() => {
@@ -252,9 +485,9 @@ export function PreviewWindow({ initialFontId }: Props) {
 
   useEffect(() => {
     if (canvasRef.current && font) {
-      renderText(canvasRef.current, font, text, zoom, cols, scheme.fg, scheme.bg, cursorPos, cursorVisible, selected)
+      renderText(canvasRef.current, font, text, zoom, cols, fg, bg, cursorPos, cursorVisible, selected)
     }
-  }, [font?.fontData.value, font?.id, text, zoom, cols, colorIdx, cursorPos?.row, cursorPos?.col, cursorVisible, selStart, selEnd, selTick])
+  }, [font?.fontData.value, font?.id, text, zoom, cols, fg, bg, cursorPos?.row, cursorPos?.col, cursorVisible, selStart, selEnd, selTick])
 
   // Convert canvas pixel coordinates to a text offset
   function hitTest(clientX: number, clientY: number): number {
@@ -354,9 +587,10 @@ export function PreviewWindow({ initialFontId }: Props) {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (zoomRef.current && !zoomRef.current.contains(e.target as Node)) {
-        setZoomOpen(false)
-      }
+      const t = e.target as Node
+      if (zoomRef.current && !zoomRef.current.contains(t)) setZoomOpen(false)
+      if (fgRef.current && !fgRef.current.contains(t) && !(fgPopupRef.current && fgPopupRef.current.contains(t))) setFgPickerOpen(false)
+      if (bgRef.current && !bgRef.current.contains(t) && !(bgPopupRef.current && bgPopupRef.current.contains(t))) setBgPickerOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -409,13 +643,38 @@ export function PreviewWindow({ initialFontId }: Props) {
         </select>
         <select
           class="px-2 py-1 bg-white rounded border border-gray-300 text-sm"
-          value={colorIdx}
-          onChange={(e) => setColorIdx(parseInt((e.target as HTMLSelectElement).value))}
+          value={systemIdx}
+          onChange={(e) => {
+            const idx = parseInt((e.target as HTMLSelectElement).value)
+            setSystemIdx(idx)
+            setFg(SYSTEMS[idx].fg)
+            setBg(SYSTEMS[idx].bg)
+          }}
         >
-          {COLOR_SCHEMES.map((c, i) => (
-            <option key={i} value={i}>{c.name}</option>
+          {SYSTEMS.map((s, i) => (
+            <option key={i} value={i}>{s.name}</option>
           ))}
         </select>
+        <ColorChip
+          chipRef={fgRef}
+          popupRef={fgPopupRef}
+          color={fg}
+          open={fgPickerOpen}
+          palette={system.palette}
+          onToggle={() => { setFgPickerOpen(!fgPickerOpen); setBgPickerOpen(false) }}
+          onPick={(c) => { setFg(c); setFgPickerOpen(false) }}
+          title="Foreground color"
+        />
+        <ColorChip
+          chipRef={bgRef}
+          popupRef={bgPopupRef}
+          color={bg}
+          open={bgPickerOpen}
+          palette={system.palette}
+          onToggle={() => { setBgPickerOpen(!bgPickerOpen); setFgPickerOpen(false) }}
+          onPick={(c) => { setBg(c); setBgPickerOpen(false) }}
+          title="Background color"
+        />
         <div class="relative ml-auto" ref={zoomRef}>
           <button
             class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"
@@ -443,7 +702,7 @@ export function PreviewWindow({ initialFontId }: Props) {
       <div
         ref={containerRef}
         class="flex-1 overflow-auto p-3 relative"
-        style={{ backgroundColor: scheme.bg }}
+        style={{ backgroundColor: bg }}
       >
         <canvas
           ref={canvasRef}

@@ -1,10 +1,12 @@
-import { useRef, useEffect, useState } from 'preact/hooks'
+import { useRef, useEffect, useState, useCallback } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
+import { windowLayouts, updateWindowLayout } from '../store'
 
 interface Props {
   title: string | ComponentChildren
   children: ComponentChildren
   statusBar?: ComponentChildren
+  windowId?: string
   initialX: number
   initialY: number
   initialW?: number
@@ -17,12 +19,21 @@ interface Props {
 }
 
 export function DragWindow({
-  title, children, statusBar, initialX, initialY,
+  title, children, statusBar, windowId, initialX, initialY,
   initialW, initialH, resizable, aspectRatio,
   onFocus, onClose, zIndex = 1
 }: Props) {
-  const [pos, setPos] = useState({ x: initialX, y: initialY })
-  const [size, setSize] = useState({ w: initialW ?? 0, h: initialH ?? 0 })
+  const stored = windowId ? windowLayouts.value[windowId] : undefined
+  const [pos, setPos] = useState({ x: stored?.x ?? initialX, y: stored?.y ?? initialY })
+  const [size, setSize] = useState({ w: stored?.w ?? (initialW ?? 0), h: stored?.h ?? (initialH ?? 0) })
+
+  const saveLayout = useCallback(() => {
+    if (windowId) {
+      updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: size.w, h: size.h })
+    }
+  }, [windowId, pos.x, pos.y, size.w, size.h])
+
+  useEffect(() => { saveLayout() }, [saveLayout])
   const dragging = useRef(false)
   const resizing = useRef(false)
   const offset = useRef({ x: 0, y: 0 })

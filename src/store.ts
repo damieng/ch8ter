@@ -35,11 +35,83 @@ export function createFont(data?: Uint8Array, name?: string, start?: number): Fo
 // --- localStorage persistence ---
 
 const STORAGE_KEY = 'ch8ter-fonts'
+const LAYOUT_KEY = 'ch8ter-layout'
 
 interface StoredFont {
   fileName: string
   startChar: number
   fontData: string // base64
+}
+
+// --- Window layout persistence ---
+
+export interface WindowRect {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export interface StoredPreview {
+  id: string
+  fontId: string
+  selectedFontId?: string
+  textKey?: string
+  zoom?: number
+  systemIdx?: number
+  fg?: string
+  bg?: string
+}
+
+interface StoredLayout {
+  windows: Record<string, WindowRect>
+  previews: StoredPreview[]
+  focusedId: string
+}
+
+export const windowLayouts = signal<Record<string, WindowRect>>({})
+export const storedPreviews = signal<StoredPreview[]>([])
+export const storedFocusedId = signal<string>('ch8ter')
+
+export function updateWindowLayout(id: string, rect: Partial<WindowRect>) {
+  const current = windowLayouts.value[id] ?? { x: 0, y: 0, w: 0, h: 0 }
+  windowLayouts.value = { ...windowLayouts.value, [id]: { ...current, ...rect } }
+}
+
+function loadLayout() {
+  try {
+    const raw = localStorage.getItem(LAYOUT_KEY)
+    if (!raw) return
+    const layout: StoredLayout = JSON.parse(raw)
+    if (layout.windows) windowLayouts.value = layout.windows
+    if (layout.previews) storedPreviews.value = layout.previews
+    if (layout.focusedId) storedFocusedId.value = layout.focusedId
+  } catch { /* ignore */ }
+}
+
+function saveLayout() {
+  const layout: StoredLayout = {
+    windows: windowLayouts.value,
+    previews: previews.value.map(p => {
+      // Merge runtime preview state
+      const stored = storedPreviews.value.find(s => s.id === p.id)
+      return { id: p.id, fontId: p.fontId, ...stored }
+    }),
+    focusedId: storedFocusedId.value,
+  }
+  localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
+}
+
+export function updatePreviewSettings(id: string, settings: Partial<StoredPreview>) {
+  const list = storedPreviews.value
+  const idx = list.findIndex(s => s.id === id)
+  if (idx >= 0) {
+    const updated = [...list]
+    updated[idx] = { ...updated[idx], ...settings }
+    storedPreviews.value = updated
+  } else {
+    storedPreviews.value = [...list, { id, fontId: '', ...settings }]
+  }
 }
 
 function toBase64(data: Uint8Array): string {
@@ -146,7 +218,32 @@ export function openPreview(fontId: string) {
 
 export function closePreview(id: string) {
   previews.value = previews.value.filter(p => p.id !== id)
+  // Clean up stored settings
+  storedPreviews.value = storedPreviews.value.filter(s => s.id !== id)
 }
+
+// Restore previews and layout from localStorage
+loadLayout()
+const restoredPreviews = storedPreviews.value
+if (restoredPreviews.length > 0) {
+  // Ensure preview IDs don't conflict
+  const maxId = restoredPreviews.reduce((max, p) => {
+    const n = parseInt(p.id.replace('preview-', ''))
+    return isNaN(n) ? max : Math.max(max, n)
+  }, 0)
+  nextPreviewId = maxId + 1
+  previews.value = restoredPreviews.map(p => ({ id: p.id, fontId: p.fontId }))
+}
+
+// Auto-save layout
+effect(() => {
+  // Track window layouts and preview state
+  windowLayouts.value
+  previews.value
+  storedPreviews.value
+  storedFocusedId.value
+  saveLayout()
+})
 
 // --- Charset (global display preference) ---
 

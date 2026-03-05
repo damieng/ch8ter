@@ -9,22 +9,22 @@ import { EditorTitle } from './components/EditorTitle'
 import { CharSetTitle } from './components/CharSetTitle'
 import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId, storedFocusedId, storedPreviews } from './store'
 import { PreviewWindow } from './components/PreviewWindow'
 
 export function App() {
-  const [focusedId, setFocusedId] = useState<string>('ch8ter')
+  const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
 
   const currentActiveId = activeFontId.value
   useEffect(() => {
     if (currentActiveId && fonts.value.some(f => f.id === currentActiveId)) {
-      setFocusedId(currentActiveId)
+      setFocus(currentActiveId)
     }
   }, [currentActiveId])
 
   const lastPreview = lastOpenedPreviewId.value
   useEffect(() => {
-    if (lastPreview) setFocusedId(lastPreview)
+    if (lastPreview) setFocus(lastPreview)
   }, [lastPreview])
 
   const allFonts = fonts.value
@@ -42,8 +42,13 @@ export function App() {
     return 1
   }
 
+  function setFocus(id: string) {
+    setFocusedId(id)
+    storedFocusedId.value = id
+  }
+
   function focusFont(fontId: string) {
-    setFocusedId(fontId)
+    setFocus(fontId)
     activeFontId.value = fontId
   }
 
@@ -60,11 +65,12 @@ export function App() {
       {/* Ch8ter pane */}
       <DragWindow
         title={<Ch8terTitle />}
+        windowId="ch8ter"
         initialX={16}
         initialY={16}
         initialW={380}
         zIndex={getZIndex('ch8ter')}
-        onFocus={() => setFocusedId('ch8ter')}
+        onFocus={() => setFocus('ch8ter')}
       >
         <Ch8terPane />
       </DragWindow>
@@ -74,6 +80,7 @@ export function App() {
         <Fragment key={font.id}>
           <DragWindow
             title={<EditorTitle font={font} />}
+            windowId={`editor-${font.id}`}
             initialX={16 + i * 30}
             initialY={120 + i * 30}
             initialW={380}
@@ -93,6 +100,7 @@ export function App() {
 
           <DragWindow
             title={<CharSetTitle font={font} />}
+            windowId={`grid-${font.id}`}
             initialX={420 + i * 30}
             initialY={16 + i * 30}
             initialW={700}
@@ -115,16 +123,17 @@ export function App() {
         <DragWindow
           key={p.id}
           title="Preview"
+          windowId={p.id}
           initialX={200 + i * 30}
           initialY={100 + i * 30}
           initialW={600}
           initialH={450}
           resizable
           zIndex={getZIndex(p.id)}
-          onFocus={() => setFocusedId(p.id)}
+          onFocus={() => setFocus(p.id)}
           onClose={() => closePreview(p.id)}
         >
-          <PreviewWindow initialFontId={p.fontId} />
+          <PreviewWindow previewId={p.id} initialFontId={p.fontId} />
         </DragWindow>
       ))}
     </div>
