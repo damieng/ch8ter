@@ -303,6 +303,46 @@ export function getPixel(font: FontInstance, glyphIndex: number, x: number, y: n
   return (font.fontData.value[offset] & (0x80 >> x)) !== 0
 }
 
+export function glyphToText(font: FontInstance, glyphIndex: number): string {
+  const data = font.fontData.value
+  const offset = glyphIndex * 8
+  const rows: string[] = []
+  for (let y = 0; y < 8; y++) {
+    let row = ''
+    for (let x = 0; x < 8; x++) {
+      row += (data[offset + y] & (0x80 >> x)) ? '*' : ' '
+    }
+    rows.push(row)
+  }
+  return rows.join('\r\n')
+}
+
+export function clearGlyph(font: FontInstance, glyphIndex: number) {
+  const data = new Uint8Array(font.fontData.value)
+  const offset = glyphIndex * 8
+  for (let y = 0; y < 8; y++) data[offset + y] = 0
+  font.fontData.value = data
+  markDirty(font)
+}
+
+export function pasteGlyph(font: FontInstance, glyphIndex: number, text: string): boolean {
+  const rows = text.split(/\r?\n/)
+  if (rows.length !== 8) return false
+  if (!rows.every(r => r.length === 8 && /^[ *]{8}$/.test(r))) return false
+  const data = new Uint8Array(font.fontData.value)
+  const offset = glyphIndex * 8
+  for (let y = 0; y < 8; y++) {
+    let byte = 0
+    for (let x = 0; x < 8; x++) {
+      if (rows[y][x] === '*') byte |= (0x80 >> x)
+    }
+    data[offset + y] = byte
+  }
+  font.fontData.value = data
+  markDirty(font)
+  return true
+}
+
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
   const data = new Uint8Array(font.fontData.value)
   const offset = glyphIndex * 8 + y

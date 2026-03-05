@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey } from '../store'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, pasteGlyph, clearGlyph } from '../store'
 import { Eye } from 'lucide-preact'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
@@ -84,6 +84,33 @@ export function GlyphGrid({ font }: Props) {
       if (activeFontId.value !== font.id) return
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+
+      const active = font.lastClickedGlyph.value
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const text = glyphToText(font, active)
+        navigator.clipboard.writeText(text)
+        e.preventDefault()
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        const text = glyphToText(font, active)
+        navigator.clipboard.writeText(text)
+        clearGlyph(font, active)
+        e.preventDefault()
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        navigator.clipboard.readText().then(text => {
+          pasteGlyph(font, active, text)
+        })
+        e.preventDefault()
+        return
+      }
+
+      if (e.ctrlKey || e.metaKey || e.altKey) return
 
       const charCode = charCodeFromKey(e.key)
       if (charCode === null) return
