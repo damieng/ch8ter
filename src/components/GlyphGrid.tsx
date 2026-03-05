@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
-import { ZoomIn, Eye, Maximize2 } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
+import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
+import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
 import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
@@ -83,6 +83,7 @@ interface Props {
 }
 
 export function GlyphGrid({ font }: Props) {
+  const [hideEmpty, setHideEmpty] = useState(false)
   const count = glyphCount(font)
   const zoomLevel = font.gridZoom.value
   const tileSize = Math.max(font.glyphWidth.value, font.glyphHeight.value) * zoomLevel
@@ -127,22 +128,42 @@ export function GlyphGrid({ font }: Props) {
     return () => { el.removeEventListener('scroll', onScroll); obs.disconnect(); cancelAnimationFrame(rafRef.current) }
   }, [])
 
+  // Build index of visible glyph indices (filter empty when toggle is on)
+  const data = font.fontData.value
+  const bpg = bytesPerGlyph(font)
+  let visibleIndices: number[]
+  if (hideEmpty) {
+    visibleIndices = []
+    for (let i = 0; i < count; i++) {
+      const offset = i * bpg
+      let empty = true
+      for (let b = 0; b < bpg; b++) {
+        if (data[offset + b] !== 0) { empty = false; break }
+      }
+      if (!empty) visibleIndices.push(i)
+    }
+  } else {
+    visibleIndices = Array.from({ length: count }, (_, i) => i)
+  }
+  const visibleCount = visibleIndices.length
+
   const cols = tileOuterW > 0 ? Math.max(1, Math.floor((viewWidth - gap) / tileOuterW)) : 1
-  const rows = Math.ceil(count / cols)
+  const rows = Math.ceil(visibleCount / cols)
   const totalHeight = rows * tileOuterH + gap
 
   // Visible row range
   const startRow = Math.max(0, Math.floor(scrollTop / tileOuterH) - 1)
   const endRow = Math.min(rows, Math.ceil((scrollTop + viewHeight) / tileOuterH) + 1)
 
-  // Build visible tiles - no useMemo since signals handle granular updates
+  // Build visible tiles
   const selectedSet = font.selectedGlyphs.value
   const activeIdx = font.lastClickedGlyph.value
   const visibleTiles = []
   for (let row = startRow; row < endRow; row++) {
     for (let col = 0; col < cols; col++) {
-      const i = row * cols + col
-      if (i >= count) break
+      const slot = row * cols + col
+      if (slot >= visibleCount) break
+      const i = visibleIndices[slot]
       visibleTiles.push(
         <div
           key={i}
@@ -237,7 +258,9 @@ export function GlyphGrid({ font }: Props) {
   useEffect(() => {
     const active = font.lastClickedGlyph.value
     if (active < 0 || active >= count || !scrollRef.current) return
-    const row = Math.floor(active / cols)
+    const slot = hideEmpty ? visibleIndices.indexOf(active) : active
+    if (slot < 0) return
+    const row = Math.floor(slot / cols)
     const tileTop = gap + row * tileOuterH
     const tileBottom = tileTop + tileOuterH
     const el = scrollRef.current
@@ -252,11 +275,19 @@ export function GlyphGrid({ font }: Props) {
     <div class="flex flex-col h-full">
       <div class="flex items-center gap-4 mb-3 flex-wrap shrink-0">
         <SaveBar font={font} />
-        <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs selected</span>
+        <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs{hideEmpty ? ` (${visibleCount} shown)` : ''}</span>
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
         <SizeButton font={font} />
         <PreviewButton font={font} />
+        <button
+          class={`px-2 py-1 rounded border font-medium flex items-center gap-1 ${hideEmpty ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-white hover:bg-blue-50 border-gray-300'}`}
+          onClick={() => setHideEmpty(!hideEmpty)}
+          title={hideEmpty ? 'Show all glyphs' : 'Hide empty glyphs'}
+        >
+          <EyeOff size={16} />
+          Hide empty
+        </button>
         <div class="ml-auto">
           <ZoomDropdown font={font} />
         </div>
