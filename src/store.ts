@@ -267,6 +267,32 @@ function shiftRight(bytes: Uint8Array): Uint8Array {
   return out
 }
 
+function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
+  let minX = 8, maxX = -1
+  for (let y = 0; y < 8; y++) {
+    if (bytes[y] === 0) continue
+    for (let x = 0; x < 8; x++) {
+      if (bytes[y] & (0x80 >> x)) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+      }
+    }
+  }
+  if (maxX < 0) return new Uint8Array(8) // empty glyph
+  const currentCenter = (minX + maxX) / 2
+  const shift = Math.round(3.5 - currentCenter)
+  if (shift === 0) return new Uint8Array(bytes)
+  const out = new Uint8Array(8)
+  for (let y = 0; y < 8; y++) {
+    if (shift > 0) {
+      out[y] = (bytes[y] << shift) & 0xFF
+    } else {
+      out[y] = bytes[y] >> -shift
+    }
+  }
+  return out
+}
+
 function applyToGlyph(font: FontInstance, index: number, fn: (b: Uint8Array) => Uint8Array) {
   const data = new Uint8Array(font.fontData.value)
   const offset = index * 8
@@ -297,6 +323,7 @@ export const activeShiftUp = (font: FontInstance) => applyToGlyph(font, font.las
 export const activeShiftDown = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftDown)
 export const activeShiftLeft = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftLeft)
 export const activeShiftRight = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftRight)
+export const activeCenterH = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes)
 
 // Selection transforms (Tools dropdown)
 export const selFlipX = (font: FontInstance) => applyToSelected(font, flipXBytes)
@@ -308,6 +335,7 @@ export const selShiftUp = (font: FontInstance) => applyToSelected(font, shiftUp)
 export const selShiftDown = (font: FontInstance) => applyToSelected(font, shiftDown)
 export const selShiftLeft = (font: FontInstance) => applyToSelected(font, shiftLeft)
 export const selShiftRight = (font: FontInstance) => applyToSelected(font, shiftRight)
+export const selCenterH = (font: FontInstance) => applyToSelected(font, centerHorizontalBytes)
 
 // Copy case
 function copyRange(font: FontInstance, srcStart: number, srcEnd: number, dstStart: number) {
@@ -355,6 +383,31 @@ export function createBoldVariant(font: FontInstance) {
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
   const newFont = createFont(bold, name, font.startChar.value)
+  addFont(newFont)
+}
+
+// Outline variant — set pixels become the border of the original shape
+export function createOutlineVariant(font: FontInstance) {
+  const src = font.fontData.value
+  const count = src.length / 8
+  const outline = new Uint8Array(src.length)
+  for (let g = 0; g < count; g++) {
+    const offset = g * 8
+    const bytes = src.slice(offset, offset + 8)
+    // Expand: OR each pixel with its 4 neighbours
+    const expanded = new Uint8Array(8)
+    for (let y = 0; y < 8; y++) {
+      expanded[y] = bytes[y] | ((bytes[y] << 1) & 0xFF) | (bytes[y] >> 1)
+      if (y > 0) expanded[y] |= bytes[y - 1]
+      if (y < 7) expanded[y] |= bytes[y + 1]
+    }
+    // Outline = expanded XOR original (border pixels only)
+    for (let y = 0; y < 8; y++) {
+      outline[offset + y] = expanded[y] ^ bytes[y]
+    }
+  }
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-outline$1')
+  const newFont = createFont(outline, name, font.startChar.value)
   addFont(newFont)
 }
 

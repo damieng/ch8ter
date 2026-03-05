@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, AlignCenterHorizontal, Wrench, ChevronDown
 } from 'lucide-preact'
 import {
   type FontInstance,
   selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
-  selShiftUp, selShiftDown, selShiftLeft, selShiftRight,
-  copyUpperToLower, copyLowerToUpper, createBoldVariant
+  selShiftUp, selShiftDown, selShiftLeft, selShiftRight, selCenterH,
+  copyUpperToLower, copyLowerToUpper, createBoldVariant, createOutlineVariant
 } from '../store'
 import { ObliqueDialog } from './ObliqueDialog'
 
@@ -75,12 +75,14 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
             {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => selShiftDown(font))}
             {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => selShiftLeft(font))}
             {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => selShiftRight(font))}
+            {iconBtn(<AlignCenterHorizontal size={ICON} />, 'Center horizontal', () => selCenterH(font))}
           </div>
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}
           {menuItem('Copy Lower to Upper', () => copyLowerToUpper(font))}
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Create Bold', () => createBoldVariant(font))}
+          {menuItem('Create Outline', () => createOutlineVariant(font))}
           {menuItem('Create Oblique...', () => setObliqueOpen(true))}
         </div>
       )}
