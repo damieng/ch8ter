@@ -1,8 +1,9 @@
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, AlignCenterHorizontal,
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   Save
 } from 'lucide-preact'
+import { CenterHIcon } from './CenterHIcon'
 import {
   type FontInstance,
   activeFlipX, activeFlipY, activeInvert, activeRotateCW, activeRotateCCW,
@@ -55,7 +56,7 @@ export function Toolbar({ font }: { font: FontInstance }) {
       <IconBtn onClick={() => activeShiftDown(font)} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeShiftLeft(font)} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
       <IconBtn onClick={() => activeShiftRight(font)} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
-      <IconBtn onClick={() => activeCenterH(font)} title="Center horizontal"><AlignCenterHorizontal size={ICON} /></IconBtn>
+      <IconBtn onClick={() => activeCenterH(font)} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
     </div>
   )
 }

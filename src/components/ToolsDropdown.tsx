@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, AlignCenterHorizontal, Wrench, ChevronDown
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
 } from 'lucide-preact'
+import { CenterHIcon } from './CenterHIcon'
 import {
   type FontInstance,
   selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
@@ -75,7 +76,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
             {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => selShiftDown(font))}
             {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => selShiftLeft(font))}
             {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => selShiftRight(font))}
-            {iconBtn(<AlignCenterHorizontal size={ICON} />, 'Center horizontal', () => selCenterH(font))}
+            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => selCenterH(font))}
           </div>
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}

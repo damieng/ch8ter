@@ -89,7 +89,7 @@ export function DragWindow({
     >
       <div
         ref={titleRef}
-        class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border-b border-gray-300 cursor-move select-none shrink-0"
+        class={`flex items-center gap-2 px-3 py-1.5 border-b border-gray-300 cursor-move select-none shrink-0 ${zIndex > 1 ? 'bg-blue-100' : 'bg-gray-100'}`}
         onMouseDown={onTitleMouseDown}
       >
         <span class="font-bold text-sm flex-1">{title}</span>

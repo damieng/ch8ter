@@ -9,36 +9,41 @@ import { EditorTitle } from './components/EditorTitle'
 import { CharSetTitle } from './components/CharSetTitle'
 import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId } from './store'
+import { PreviewWindow } from './components/PreviewWindow'
 
 export function App() {
-  // Track which font pair is in the foreground (null = ch8ter pane focused)
-  const [focusedFontId, setFocusedFontId] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useState<string>('ch8ter')
 
-  // When a new font is added/activated, bring its windows to front
   const currentActiveId = activeFontId.value
   useEffect(() => {
     if (currentActiveId && fonts.value.some(f => f.id === currentActiveId)) {
-      setFocusedFontId(currentActiveId)
+      setFocusedId(currentActiveId)
     }
   }, [currentActiveId])
 
-  const allFonts = fonts.value
-  const maxZ = allFonts.length * 2 + 3
+  const lastPreview = lastOpenedPreviewId.value
+  useEffect(() => {
+    if (lastPreview) setFocusedId(lastPreview)
+  }, [lastPreview])
 
+  const allFonts = fonts.value
+  const TOP = 100
+
+  // Focused font brings both its editor and grid to top
+  // Focused preview or ch8ter just brings itself to top
   function getZIndex(windowId: string): number {
-    if (windowId === 'ch8ter') {
-      return focusedFontId === null ? maxZ : 2
+    // Extract the font id for paired windows
+    const pairedFontId = windowId.startsWith('editor-') ? windowId.slice(7) : windowId
+
+    if (pairedFontId === focusedId) {
+      return windowId.startsWith('editor-') ? TOP - 1 : TOP
     }
-    // Both the font window and its editor share the same high z-index when focused
-    const fontId = windowId.startsWith('editor-') ? windowId.slice(7) : windowId
-    if (fontId === focusedFontId) return maxZ - (windowId.startsWith('editor-') ? 1 : 0)
-    const idx = allFonts.findIndex(f => f.id === fontId)
-    return Math.max(1, idx + 3)
+    return 1
   }
 
   function focusFont(fontId: string) {
-    setFocusedFontId(fontId)
+    setFocusedId(fontId)
     activeFontId.value = fontId
   }
 
@@ -59,7 +64,7 @@ export function App() {
         initialY={16}
         initialW={380}
         zIndex={getZIndex('ch8ter')}
-        onFocus={() => setFocusedFontId(null)}
+        onFocus={() => setFocusedId('ch8ter')}
       >
         <Ch8terPane />
       </DragWindow>
@@ -103,6 +108,24 @@ export function App() {
             </div>
           </DragWindow>
         </Fragment>
+      ))}
+
+      {/* Preview windows */}
+      {previews.value.map((p, i) => (
+        <DragWindow
+          key={p.id}
+          title="Preview"
+          initialX={200 + i * 30}
+          initialY={100 + i * 30}
+          initialW={600}
+          initialH={450}
+          resizable
+          zIndex={getZIndex(p.id)}
+          onFocus={() => setFocusedId(p.id)}
+          onClose={() => closePreview(p.id)}
+        >
+          <PreviewWindow initialFontId={p.fontId} />
+        </DragWindow>
       ))}
     </div>
   )

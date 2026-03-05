@@ -1,4 +1,4 @@
-import { signal, type Signal } from '@preact/signals'
+import { signal, type Signal, effect } from '@preact/signals'
 
 // --- Font Instance ---
 
@@ -32,10 +32,73 @@ export function createFont(data?: Uint8Array, name?: string, start?: number): Fo
   }
 }
 
+// --- localStorage persistence ---
+
+const STORAGE_KEY = 'ch8ter-fonts'
+
+interface StoredFont {
+  fileName: string
+  startChar: number
+  fontData: string // base64
+}
+
+function toBase64(data: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i])
+  return btoa(binary)
+}
+
+function fromBase64(b64: string): Uint8Array {
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+function loadFromStorage(): FontInstance[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const stored: StoredFont[] = JSON.parse(raw)
+    if (!Array.isArray(stored) || stored.length === 0) return null
+    return stored.map(s => {
+      const data = fromBase64(s.fontData)
+      const font = createFont(data, s.fileName, s.startChar)
+      font.savedSnapshot.value = new Uint8Array(data)
+      font.dirty.value = false
+      return font
+    })
+  } catch {
+    return null
+  }
+}
+
+function saveToStorage() {
+  const stored: StoredFont[] = fonts.value.map(f => ({
+    fileName: f.fileName.value,
+    startChar: f.startChar.value,
+    fontData: toBase64(f.fontData.value),
+  }))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+}
+
 // --- Global state ---
 
-export const fonts = signal<FontInstance[]>([createFont()])
+const restored = loadFromStorage()
+export const fonts = signal<FontInstance[]>(restored ?? [createFont()])
 export const activeFontId = signal<string>(fonts.value[0].id)
+
+// Auto-save to localStorage on any font data/name/list change
+effect(() => {
+  // Access all reactive values we want to track
+  const allFonts = fonts.value
+  for (const f of allFonts) {
+    f.fontData.value
+    f.fileName.value
+    f.startChar.value
+  }
+  saveToStorage()
+})
 
 function isEmptyUntitled(f: FontInstance): boolean {
   if (f.dirty.value) return false
@@ -61,6 +124,28 @@ export function removeFont(id: string) {
   if (activeFontId.value === id) {
     activeFontId.value = remaining[0].id
   }
+}
+
+// --- Preview windows ---
+
+export interface PreviewInstance {
+  id: string
+  fontId: string
+}
+
+let nextPreviewId = 1
+
+export const previews = signal<PreviewInstance[]>([])
+export const lastOpenedPreviewId = signal<string | null>(null)
+
+export function openPreview(fontId: string) {
+  const id = `preview-${nextPreviewId++}`
+  previews.value = [...previews.value, { id, fontId }]
+  lastOpenedPreviewId.value = id
+}
+
+export function closePreview(id: string) {
+  previews.value = previews.value.filter(p => p.id !== id)
 }
 
 // --- Charset (global display preference) ---

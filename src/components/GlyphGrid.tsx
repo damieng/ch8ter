@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId } from '../store'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview } from '../store'
+import { Eye } from 'lucide-preact'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
@@ -47,6 +48,44 @@ function ZoomDropdown({ font }: { font: FontInstance }) {
   )
 }
 
+function PreviewDropdown({ font }: { font: FontInstance }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div class="relative" ref={ref}>
+      <button
+        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
+        onClick={() => setOpen(!open)}
+      >
+        <Eye size={16} />
+        Preview
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-32">
+          <button
+            class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
+            onClick={() => { openPreview(font.id); setOpen(false) }}
+          >
+            Text
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   font: FontInstance
 }
@@ -81,6 +120,7 @@ export function GlyphGrid({ font }: Props) {
         <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs selected</span>
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
+        <PreviewDropdown font={font} />
         <div class="ml-auto">
           <ZoomDropdown font={font} />
         </div>
