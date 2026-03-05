@@ -577,63 +577,89 @@ export function createOutlineVariant(font: FontInstance) {
   addFont(newFont)
 }
 
-// Oblique variant — shear each glyph horizontally based on angle
-// Auto-shifts glyph left/right if shearing would clip set pixels
-// Fills gaps between adjacent rows to preserve stroke continuity
+// Oblique variant — shear via float-precision transform + Bresenham re-rasterize
+// For each original pixel, compute exact sheared position. Then draw Bresenham
+// lines between all pairs of originally 8-connected pixels to preserve strokes.
 export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number): Uint8Array {
   const tan = Math.tan((angleDegrees * Math.PI) / 180)
-  const shifts: number[] = []
-  for (let y = 0; y < 8; y++) {
-    shifts.push(Math.round(tan * (3.5 - y)))
-  }
 
-  // Find leftmost and rightmost set pixel across all rows after shear
-  let minBit = 8, maxBit = -1
-  for (let y = 0; y < 8; y++) {
-    if (bytes[y] === 0) continue
-    for (let x = 0; x < 8; x++) {
-      if (bytes[y] & (0x80 >> x)) {
-        const newX = x - shifts[y]
-        if (newX < minBit) minBit = newX
-        if (newX > maxBit) maxBit = newX
-      }
-    }
-  }
+  // Collect original set pixels
+  const orig: { x: number; y: number }[] = []
+  const isSet = (x: number, y: number) =>
+    x >= 0 && x < 8 && y >= 0 && y < 8 && (bytes[y] & (0x80 >> x)) !== 0
 
-  // Calculate centering offset to keep glyph within 0-7
+  for (let y = 0; y < 8; y++)
+    for (let x = 0; x < 8; x++)
+      if (isSet(x, y)) orig.push({ x, y })
+
+  if (orig.length === 0) return new Uint8Array(8)
+
+  // Compute exact sheared x for each pixel (y stays the same)
+  const shearedFloat = orig.map(p => ({
+    x: p.x + tan * (3.5 - p.y),
+    y: p.y,
+    ox: p.x, oy: p.y,
+  }))
+
+  // Auto-center: find bounds and adjust
+  let minX = Infinity, maxX = -Infinity
+  for (const p of shearedFloat) {
+    if (p.x < minX) minX = p.x
+    if (p.x > maxX) maxX = p.x
+  }
   let adjust = 0
-  if (minBit < 0) adjust = -minBit
-  if (maxBit > 7) adjust = 7 - maxBit
-  if (minBit + adjust < 0) adjust = -minBit
+  if (minX < 0) adjust = -minX
+  if (maxX + adjust > 7) adjust = 7 - maxX
+  if (minX + adjust < 0) adjust = -minX
 
-  const totalShifts: number[] = shifts.map(s => s - adjust)
+  // Round to integer grid
+  const rounded = shearedFloat.map(p => ({
+    x: Math.max(0, Math.min(7, Math.round(p.x + adjust))),
+    y: p.y,
+    ox: p.ox, oy: p.oy,
+  }))
 
-  // Basic shear
-  const out = new Uint8Array(8)
-  for (let y = 0; y < 8; y++) {
-    const s = totalShifts[y]
-    if (s > 0) {
-      out[y] = (bytes[y] << s) & 0xFF
-    } else if (s < 0) {
-      out[y] = bytes[y] >> -s
-    } else {
-      out[y] = bytes[y]
-    }
+  // Build lookup: original (x,y) → rounded (x,y)
+  const posMap = new Map<string, { x: number; y: number }>()
+  for (const p of rounded) {
+    posMap.set(`${p.ox},${p.oy}`, { x: p.x, y: p.y })
   }
 
-  // Fill gaps: where adjacent rows both had a pixel at the same original x,
-  // fill horizontal gaps created by shift differences > 1
-  for (let y = 0; y < 7; y++) {
-    if (Math.abs(totalShifts[y] - totalShifts[y + 1]) <= 1) continue
-    for (let x = 0; x < 8; x++) {
-      if (!(bytes[y] & (0x80 >> x)) || !(bytes[y + 1] & (0x80 >> x))) continue
-      const x1 = x - totalShifts[y]
-      const x2 = x - totalShifts[y + 1]
-      const lo = Math.max(0, Math.min(x1, x2))
-      const hi = Math.min(7, Math.max(x1, x2))
-      for (let fx = lo; fx <= hi; fx++) {
-        out[y] |= (0x80 >> fx)
-        out[y + 1] |= (0x80 >> fx)
+  const out = new Uint8Array(8)
+  function plot(x: number, y: number) {
+    if (x >= 0 && x < 8 && y >= 0 && y < 8) out[y] |= (0x80 >> x)
+  }
+
+  // Plot all transformed pixels
+  for (const p of rounded) plot(p.x, p.y)
+
+  // For each pair of 8-connected original pixels, draw Bresenham line
+  // between their sheared positions to maintain connectivity
+  for (const p of orig) {
+    const from = posMap.get(`${p.x},${p.y}`)!
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dy === 0 && dx === 0) continue
+        // Only process each pair once: neighbor with higher key
+        const nx = p.x + dx, ny = p.y + dy
+        if (ny < 0 || ny > 7 || nx < 0 || nx > 7) continue
+        if (ny < p.y || (ny === p.y && nx < p.x)) continue
+        if (!isSet(nx, ny)) continue
+        const to = posMap.get(`${nx},${ny}`)!
+        // Already 8-connected? Skip
+        if (Math.abs(from.x - to.x) <= 1 && Math.abs(from.y - to.y) <= 1) continue
+        // Bresenham between from and to
+        let x0 = from.x, y0 = from.y, x1 = to.x, y1 = to.y
+        const sdx = Math.abs(x1 - x0), sdy = Math.abs(y1 - y0)
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1
+        let err = sdx - sdy
+        while (true) {
+          plot(x0, y0)
+          if (x0 === x1 && y0 === y1) break
+          const e2 = 2 * err
+          if (e2 > -sdy) { err -= sdy; x0 += sx }
+          if (e2 < sdx) { err += sdx; y0 += sy }
+        }
       }
     }
   }

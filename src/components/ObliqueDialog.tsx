@@ -72,7 +72,7 @@ interface Props {
 }
 
 export function ObliqueDialog({ font, onClose }: Props) {
-  const [angle, setAngle] = useState(-26)
+  const [angle, setAngle] = useState(20)
 
   function handleCreate() {
     createObliqueVariant(font, angle)
