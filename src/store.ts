@@ -330,7 +330,7 @@ export const CHARSETS: Record<string, CharsetDef> = {
   msx: { label: 'MSX', colorSystem: 'MSX (TMS9918)', overrides: {
     0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
   }},
-  topaz: { label: 'Amiga Topaz', colorSystem: 'Custom', overrides: {
+  amiga: { label: 'Amiga (ISO-8859-1)', colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂
   }},
   sam: { label: 'SAM Coupe', colorSystem: 'SAM Coup\u00e9', overrides: {
