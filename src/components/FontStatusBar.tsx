@@ -1,9 +1,16 @@
-import { charset, CHARSETS, type Charset } from '../store'
+import { type FontInstance, glyphCount, charset, CHARSETS, type Charset } from '../store'
 
-export function FontStatusBar() {
+export function FontStatusBar({ font }: { font: FontInstance }) {
+  const count = glyphCount(font)
+  const selSize = font.selectedGlyphs.value.size
+  const hint = selSize > 1
+    ? `${selSize} glyphs selected`
+    : 'Click to select, Shift+click for range, Ctrl+click to toggle'
+
   return (
     <>
-      <span>Click to select, Shift+click for range, Ctrl+click to toggle</span>
+      <span>{hint}</span>
+      <span>{count} glyphs</span>
       <select
         class="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-500"
         value={charset.value}

@@ -140,7 +140,8 @@ export function GlyphGrid({ font }: Props) {
       for (let b = 0; b < bpg; b++) {
         if (data[offset + b] !== 0) { empty = false; break }
       }
-      if (!empty) visibleIndices.push(i)
+      const charCode = font.startChar.value + i
+      if (!empty || charCode === 32) visibleIndices.push(i)
     }
   } else {
     visibleIndices = Array.from({ length: count }, (_, i) => i)
@@ -275,7 +276,6 @@ export function GlyphGrid({ font }: Props) {
     <div class="flex flex-col h-full">
       <div class="flex items-center gap-4 mb-3 flex-wrap shrink-0">
         <SaveBar font={font} />
-        <span class="text-sm">{font.selectedGlyphs.value.size} of {count} glyphs{hideEmpty ? ` (${visibleCount} shown)` : ''}</span>
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
         <SizeButton font={font} />
@@ -286,7 +286,7 @@ export function GlyphGrid({ font }: Props) {
           title={hideEmpty ? 'Show all glyphs' : 'Hide empty glyphs'}
         >
           <EyeOff size={16} />
-          Hide empty
+          {hideEmpty ? `${visibleCount} shown` : 'Hide empty'}
         </button>
         <div class="ml-auto">
           <ZoomDropdown font={font} />

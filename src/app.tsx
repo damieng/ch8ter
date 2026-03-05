@@ -113,7 +113,7 @@ export function App() {
             initialW={700}
             initialH={600}
             resizable
-            statusBar={<FontStatusBar />}
+            statusBar={<FontStatusBar font={font} />}
             zIndex={getZIndex(font.id)}
             onFocus={() => focusFont(font.id)}
             onClose={() => handleClose(font.id)}
