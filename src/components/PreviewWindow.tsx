@@ -188,6 +188,10 @@ export function PreviewWindow({ initialFontId }: Props) {
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
   const [selTick, setSelTick] = useState(0)
+  const dragging = useRef(false)
+  const dragAnchor = useRef(0)
+  const clickCount = useRef(0)
+  const lastClickTime = useRef(0)
 
   const allFonts = fonts.value
   const font = allFonts.find(f => f.id === selectedFontId) ?? allFonts[0]
@@ -252,42 +256,101 @@ export function PreviewWindow({ initialFontId }: Props) {
     }
   }, [font?.fontData.value, font?.id, text, zoom, cols, colorIdx, cursorPos?.row, cursorPos?.col, cursorVisible, selStart, selEnd, selTick])
 
-  // Click on canvas to position cursor
-  function handleCanvasClick(e: MouseEvent) {
-    if (!canvasRef.current || !textareaRef.current) return
+  // Convert canvas pixel coordinates to a text offset
+  function hitTest(clientX: number, clientY: number): number {
+    if (!canvasRef.current) return 0
     const rect = canvasRef.current.getBoundingClientRect()
     const cellSize = 8 * zoom
-    const clickCol = Math.floor((e.clientX - rect.left) / cellSize)
-    const clickRow = Math.floor((e.clientY - rect.top) / cellSize)
+    const clickCol = Math.floor((clientX - rect.left) / cellSize)
+    const clickRow = Math.floor((clientY - rect.top) / cellSize)
 
     const { lines, offsets: wrappedOffsets } = wrapText(text, cols)
-    const row = Math.min(clickRow, lines.length - 1)
-    if (row < 0) {
-      textareaRef.current.selectionStart = textareaRef.current.selectionEnd = 0
-      textareaRef.current.focus()
-      resetBlink()
-      return
-    }
-    const col = Math.min(clickCol, wrappedOffsets[row]?.length ?? 0)
-    let offset: number
+    const row = Math.max(0, Math.min(clickRow, lines.length - 1))
+    if (lines.length === 0) return 0
+    const col = Math.min(Math.max(0, clickCol), wrappedOffsets[row]?.length ?? 0)
     if (col < (wrappedOffsets[row]?.length ?? 0)) {
-      offset = wrappedOffsets[row][col]
+      return wrappedOffsets[row][col]
     } else if (wrappedOffsets[row]?.length > 0) {
-      offset = wrappedOffsets[row][wrappedOffsets[row].length - 1] + 1
+      return wrappedOffsets[row][wrappedOffsets[row].length - 1] + 1
+    }
+    // Empty line
+    let offset = text.length
+    let lineCount = 0
+    for (let i = 0; i <= text.length; i++) {
+      if (lineCount === row) { offset = i; break }
+      if (text[i] === '\n') lineCount++
+    }
+    return offset
+  }
+
+  // Find word boundaries around an offset
+  function wordBounds(offset: number): [number, number] {
+    const wordChars = /[a-zA-Z0-9_']/
+    let start = offset, end = offset
+    while (start > 0 && wordChars.test(text[start - 1])) start--
+    while (end < text.length && wordChars.test(text[end])) end++
+    // If we didn't find a word (clicked on space/punctuation), select that char
+    if (start === end && offset < text.length) { end = offset + 1 }
+    return [start, end]
+  }
+
+  function handleCanvasMouseDown(e: MouseEvent) {
+    if (!textareaRef.current) return
+    e.preventDefault()
+    const ta = textareaRef.current
+    const now = Date.now()
+    const offset = hitTest(e.clientX, e.clientY)
+
+    // Detect click count (double/triple)
+    if (now - lastClickTime.current < 400) {
+      clickCount.current++
     } else {
-      // Empty line — find where this \n is
-      offset = text.length
-      let lineCount = 0
-      for (let i = 0; i <= text.length; i++) {
-        if (lineCount === row) { offset = i; break }
-        if (text[i] === '\n') lineCount++
-      }
+      clickCount.current = 1
+    }
+    lastClickTime.current = now
+
+    if (clickCount.current >= 3) {
+      // Triple-click: select all
+      ta.selectionStart = 0
+      ta.selectionEnd = text.length
+      clickCount.current = 0
+    } else if (clickCount.current === 2) {
+      // Double-click: select word
+      const [ws, we] = wordBounds(offset)
+      ta.selectionStart = ws
+      ta.selectionEnd = we
+      dragAnchor.current = ws
+    } else {
+      // Single click: position cursor, start drag
+      ta.selectionStart = ta.selectionEnd = offset
+      dragAnchor.current = offset
+      dragging.current = true
     }
 
-    textareaRef.current.selectionStart = textareaRef.current.selectionEnd = offset
-    textareaRef.current.focus()
+    ta.focus()
     resetBlink()
+    handleSelectionChange()
   }
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current || !textareaRef.current) return
+      const offset = hitTest(e.clientX, e.clientY)
+      const anchor = dragAnchor.current
+      textareaRef.current.selectionStart = Math.min(anchor, offset)
+      textareaRef.current.selectionEnd = Math.max(anchor, offset)
+      handleSelectionChange()
+    }
+    function onMouseUp() {
+      dragging.current = false
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [text, cols, zoom])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -386,7 +449,7 @@ export function PreviewWindow({ initialFontId }: Props) {
           ref={canvasRef}
           class="block cursor-text"
           style={{ imageRendering: 'pixelated' }}
-          onClick={handleCanvasClick}
+          onMouseDown={handleCanvasMouseDown}
         />
         {/* Hidden textarea for keyboard input */}
         <textarea
