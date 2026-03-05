@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import {
-  FlipHorizontal, FlipVertical, Contrast, RotateCw,
+  FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
 } from 'lucide-preact'
 import {
-  selFlipX, selFlipY, selInvert, selRotateCW,
+  selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
   selShiftUp, selShiftDown, selShiftLeft, selShiftRight,
+  copyUpperToLower, copyLowerToUpper,
   selectedGlyphs
 } from '../store'
 
@@ -27,18 +28,6 @@ export function ToolsDropdown() {
 
   const selCount = selectedGlyphs.value.size
 
-  function item(label: string, icon: any, fn: () => void) {
-    return (
-      <button
-        class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
-        onClick={() => { fn(); setOpen(false) }}
-      >
-        {icon}
-        {label}
-      </button>
-    )
-  }
-
   function iconBtn(icon: any, title: string, fn: () => void) {
     return (
       <button
@@ -47,6 +36,17 @@ export function ToolsDropdown() {
         title={title}
       >
         {icon}
+      </button>
+    )
+  }
+
+  function menuItem(label: string, fn: () => void) {
+    return (
+      <button
+        class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
+        onClick={() => { fn(); setOpen(false) }}
+      >
+        {label}
       </button>
     )
   }
@@ -62,18 +62,23 @@ export function ToolsDropdown() {
         <ChevronDown size={14} />
       </button>
       {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-48">
-          {item('Flip X', <FlipHorizontal size={ICON} />, selFlipX)}
-          {item('Flip Y', <FlipVertical size={ICON} />, selFlipY)}
-          {item('Invert', <Contrast size={ICON} />, selInvert)}
-          {item('Rotate CW', <RotateCw size={ICON} />, selRotateCW)}
-          <div class="border-t border-gray-200 my-1" />
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto">
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<ArrowUp size={ICON} />, 'Up', selShiftUp)}
-            {iconBtn(<ArrowDown size={ICON} />, 'Down', selShiftDown)}
-            {iconBtn(<ArrowLeft size={ICON} />, 'Left', selShiftLeft)}
-            {iconBtn(<ArrowRight size={ICON} />, 'Right', selShiftRight)}
+            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', selFlipX)}
+            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', selFlipY)}
+            {iconBtn(<Contrast size={ICON} />, 'Invert', selInvert)}
+            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', selRotateCW)}
+            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', selRotateCCW)}
           </div>
+          <div class="flex items-center gap-0 px-2 py-1">
+            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', selShiftUp)}
+            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', selShiftDown)}
+            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', selShiftLeft)}
+            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', selShiftRight)}
+          </div>
+          <div class="border-t border-gray-200 my-1" />
+          {menuItem('Copy Upper to Lower', copyUpperToLower)}
+          {menuItem('Copy Lower to Upper', copyLowerToUpper)}
         </div>
       )}
     </div>

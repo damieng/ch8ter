@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'preact/hooks'
-import { fontData, startChar } from '../store'
+import { fontData, startChar, charLabel } from '../store'
 
 interface Props {
   index: number
@@ -37,9 +37,8 @@ export function GlyphTile({ index, size, selected, active, onClick }: Props) {
   }, [fontData.value, index, size])
 
   const charCode = startChar.value + index
-  const charLabel = charCode >= 33 && charCode <= 126 ? String.fromCharCode(charCode) : ''
+  const label = charLabel(charCode)
 
-  // Always use border-2 so layout doesn't shift; change color only
   let borderColor = 'border-gray-300'
   if (active) borderColor = 'border-amber-500'
   else if (selected) borderColor = 'border-blue-500'
@@ -48,11 +47,11 @@ export function GlyphTile({ index, size, selected, active, onClick }: Props) {
     <div
       class={`inline-flex flex-col items-center cursor-pointer hover:bg-blue-100 rounded p-0.5 border-2 ${borderColor}`}
       onClick={onClick}
-      title={`${charCode} (0x${charCode.toString(16).toUpperCase()})${charLabel ? ' ' + charLabel : ''}`}
+      title={`${charCode} (0x${charCode.toString(16).toUpperCase()})${label ? ' ' + label : ''}`}
     >
       <canvas ref={canvasRef} width={size} height={size} class="block" />
       <span class="text-sm leading-tight mt-0.5">
-        {charLabel || '\u00B7'}
+        {label || '\u00B7'}
       </span>
     </div>
   )

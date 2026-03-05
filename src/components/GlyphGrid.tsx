@@ -5,6 +5,7 @@ import { GlyphTile } from './GlyphTile'
 import { FontInfo } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
 import { SelectDropdown } from './SelectDropdown'
+import { CharsetDropdown } from './CharsetDropdown'
 
 export function GlyphGrid() {
   const count = glyphCount.value
@@ -42,6 +43,7 @@ export function GlyphGrid() {
         </div>
         <SelectDropdown />
         <ToolsDropdown />
+        <CharsetDropdown />
         <div class="ml-auto">
           <FontInfo />
         </div>

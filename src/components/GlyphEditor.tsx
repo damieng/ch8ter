@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'preact/hooks'
-import { fontData, activeGlyph, getPixel, setPixel, startChar, editorZoom } from '../store'
+import { fontData, activeGlyph, getPixel, setPixel, startChar, editorZoom, charLabel } from '../store'
 
 const LINE = 1
 
@@ -71,7 +71,8 @@ export function GlyphEditor() {
   }, [])
 
   const charCode = startChar.value + activeGlyph.value
-  const charLabel = charCode >= 33 && charCode <= 126 ? ` "${String.fromCharCode(charCode)}"` : ''
+  const label = charLabel(charCode)
+  const labelStr = label ? ` "${label}"` : ''
 
   return (
     <div>
@@ -89,7 +90,7 @@ export function GlyphEditor() {
       </div>
       <div class="flex items-center gap-3 mb-2">
         <span class="font-bold">
-          Glyph {activeGlyph.value} — Char {charCode} (0x{charCode.toString(16).toUpperCase()}){charLabel}
+          Glyph {activeGlyph.value} — Char {charCode} (0x{charCode.toString(16).toUpperCase()}){labelStr}
         </span>
       </div>
       <canvas

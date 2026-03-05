@@ -14,6 +14,28 @@ export const activeGlyph = computed(() => lastClickedGlyph.value)
 export const gridZoom = signal(5) // right-side grid: 1-10 (x100%)
 export const editorZoom = signal(8) // editor: 4-20 (x100%)
 
+export type Charset = 'zx' | 'ascii'
+export const charset = signal<Charset>('zx')
+
+// ZX Spectrum charset differs from ASCII at three code points:
+// 0x5E (94): ↑ instead of ^
+// 0x60 (96): £ instead of `
+// 0x7F (127): © instead of DEL
+const ZX_OVERRIDES: Record<number, string> = {
+  0x5E: '\u2191', // ↑
+  0x60: '\u00A3', // £
+  0x7F: '\u00A9', // ©
+}
+
+export function charLabel(charCode: number): string {
+  if (charset.value === 'zx' && ZX_OVERRIDES[charCode]) {
+    return ZX_OVERRIDES[charCode]
+  }
+  if (charCode === 0x7F) return '' // DEL in ASCII mode — no printable label
+  if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
+  return ''
+}
+
 export function getPixel(glyphIndex: number, x: number, y: number): boolean {
   const offset = glyphIndex * 8 + y
   return (fontData.value[offset] & (0x80 >> x)) !== 0
@@ -142,6 +164,18 @@ function rotateCWBytes(bytes: Uint8Array): Uint8Array {
   return out
 }
 
+function rotateCCWBytes(bytes: Uint8Array): Uint8Array {
+  const out = new Uint8Array(8)
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      if (bytes[y] & (0x80 >> x)) {
+        out[7 - x] |= (0x80 >> y)
+      }
+    }
+  }
+  return out
+}
+
 function shiftUp(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 7; y++) out[y] = bytes[y + 1]
@@ -195,6 +229,7 @@ export const activeFlipX = () => applyToGlyph(activeGlyph.value, flipXBytes)
 export const activeFlipY = () => applyToGlyph(activeGlyph.value, flipYBytes)
 export const activeInvert = () => applyToGlyph(activeGlyph.value, invertBytes)
 export const activeRotateCW = () => applyToGlyph(activeGlyph.value, rotateCWBytes)
+export const activeRotateCCW = () => applyToGlyph(activeGlyph.value, rotateCCWBytes)
 export const activeShiftUp = () => applyToGlyph(activeGlyph.value, shiftUp)
 export const activeShiftDown = () => applyToGlyph(activeGlyph.value, shiftDown)
 export const activeShiftLeft = () => applyToGlyph(activeGlyph.value, shiftLeft)
@@ -205,10 +240,29 @@ export const selFlipX = () => applyToSelected(flipXBytes)
 export const selFlipY = () => applyToSelected(flipYBytes)
 export const selInvert = () => applyToSelected(invertBytes)
 export const selRotateCW = () => applyToSelected(rotateCWBytes)
+export const selRotateCCW = () => applyToSelected(rotateCCWBytes)
 export const selShiftUp = () => applyToSelected(shiftUp)
 export const selShiftDown = () => applyToSelected(shiftDown)
 export const selShiftLeft = () => applyToSelected(shiftLeft)
 export const selShiftRight = () => applyToSelected(shiftRight)
+
+// Copy case: copies glyph data from one ASCII range to another
+function copyRange(srcStart: number, srcEnd: number, dstStart: number) {
+  const s = startChar.value
+  const count = glyphCount.value
+  const data = new Uint8Array(fontData.value)
+  for (let c = srcStart; c <= srcEnd; c++) {
+    const srcIdx = c - s
+    const dstIdx = (dstStart + (c - srcStart)) - s
+    if (srcIdx >= 0 && srcIdx < count && dstIdx >= 0 && dstIdx < count) {
+      data.set(data.slice(srcIdx * 8, srcIdx * 8 + 8), dstIdx * 8)
+    }
+  }
+  fontData.value = data
+}
+
+export const copyUpperToLower = () => copyRange(65, 90, 97)
+export const copyLowerToUpper = () => copyRange(97, 122, 65)
 
 // File I/O
 export function loadFont(buffer: ArrayBuffer) {

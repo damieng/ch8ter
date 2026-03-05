@@ -1,10 +1,10 @@
 import {
-  FlipHorizontal, FlipVertical, Contrast, RotateCw,
+  FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   FilePlus, FolderOpen, Save
 } from 'lucide-preact'
 import {
-  activeFlipX, activeFlipY, activeInvert, activeRotateCW,
+  activeFlipX, activeFlipY, activeInvert, activeRotateCW, activeRotateCCW,
   activeShiftUp, activeShiftDown, activeShiftLeft, activeShiftRight,
   loadFont, saveFont, startChar,
   fontData, glyphCount
@@ -81,15 +81,20 @@ export function FontInfo() {
 
 export function Toolbar() {
   return (
-    <div class="flex flex-wrap gap-1">
-      <IconBtn onClick={activeFlipX} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
-      <IconBtn onClick={activeFlipY} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
-      <IconBtn onClick={activeInvert} title="Invert"><Contrast size={ICON} /></IconBtn>
-      <IconBtn onClick={activeRotateCW} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
-      <IconBtn onClick={activeShiftUp} title="Rotate up"><ArrowUp size={ICON} /></IconBtn>
-      <IconBtn onClick={activeShiftDown} title="Rotate down"><ArrowDown size={ICON} /></IconBtn>
-      <IconBtn onClick={activeShiftLeft} title="Rotate left"><ArrowLeft size={ICON} /></IconBtn>
-      <IconBtn onClick={activeShiftRight} title="Rotate right"><ArrowRight size={ICON} /></IconBtn>
+    <div class="flex flex-col gap-1">
+      <div class="flex flex-wrap gap-1">
+        <IconBtn onClick={activeFlipX} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
+        <IconBtn onClick={activeFlipY} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
+        <IconBtn onClick={activeInvert} title="Invert"><Contrast size={ICON} /></IconBtn>
+        <IconBtn onClick={activeRotateCW} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
+        <IconBtn onClick={activeRotateCCW} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
+      </div>
+      <div class="flex flex-wrap gap-1">
+        <IconBtn onClick={activeShiftUp} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
+        <IconBtn onClick={activeShiftDown} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
+        <IconBtn onClick={activeShiftLeft} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
+        <IconBtn onClick={activeShiftRight} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
+      </div>
     </div>
   )
 }
