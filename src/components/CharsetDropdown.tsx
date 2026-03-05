@@ -1,15 +1,10 @@
 import { useState, useRef } from 'preact/hooks'
 import { ChevronDown, Type } from 'lucide-preact'
-import { charset } from '../store'
+import { charset, CHARSETS } from '../store'
 import type { Charset } from '../store'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16
-
-const OPTIONS: { value: Charset; label: string }[] = [
-  { value: 'zx', label: 'ZX Spectrum' },
-  { value: 'ascii', label: 'ASCII' },
-]
 
 export function CharsetDropdown() {
   const [open, setOpen] = useState(false)
@@ -17,7 +12,7 @@ export function CharsetDropdown() {
 
   useClickOutside(ref, () => setOpen(false))
 
-  const current = OPTIONS.find(o => o.value === charset.value)!
+  const current = CHARSETS[charset.value]
 
   return (
     <div class="relative" ref={ref}>
@@ -30,16 +25,16 @@ export function CharsetDropdown() {
         <ChevronDown size={14} />
       </button>
       {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-40">
-          {OPTIONS.map(opt => (
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-44">
+          {Object.entries(CHARSETS).map(([key, def]) => (
             <button
-              key={opt.value}
+              key={key}
               class={`flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded ${
-                charset.value === opt.value ? 'font-bold' : ''
+                charset.value === key ? 'font-bold' : ''
               }`}
-              onClick={() => { charset.value = opt.value; setOpen(false) }}
+              onClick={() => { charset.value = key as Charset; setOpen(false) }}
             >
-              {opt.label}
+              {def.label}
             </button>
           ))}
         </div>

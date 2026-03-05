@@ -1,4 +1,4 @@
-import { charset, type Charset } from '../store'
+import { charset, CHARSETS, type Charset } from '../store'
 
 export function FontStatusBar() {
   return (
@@ -9,8 +9,9 @@ export function FontStatusBar() {
         value={charset.value}
         onChange={(e) => { charset.value = (e.target as HTMLSelectElement).value as Charset }}
       >
-        <option value="zx">ZX Spectrum</option>
-        <option value="ascii">ASCII</option>
+        {Object.entries(CHARSETS).map(([key, def]) => (
+          <option key={key} value={key}>{def.label}</option>
+        ))}
       </select>
     </>
   )

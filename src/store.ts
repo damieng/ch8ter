@@ -253,18 +253,61 @@ effect(() => {
 
 // --- Charset (global display preference) ---
 
-export type Charset = 'zx' | 'ascii'
-export const charset = signal<Charset>('zx')
-
-const ZX_OVERRIDES: Record<number, string> = {
-  0x5E: '\u2191', // ↑
-  0x60: '\u00A3', // £
-  0x7F: '\u00A9', // ©
+interface CharsetDef {
+  label: string
+  overrides: Record<number, string>
 }
 
+export const CHARSETS: Record<string, CharsetDef> = {
+  ascii: { label: 'ASCII', overrides: {} },
+  zx: { label: 'ZX Spectrum', overrides: {
+    0x5E: '\u2191', // ↑ (up arrow instead of caret)
+    0x60: '\u00A3', // £ (pound instead of backtick)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+  bbc: { label: 'BBC Micro', overrides: {
+    0x60: '\u00A3', // £ (pound instead of backtick)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+  c64: { label: 'Commodore 64', overrides: {
+    0x5C: '\u00A3', // £ (pound instead of backslash)
+    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
+    0x5F: '\u2190', // ← (left arrow instead of underscore)
+    0x7F: '\u03C0', // π (pi)
+  }},
+  atari: { label: 'Atari 8-bit', overrides: {
+    // ATASCII: 0x7B-0x7F are control codes, not printable
+    0x7B: '\u2666', // ♦ (spade-like in Atari set)
+    0x7D: '\u2503', // clear screen (box drawing as placeholder)
+    0x7E: '\u25C0', // delete char
+    0x7F: '\u25B6', // tab
+  }},
+  cpc: { label: 'Amstrad CPC', overrides: {
+    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+  cga: { label: 'IBM CGA', overrides: {
+    0x7F: '\u2302', // ⌂ (house, CP437)
+  }},
+  msx: { label: 'MSX', overrides: {
+    0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
+  }},
+  topaz: { label: 'Amiga Topaz', overrides: {
+    0x7F: '\u2302', // ⌂
+  }},
+  sam: { label: 'SAM Coupe', overrides: {
+    0x60: '\u00A3', // £ (pound, inherited from Spectrum)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+}
+
+export type Charset = keyof typeof CHARSETS
+export const charset = signal<Charset>('zx')
+
 export function charLabel(charCode: number): string {
-  if (charset.value === 'zx' && ZX_OVERRIDES[charCode]) {
-    return ZX_OVERRIDES[charCode]
+  const overrides = CHARSETS[charset.value]?.overrides
+  if (overrides && overrides[charCode]) {
+    return overrides[charCode]
   }
   if (charCode === 0x7F) return ''
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
@@ -272,11 +315,11 @@ export function charLabel(charCode: number): string {
 }
 
 // Reverse lookup: given a typed character, find its char code in the font.
-// In ZX mode, maps £→0x60, ↑→0x5E, ©→0x7F. Otherwise uses charCodeAt.
 export function charCodeFromKey(ch: string): number | null {
   if (ch.length !== 1) return null
-  if (charset.value === 'zx') {
-    for (const [code, label] of Object.entries(ZX_OVERRIDES)) {
+  const overrides = CHARSETS[charset.value]?.overrides
+  if (overrides) {
+    for (const [code, label] of Object.entries(overrides)) {
       if (label === ch) return parseInt(code)
     }
   }
