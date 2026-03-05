@@ -1,8 +1,9 @@
 import type preact from 'preact'
+import type { RefObject } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
 import { ZoomIn } from 'lucide-preact'
-import { type FontInstance, fonts, storedPreviews, updatePreviewSettings } from '../store'
+import { fonts, storedPreviews, updatePreviewSettings } from '../store'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { wrapText, wrapTextProportional, cursorPosition, selectedCells, glyphBounds, propCharAdvance } from '../textLayout'
@@ -11,8 +12,8 @@ import { useClickOutside } from '../hooks/useClickOutside'
 import { CenterHIcon } from './CenterHIcon'
 
 function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, title }: {
-  chipRef: preact.RefObject<HTMLDivElement | null>
-  popupRef: preact.RefObject<HTMLDivElement | null>
+  chipRef: RefObject<HTMLDivElement | null>
+  popupRef: RefObject<HTMLDivElement | null>
   color: string
   open: boolean
   palette?: string[]
@@ -39,7 +40,7 @@ function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, 
   }
 
   return (
-    <div ref={chipRef}>
+    <div ref={chipRef as preact.Ref<HTMLDivElement>}>
       <button
         class="w-6 h-6 rounded border-2 border-gray-400 hover:border-gray-600"
         style={{ backgroundColor: color }}
@@ -58,7 +59,7 @@ function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, 
       )}
       {open && palette && createPortal(
         <div
-          ref={popupRef}
+          ref={popupRef as preact.Ref<HTMLDivElement>}
           class="fixed bg-white border border-gray-300 rounded shadow-lg p-2"
           style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
         >

@@ -17,7 +17,7 @@ export function App() {
   const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
 
   const currentActiveId = activeFontId.value
-  const initialActiveId = useRef(currentActiveId)
+  const initialActiveId = useRef<string | null>(currentActiveId)
   useEffect(() => {
     // Skip the initial mount — restored focusedId takes precedence
     if (currentActiveId === initialActiveId.current) return
