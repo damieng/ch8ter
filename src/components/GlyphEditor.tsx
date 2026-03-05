@@ -1,10 +1,11 @@
-import { useRef, useEffect } from 'preact/hooks'
+import { useRef, useEffect, useState } from 'preact/hooks'
 import { type FontInstance, getPixel, setPixel } from '../store'
 import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
 
 export function GlyphEditor({ font }: { font: FontInstance }) {
   const painting = useRef<boolean | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [containerSize, setContainerSize] = useState({ w: 256, h: 256 })
 
   function handleCell(x: number, y: number, e: MouseEvent) {
     e.preventDefault()
@@ -28,6 +29,16 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
     return () => document.removeEventListener('mouseup', onMouseUp)
   }, [])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight })
+    const obs = new ResizeObserver(update)
+    obs.observe(el)
+    update()
+    return () => obs.disconnect()
+  }, [])
+
   const idx = font.lastClickedGlyph.value
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
@@ -49,19 +60,31 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
     }
   }
 
+  // Square cells: fit the largest square cell size into the container
+  const gap = 1
+  const cellSize = Math.max(1, Math.floor(Math.min(
+    (containerSize.w - gap * (w + 1)) / w,
+    (containerSize.h - gap * (h + 1)) / h,
+  )))
+  const gridW = cellSize * w + gap * (w + 1)
+  const gridH = cellSize * h + gap * (h + 1)
+
   return (
-    <div
-      ref={containerRef}
-      class="w-full h-full grid select-none"
-      style={{
-        gridTemplateColumns: `repeat(${w}, 1fr)`,
-        gridTemplateRows: `repeat(${h}, 1fr)`,
-        gap: '1px',
-        backgroundColor: '#94a3b8',
-        padding: '1px',
-      }}
-    >
-      {cells}
+    <div ref={containerRef} class="w-full h-full flex items-center justify-center">
+      <div
+        class="grid select-none"
+        style={{
+          width: `${gridW}px`,
+          height: `${gridH}px`,
+          gridTemplateColumns: `repeat(${w}, ${cellSize}px)`,
+          gridTemplateRows: `repeat(${h}, ${cellSize}px)`,
+          gap: `${gap}px`,
+          backgroundColor: '#94a3b8',
+          padding: `${gap}px`,
+        }}
+      >
+        {cells}
+      </div>
     </div>
   )
 }

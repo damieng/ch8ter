@@ -94,7 +94,6 @@ export function App() {
             initialW={380}
             initialH={440}
             resizable
-            aspectRatio={1}
             zIndex={getZIndex(`editor-${font.id}`)}
             onFocus={() => focusFont(font.id)}
           >
