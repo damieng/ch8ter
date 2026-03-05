@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'preact/hooks'
 import { type FontInstance, getPixel, setPixel } from '../store'
+import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
 
 export function GlyphEditor({ font }: { font: FontInstance }) {
   const painting = useRef<boolean | null>(null)
@@ -10,11 +11,15 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
     const idx = font.lastClickedGlyph.value
     if (painting.current === null) {
       painting.current = !getPixel(font, idx, x, y)
+      beginPaintStroke(font, idx)
     }
     setPixel(font, idx, x, y, painting.current)
   }
 
   function onMouseUp() {
+    if (painting.current !== null) {
+      commitPaintStroke(font)
+    }
     painting.current = null
   }
 

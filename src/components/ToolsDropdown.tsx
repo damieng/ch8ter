@@ -6,10 +6,11 @@ import {
 import { CenterHIcon } from './CenterHIcon'
 import {
   type FontInstance,
-  selFlipX, selFlipY, selInvert, selRotateCW, selRotateCCW,
-  selShiftUp, selShiftDown, selShiftLeft, selShiftRight, selCenterH,
-  copyUpperToLower, copyLowerToUpper, createBoldVariant, createOutlineVariant
+  flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
+  shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
+  createBoldVariant, createOutlineVariant
 } from '../store'
+import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from './ObliqueDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
 
@@ -58,22 +59,22 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto">
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', () => selFlipX(font))}
-            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', () => selFlipY(font))}
-            {iconBtn(<Contrast size={ICON} />, 'Invert', () => selInvert(font))}
-            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', () => selRotateCW(font))}
-            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => selRotateCCW(font))}
+            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', () => execTransformSelection(font, flipXBytes, 'Flip X'))}
+            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', () => execTransformSelection(font, flipYBytes, 'Flip Y'))}
+            {iconBtn(<Contrast size={ICON} />, 'Invert', () => execTransformSelection(font, invertBytes, 'Invert'))}
+            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', () => execTransformSelection(font, rotateCWBytes, 'Rotate CW'))}
+            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => execTransformSelection(font, rotateCCWBytes, 'Rotate CCW'))}
           </div>
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => selShiftUp(font))}
-            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => selShiftDown(font))}
-            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => selShiftLeft(font))}
-            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => selShiftRight(font))}
-            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => selCenterH(font))}
+            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => execTransformSelection(font, shiftUp, 'Shift Up'))}
+            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => execTransformSelection(font, shiftDown, 'Shift Down'))}
+            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => execTransformSelection(font, shiftLeft, 'Shift Left'))}
+            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => execTransformSelection(font, shiftRight, 'Shift Right'))}
+            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => execTransformSelection(font, centerHorizontalBytes, 'Center H'))}
           </div>
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Copy Upper to Lower', () => copyUpperToLower(font))}
-          {menuItem('Copy Lower to Upper', () => copyLowerToUpper(font))}
+          {menuItem('Copy Upper to Lower', () => execCopyRange(font, 65, 90, 97, 'Copy Upper→Lower'))}
+          {menuItem('Copy Lower to Upper', () => execCopyRange(font, 97, 122, 65, 'Copy Lower→Upper'))}
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Create Bold', () => createBoldVariant(font))}
           {menuItem('Create Outline', () => createOutlineVariant(font))}

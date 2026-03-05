@@ -1,4 +1,5 @@
 import { signal, type Signal, effect } from '@preact/signals'
+import { UndoHistory } from './undoHistory'
 
 // --- Font Instance ---
 
@@ -12,6 +13,7 @@ export interface FontInstance {
   gridZoom: Signal<number>
   dirty: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
+  undoHistory: UndoHistory
 }
 
 let nextFontId = 1
@@ -29,6 +31,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number): Fo
     gridZoom: signal(5),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
+    undoHistory: new UndoHistory(),
   }
 }
 
@@ -317,32 +320,6 @@ export function glyphToText(font: FontInstance, glyphIndex: number): string {
   return rows.join('\r\n')
 }
 
-export function clearGlyph(font: FontInstance, glyphIndex: number) {
-  const data = new Uint8Array(font.fontData.value)
-  const offset = glyphIndex * 8
-  for (let y = 0; y < 8; y++) data[offset + y] = 0
-  font.fontData.value = data
-  markDirty(font)
-}
-
-export function pasteGlyph(font: FontInstance, glyphIndex: number, text: string): boolean {
-  const rows = text.split(/\r?\n/)
-  if (rows.length !== 8) return false
-  if (!rows.every(r => r.length === 8 && /^[ *]{8}$/.test(r))) return false
-  const data = new Uint8Array(font.fontData.value)
-  const offset = glyphIndex * 8
-  for (let y = 0; y < 8; y++) {
-    let byte = 0
-    for (let x = 0; x < 8; x++) {
-      if (rows[y][x] === '*') byte |= (0x80 >> x)
-    }
-    data[offset + y] = byte
-  }
-  font.fontData.value = data
-  markDirty(font)
-  return true
-}
-
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
   const data = new Uint8Array(font.fontData.value)
   const offset = glyphIndex * 8 + y
@@ -428,7 +405,7 @@ export function selectSymbols(font: FontInstance) {
 
 // --- Transformations ---
 
-function flipXBytes(bytes: Uint8Array): Uint8Array {
+export function flipXBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
     let reversed = 0
@@ -440,19 +417,19 @@ function flipXBytes(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function flipYBytes(bytes: Uint8Array): Uint8Array {
+export function flipYBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) out[y] = bytes[7 - y]
   return out
 }
 
-function invertBytes(bytes: Uint8Array): Uint8Array {
+export function invertBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) out[y] = bytes[y] ^ 0xFF
   return out
 }
 
-function rotateCWBytes(bytes: Uint8Array): Uint8Array {
+export function rotateCWBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
     for (let x = 0; x < 8; x++) {
@@ -464,7 +441,7 @@ function rotateCWBytes(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function rotateCCWBytes(bytes: Uint8Array): Uint8Array {
+export function rotateCCWBytes(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
     for (let x = 0; x < 8; x++) {
@@ -476,21 +453,21 @@ function rotateCCWBytes(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function shiftUp(bytes: Uint8Array): Uint8Array {
+export function shiftUp(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 7; y++) out[y] = bytes[y + 1]
   out[7] = bytes[0]
   return out
 }
 
-function shiftDown(bytes: Uint8Array): Uint8Array {
+export function shiftDown(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 1; y < 8; y++) out[y] = bytes[y - 1]
   out[0] = bytes[7]
   return out
 }
 
-function shiftLeft(bytes: Uint8Array): Uint8Array {
+export function shiftLeft(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
     out[y] = ((bytes[y] << 1) | (bytes[y] >> 7)) & 0xFF
@@ -498,7 +475,7 @@ function shiftLeft(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function shiftRight(bytes: Uint8Array): Uint8Array {
+export function shiftRight(bytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(8)
   for (let y = 0; y < 8; y++) {
     out[y] = ((bytes[y] >> 1) | ((bytes[y] & 1) << 7)) & 0xFF
@@ -506,7 +483,7 @@ function shiftRight(bytes: Uint8Array): Uint8Array {
   return out
 }
 
-function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
+export function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
   // Count blank columns on left
   let leftBlank = 0
   for (let x = 0; x < 8; x++) {
@@ -544,69 +521,6 @@ function centerHorizontalBytes(bytes: Uint8Array): Uint8Array {
   }
   return out
 }
-
-function applyToGlyph(font: FontInstance, index: number, fn: (b: Uint8Array) => Uint8Array) {
-  const data = new Uint8Array(font.fontData.value)
-  const offset = index * 8
-  const bytes = data.slice(offset, offset + 8)
-  data.set(fn(bytes), offset)
-  font.fontData.value = data
-  markDirty(font)
-}
-
-function applyToSelected(font: FontInstance, fn: (b: Uint8Array) => Uint8Array) {
-  const data = new Uint8Array(font.fontData.value)
-  for (const idx of font.selectedGlyphs.value) {
-    const offset = idx * 8
-    const bytes = data.slice(offset, offset + 8)
-    data.set(fn(bytes), offset)
-  }
-  font.fontData.value = data
-  markDirty(font)
-}
-
-// Active glyph transforms (editor toolbar)
-export const activeFlipX = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, flipXBytes)
-export const activeFlipY = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, flipYBytes)
-export const activeInvert = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, invertBytes)
-export const activeRotateCW = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, rotateCWBytes)
-export const activeRotateCCW = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, rotateCCWBytes)
-export const activeShiftUp = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftUp)
-export const activeShiftDown = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftDown)
-export const activeShiftLeft = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftLeft)
-export const activeShiftRight = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, shiftRight)
-export const activeCenterH = (font: FontInstance) => applyToGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes)
-
-// Selection transforms (Tools dropdown)
-export const selFlipX = (font: FontInstance) => applyToSelected(font, flipXBytes)
-export const selFlipY = (font: FontInstance) => applyToSelected(font, flipYBytes)
-export const selInvert = (font: FontInstance) => applyToSelected(font, invertBytes)
-export const selRotateCW = (font: FontInstance) => applyToSelected(font, rotateCWBytes)
-export const selRotateCCW = (font: FontInstance) => applyToSelected(font, rotateCCWBytes)
-export const selShiftUp = (font: FontInstance) => applyToSelected(font, shiftUp)
-export const selShiftDown = (font: FontInstance) => applyToSelected(font, shiftDown)
-export const selShiftLeft = (font: FontInstance) => applyToSelected(font, shiftLeft)
-export const selShiftRight = (font: FontInstance) => applyToSelected(font, shiftRight)
-export const selCenterH = (font: FontInstance) => applyToSelected(font, centerHorizontalBytes)
-
-// Copy case
-function copyRange(font: FontInstance, srcStart: number, srcEnd: number, dstStart: number) {
-  const s = font.startChar.value
-  const count = glyphCount(font)
-  const data = new Uint8Array(font.fontData.value)
-  for (let c = srcStart; c <= srcEnd; c++) {
-    const srcIdx = c - s
-    const dstIdx = (dstStart + (c - srcStart)) - s
-    if (srcIdx >= 0 && srcIdx < count && dstIdx >= 0 && dstIdx < count) {
-      data.set(data.slice(srcIdx * 8, srcIdx * 8 + 8), dstIdx * 8)
-    }
-  }
-  font.fontData.value = data
-  markDirty(font)
-}
-
-export const copyUpperToLower = (font: FontInstance) => copyRange(font, 65, 90, 97)
-export const copyLowerToUpper = (font: FontInstance) => copyRange(font, 97, 122, 65)
 
 // Create bold variant — OR each row with itself shifted right by 1
 // If the rightmost column is used, shift the glyph left first to make room
@@ -751,6 +665,7 @@ export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
   font.dirty.value = false
   font.selectedGlyphs.value = new Set([0])
   font.lastClickedGlyph.value = 0
+  font.undoHistory.clear()
 }
 
 export function saveFont(font: FontInstance): Uint8Array {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { ChevronDown, ZoomIn } from 'lucide-preact'
-import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, pasteGlyph, clearGlyph } from '../store'
+import { type FontInstance, glyphCount, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText } from '../store'
+import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
 import { Eye } from 'lucide-preact'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
@@ -87,6 +88,18 @@ export function GlyphGrid({ font }: Props) {
 
       const active = font.lastClickedGlyph.value
 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        undo(font)
+        e.preventDefault()
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        redo(font)
+        e.preventDefault()
+        return
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         const text = glyphToText(font, active)
         navigator.clipboard.writeText(text)
@@ -97,21 +110,21 @@ export function GlyphGrid({ font }: Props) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
         const text = glyphToText(font, active)
         navigator.clipboard.writeText(text)
-        clearGlyph(font, active)
+        execClearGlyph(font, active)
         e.preventDefault()
         return
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         navigator.clipboard.readText().then(text => {
-          pasteGlyph(font, active, text)
+          execPasteGlyph(font, active, text)
         })
         e.preventDefault()
         return
       }
 
       if (e.key === 'Delete') {
-        clearGlyph(font, active)
+        execClearGlyph(font, active)
         e.preventDefault()
         return
       }
