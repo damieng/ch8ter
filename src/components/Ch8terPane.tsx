@@ -1,6 +1,8 @@
+import { useState } from 'preact/hooks'
 import { FilePlus, FolderOpen } from 'lucide-preact'
 import { createFont, addFont, loadFont } from '../store'
 import { IconBtn } from './IconBtn'
+import { NewFontDialog } from './NewFontDialog'
 
 const ICON = 18
 
@@ -16,18 +18,7 @@ export function Ch8terTitle() {
 }
 
 export function Ch8terPane() {
-  function handleNew() {
-    const countStr = prompt('Number of glyphs (default 96):', '96')
-    if (!countStr) return
-    const count = parseInt(countStr, 10)
-    if (isNaN(count) || count < 1) return
-    const startStr = prompt('Start character code (default 32):', '32')
-    if (startStr === null) return
-    const start = parseInt(startStr, 10)
-    if (isNaN(start) || start < 0) return
-    const font = createFont(new Uint8Array(count * 8), 'untitled.ch8', start)
-    addFont(font)
-  }
+  const [showNewDialog, setShowNewDialog] = useState(false)
 
   function handleOpen() {
     const input = document.createElement('input')
@@ -48,15 +39,16 @@ export function Ch8terPane() {
 
   return (
     <div class="flex items-center gap-3 px-3 py-2">
-      <IconBtn onClick={handleNew} title="New font">
+      <IconBtn onClick={() => setShowNewDialog(true)} title="New font">
         <FilePlus size={ICON} />
       </IconBtn>
+      {showNewDialog && <NewFontDialog onClose={() => setShowNewDialog(false)} />}
       <IconBtn onClick={handleOpen} title="Open .ch8 file">
         <FolderOpen size={ICON} />
       </IconBtn>
       <span class="w-px h-6 bg-gray-300 mx-0.5" />
       <div class="flex flex-col">
-        <span class="text-sm text-gray-600">ZX Spectrum Font Editor</span>
+        <span class="text-sm text-gray-600">Online Bitmap Font Editor</span>
         <a
           class="text-sm text-blue-500 hover:text-blue-700 underline"
           href="https://github.com/damieng/ch8ter"
