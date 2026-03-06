@@ -7,6 +7,7 @@ export interface RenderOptions {
   canvas: HTMLCanvasElement
   font: FontInstance
   lines: string[]
+  attrs: number[][]
   scale: number
   cols: number
   fg: string
@@ -19,7 +20,7 @@ export interface RenderOptions {
 }
 
 export function renderText({
-  canvas, font, lines, scale, cols, fg, bg,
+  canvas, font, lines, attrs, scale, cols, fg, bg,
   cursorPos, showCursor, selected, proportional, lineHeight,
 }: RenderOptions) {
   const ctx = canvas.getContext('2d')!
@@ -78,17 +79,26 @@ export function renderText({
 
     for (let row = 0; row < lines.length; row++) {
       const line = lines[row]
+      const rowAttrs = attrs[row] || []
       const oy = row * rowH
       for (let col = 0; col < line.length; col++) {
         const isSel = selected.has(`${row},${col}`)
+        const inv = rowAttrs[col] === 1
+        const cFg = inv ? bg : fg
+        const cBg = inv ? fg : bg
         const ox = col * cellW
 
-        if (isSel) {
-          ctx.fillStyle = fg
+        if (inv) {
+          ctx.fillStyle = cBg
           ctx.fillRect(ox, oy, cellW, rowH)
-          ctx.fillStyle = bg
+        }
+
+        if (isSel) {
+          ctx.fillStyle = cFg
+          ctx.fillRect(ox, oy, cellW, rowH)
+          ctx.fillStyle = cBg
         } else {
-          ctx.fillStyle = fg
+          ctx.fillStyle = cFg
         }
 
         const glyphIdx = line.charCodeAt(col) - startChar
@@ -129,17 +139,26 @@ export function renderText({
 
     for (let row = 0; row < lines.length; row++) {
       let xPos = 0
+      const rowAttrs = attrs[row] || []
       const oy = row * rowH
       for (let col = 0; col < lines[row].length; col++) {
         const ch = lines[row][col]
         const charCode = ch.charCodeAt(0)
         const glyphIdx = charCode - startChar
         const isSel = selected.has(`${row},${col}`)
+        const inv = rowAttrs[col] === 1
+        const cFg = inv ? bg : fg
+        const cBg = inv ? fg : bg
         const advance = adv(ch) * scale
+
+        if (inv) {
+          ctx.fillStyle = cBg
+          ctx.fillRect(xPos, oy, advance, rowH)
+        }
 
         if (charCode === 32) {
           if (isSel) {
-            ctx.fillStyle = fg
+            ctx.fillStyle = cFg
             ctx.fillRect(xPos, oy, advance, rowH)
           }
           xPos += advance
@@ -155,11 +174,11 @@ export function renderText({
         const charW = (bounds.width || 1) * scale
 
         if (isSel) {
-          ctx.fillStyle = fg
+          ctx.fillStyle = cFg
           ctx.fillRect(xPos, oy, advance, rowH)
-          ctx.fillStyle = bg
+          ctx.fillStyle = cBg
         } else {
-          ctx.fillStyle = fg
+          ctx.fillStyle = cFg
         }
 
         drawGlyphProp(glyphIdx, xPos, oy, bounds.left, charW)

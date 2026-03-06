@@ -1,3 +1,7 @@
+import { INVERSE_CHAR } from './textLayout'
+
+const INV = INVERSE_CHAR
+
 export interface SampleText {
   name: string
   text: string
@@ -29,7 +33,7 @@ export const sampleTexts: SampleGroup[] = [
     items: [
       {
         name: 'Full set',
-        text: ' !"#$%&\'()*+,-./0123456789:;<=>?\n@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\n`abcdefghijklmnopqrstuvwxyz{|}~',
+        text: ` !"#$%&'()*+,-./0123456789:;<=>?\n@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\n\`abcdefghijklmnopqrstuvwxyz{|}~\n\n${INV} !"#$%&'()*+,-./0123456789:;<=>?\n@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\n\`abcdefghijklmnopqrstuvwxyz{|}~${INV}`,
       },
     ],
   },
@@ -42,7 +46,7 @@ export const sampleTexts: SampleGroup[] = [
       },
       {
         name: 'Zork-style',
-        text: 'West of House\nYou are standing in an open field west of a white house, with a boarded front door.\nThere is a small mailbox here.\n\n> OPEN MAILBOX\n\nOpening the small mailbox reveals a leaflet.\n\n> READ LEAFLET\n\nWELCOME TO ADVENTURE!\nYour quest begins here.',
+        text: `${INV} West of House ${INV}\nYou are standing in an open field west of a white house, with a boarded front door.\nThere is a small mailbox here.\n\n> OPEN MAILBOX\n\nOpening the small mailbox reveals a leaflet.\n\n> READ LEAFLET\n\nWELCOME TO ADVENTURE!\nYour quest begins here.`,
       },
       {
         name: 'Dungeon',
@@ -97,7 +101,7 @@ export const sampleTexts: SampleGroup[] = [
     items: [
       {
         name: 'Intro screen',
-        text: '================================\n\n***     CRYSTAL  CAVERNS     ***\n\n================================\n\n  1. Start new game\n  2. Continue saved game\n  3. Difficulty: NORMAL\n  4. Sound: ON\n  5. Controls: KEYBOARD\n\n  0. Begin adventure!\n\n--------------------------------\n  A game by Pixel Forge Studios\n  (c) 1986 Pixel Forge Ltd.\n================================',
+        text: `${INV}                                ${INV}\n${INV}***     CRYSTAL  CAVERNS     ***${INV}\n${INV}                                ${INV}\n\n  1. Start new game\n  2. Continue saved game\n  3. Difficulty: NORMAL\n  4. Sound: ON\n  5. Controls: KEYBOARD\n\n  0. Begin adventure!\n\n--------------------------------\n  A game by Pixel Forge Studios\n  (c) 1986 Pixel Forge Ltd.\n--------------------------------`,
       },
       {
         name: 'High scores',
@@ -105,7 +109,7 @@ export const sampleTexts: SampleGroup[] = [
       },
       {
         name: 'RPG status',
-        text: '================================\n  HERO STATUS      Floor: 7\n================================\nName:  Sir Aldric   Class: Knight\nHP:    142/180      MP:    35/50\nSTR: 18  DEX: 12  INT: 10\nGold: 1,247    EXP: 8,420\n--------------------------------\n  INVENTORY\n  Iron Sword (+12 ATK)\n  Chain Mail (+8 DEF)\n  Healing Potion x3\n  Dungeon Map\n================================',
+        text: `${INV}  HERO STATUS      Floor: 7  ${INV}\nName:  Sir Aldric   Class: Knight\nHP:    142/180      MP:    35/50\nSTR: 18  DEX: 12  INT: 10\nGold: 1,247    EXP: 8,420\n${INV}  INVENTORY                  ${INV}\n  Iron Sword (+12 ATK)\n  Chain Mail (+8 DEF)\n  Healing Potion x3\n  Dungeon Map`,
       },
     ],
   },

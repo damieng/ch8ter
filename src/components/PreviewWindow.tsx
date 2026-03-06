@@ -228,14 +228,14 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     )
   }, [text, cols, proportional, font?.fontData.value, font?.startChar.value, gw, gh])
 
-  const { lines: wrappedLines, offsets } = wrapResult
+  const { lines: wrappedLines, offsets, attrs } = wrapResult
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
   const selected = focused ? selectedCells(offsets, selStart, selEnd) : new Set<string>()
 
   useEffect(() => {
     if (canvasRef.current && font) {
       renderText({
-        canvas: canvasRef.current, font, lines: wrappedLines, scale: zoom, cols,
+        canvas: canvasRef.current, font, lines: wrappedLines, attrs, scale: zoom, cols,
         fg, bg, cursorPos, showCursor: cursorVisible, selected, proportional, lineHeight,
       })
     }

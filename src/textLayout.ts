@@ -1,43 +1,68 @@
 // Text wrapping, cursor mapping, and glyph measurement for the preview renderer.
 
+export const INVERSE_CHAR = '\x01'
+
 export interface WrapResult {
   lines: string[]
   offsets: number[][]  // offsets[row][col] = index into original text
+  attrs: number[][]    // 0 = normal, 1 = inverse
 }
 
 // Wrap text into lines by character count (fixed-width mode).
 export function wrapText(text: string, cols: number): WrapResult {
   const lines: string[] = []
   const offsets: number[][] = []
+  const attrs: number[][] = []
   let pos = 0
+  let inverse = false
   for (const paragraph of text.split('\n')) {
     const tokens = paragraph.match(/\S+| +/g) || []
     let line = ''
     let lineOffsets: number[] = []
+    let lineAttrs: number[] = []
     let tokenPos = pos
 
     for (const token of tokens) {
       if (token[0] === ' ') {
-        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        for (let i = 0; i < token.length; i++) {
+          lineOffsets.push(tokenPos + i)
+          lineAttrs.push(inverse ? 1 : 0)
+        }
         line += token
       } else {
-        if (line.length + token.length > cols && line.length > 0) {
+        let visible = ''
+        const wordOffsets: number[] = []
+        const wordAttrs: number[] = []
+        for (let i = 0; i < token.length; i++) {
+          if (token[i] === INVERSE_CHAR) {
+            inverse = !inverse
+          } else {
+            visible += token[i]
+            wordOffsets.push(tokenPos + i)
+            wordAttrs.push(inverse ? 1 : 0)
+          }
+        }
+        if (line.length + visible.length > cols && line.length > 0) {
           lines.push(line)
           offsets.push(lineOffsets)
+          attrs.push(lineAttrs)
           line = ''
           lineOffsets = []
+          lineAttrs = []
         }
-        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
-        line += token
+        lineOffsets.push(...wordOffsets)
+        lineAttrs.push(...wordAttrs)
+        line += visible
       }
       tokenPos += token.length
     }
 
     lines.push(line)
     offsets.push(lineOffsets)
+    attrs.push(lineAttrs)
     pos += paragraph.length + 1
   }
-  return { lines, offsets }
+  return { lines, offsets, attrs }
 }
 
 // Wrap text by pixel width (proportional mode).
@@ -49,11 +74,14 @@ export function wrapTextProportional(
 ): WrapResult {
   const lines: string[] = []
   const offsets: number[][] = []
+  const attrs: number[][] = []
   let pos = 0
+  let inverse = false
   for (const paragraph of text.split('\n')) {
     const tokens = paragraph.match(/\S+| +/g) || []
     let line = ''
     let lineOffsets: number[] = []
+    let lineAttrs: number[] = []
     let lineWidth = 0
     let tokenPos = pos
 
@@ -61,31 +89,50 @@ export function wrapTextProportional(
       if (token[0] === ' ') {
         let tokenWidth = 0
         for (let i = 0; i < token.length; i++) tokenWidth += charWidth(' ')
-        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        for (let i = 0; i < token.length; i++) {
+          lineOffsets.push(tokenPos + i)
+          lineAttrs.push(inverse ? 1 : 0)
+        }
         line += token
         lineWidth += tokenWidth
       } else {
-        let tokenWidth = 0
-        for (let i = 0; i < token.length; i++) tokenWidth += charWidth(token[i])
-        if (lineWidth + tokenWidth > maxWidth && line.length > 0) {
+        let visible = ''
+        let visibleWidth = 0
+        const wordOffsets: number[] = []
+        const wordAttrs: number[] = []
+        for (let i = 0; i < token.length; i++) {
+          if (token[i] === INVERSE_CHAR) {
+            inverse = !inverse
+          } else {
+            visible += token[i]
+            visibleWidth += charWidth(token[i])
+            wordOffsets.push(tokenPos + i)
+            wordAttrs.push(inverse ? 1 : 0)
+          }
+        }
+        if (lineWidth + visibleWidth > maxWidth && line.length > 0) {
           lines.push(line)
           offsets.push(lineOffsets)
+          attrs.push(lineAttrs)
           line = ''
           lineOffsets = []
+          lineAttrs = []
           lineWidth = 0
         }
-        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
-        line += token
-        lineWidth += tokenWidth
+        lineOffsets.push(...wordOffsets)
+        lineAttrs.push(...wordAttrs)
+        line += visible
+        lineWidth += visibleWidth
       }
       tokenPos += token.length
     }
 
     lines.push(line)
     offsets.push(lineOffsets)
+    attrs.push(lineAttrs)
     pos += paragraph.length + 1
   }
-  return { lines, offsets }
+  return { lines, offsets, attrs }
 }
 
 // Map a text cursor offset to a row/col in wrapped lines.
