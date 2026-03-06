@@ -23,6 +23,7 @@ import { writeYaff } from '../yaffWriter'
 import { ttfToWoff } from '../woffExport'
 import { writeDraw } from '../drawWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { SourceExportDialog } from './SourceExportDialog'
 
 const ICON = 18
 
@@ -154,6 +155,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
 
 export function ExportBar({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
+  const [sourceOpen, setSourceOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
 
@@ -211,8 +213,13 @@ export function ExportBar({ font }: { font: FontInstance }) {
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportVarWoff}>
             Export as .woff (variable)
           </button>
+          <div class="border-t border-gray-200 my-1" />
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { setSourceOpen(true); setOpen(false) }}>
+            Export Source...
+          </button>
         </div>
       )}
+      {sourceOpen && <SourceExportDialog font={font} onClose={() => setSourceOpen(false)} />}
     </div>
   )
 }
