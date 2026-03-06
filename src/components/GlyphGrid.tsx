@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
-import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
+import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
+import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
 import { SaveBar } from './Toolbar'
@@ -105,6 +105,7 @@ export function GlyphGrid({ font }: Props) {
   const tileOuterW = canvasW + border + pad + gap
   const tileOuterH = canvasH + border + pad + labelHeight + gap
 
+  const gridNavRef = useRef({ cols: 0, visibleIndices: [] as number[], visibleCount: 0, hideEmpty: true })
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewHeight, setViewHeight] = useState(400)
@@ -155,6 +156,7 @@ export function GlyphGrid({ font }: Props) {
   const cols = tileOuterW > 0 ? Math.max(1, Math.floor((viewWidth - gap) / tileOuterW)) : 1
   const rows = Math.ceil(visibleCount / cols)
   const totalHeight = rows * tileOuterH + gap
+  gridNavRef.current = { cols, visibleIndices, visibleCount, hideEmpty }
 
   // Visible row range
   const startRow = Math.max(0, Math.floor(scrollTop / tileOuterH) - 1)
@@ -240,6 +242,34 @@ export function GlyphGrid({ font }: Props) {
 
       if (e.key === 'Delete') {
         execClearGlyph(font, active)
+        e.preventDefault()
+        return
+      }
+
+      // Ctrl+Arrow: navigate glyphs in the grid
+      if ((e.ctrlKey || e.metaKey) && e.key.startsWith('Arrow')) {
+        const nav = gridNavRef.current
+        const slot = nav.hideEmpty ? nav.visibleIndices.indexOf(active) : active
+        if (slot < 0) return
+        let newSlot = slot
+        if (e.key === 'ArrowRight') newSlot = slot + 1
+        else if (e.key === 'ArrowLeft') newSlot = slot - 1
+        else if (e.key === 'ArrowDown') newSlot = slot + nav.cols
+        else if (e.key === 'ArrowUp') newSlot = slot - nav.cols
+        if (newSlot >= 0 && newSlot < nav.visibleCount) {
+          selectGlyph(font, nav.visibleIndices[newSlot], false, false)
+        }
+        e.preventDefault()
+        return
+      }
+
+      // Plain Arrow: shift glyph pixels
+      const shiftMap: Record<string, typeof shiftUp> = {
+        ArrowUp: shiftUp, ArrowDown: shiftDown,
+        ArrowLeft: shiftLeft, ArrowRight: shiftRight,
+      }
+      if (shiftMap[e.key]) {
+        execTransformGlyph(font, active, shiftMap[e.key], 'Shift')
         e.preventDefault()
         return
       }

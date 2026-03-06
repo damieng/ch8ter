@@ -1,7 +1,7 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './bdfParser'
-import { calcAllMetrics } from './charMetrics'
+import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
 
 // --- Font Instance ---
 
@@ -261,6 +261,34 @@ effect(() => {
   }
   saveToStorage()
 })
+
+// Fill in only metrics that are still at default (-1), using BDF properties where available
+export function calcMissingMetrics(font: FontInstance) {
+  const data = font.fontData.value
+  const start = font.startChar.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bl = font.baseline.value
+  const props = font.meta.value?.properties
+
+  if (font.capHeight.value < 0) {
+    const fromProp = props?.['CAP_HEIGHT']
+    font.capHeight.value = fromProp != null ? parseInt(fromProp) : calcCapHeight(data, start, w, h, bl)
+  }
+  if (font.xHeight.value < 0) {
+    const fromProp = props?.['X_HEIGHT']
+    font.xHeight.value = fromProp != null ? parseInt(fromProp) : calcXHeight(data, start, w, h, bl)
+  }
+  if (font.ascender.value < 0) {
+    font.ascender.value = calcAscender(data, start, w, h, bl)
+  }
+  if (font.numericHeight.value < 0) {
+    font.numericHeight.value = calcNumericHeight(data, start, w, h, bl)
+  }
+  if (font.descender.value < 0) {
+    font.descender.value = calcDescender(data, start, w, h, bl)
+  }
+}
 
 export function recalcMetrics(font: FontInstance) {
   const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value)

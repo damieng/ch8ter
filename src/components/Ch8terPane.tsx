@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { FilePlus, FolderOpen } from 'lucide-preact'
-import { createFont, addFont, loadFont, charset } from '../store'
+import { createFont, addFont, loadFont, charset, recalcMetrics, calcMissingMetrics } from '../store'
 import { parseBdf } from '../bdfParser'
 import { parsePsf, type PsfParseResult } from '../psfParser'
 import { IconBtn } from './IconBtn'
@@ -81,6 +81,7 @@ export function Ch8terPane() {
           try {
             const result = parseBdf(text)
             const font = createFont(result.fontData, toCh8Name(file.name), result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline, result.glyphMeta)
+            calcMissingMetrics(font)
             addFont(font)
             charset.value = 'imported'
           } catch (e) {
@@ -93,6 +94,7 @@ export function Ch8terPane() {
             const result = parsePsf(buf)
             const { fontData, startChar } = layoutPsfGlyphs(result)
             const font = createFont(fontData, toCh8Name(file.name), startChar, result.glyphWidth, result.glyphHeight)
+            recalcMetrics(font)
             addFont(font)
             charset.value = 'imported'
           } catch (e) {
