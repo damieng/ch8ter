@@ -17,6 +17,7 @@ import { execTransformGlyph } from '../undoHistory'
 import { GlyphMetaDialog } from './GlyphMetaDialog'
 import { writeBdf } from '../bdfWriter'
 import { writePsf } from '../psfWriter'
+import { exportTtf } from '../ttfExport'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 18
@@ -31,7 +32,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|bdf|psf|psfu|bin)$/i, '')
+  return filename.replace(/\.(ch8|bdf|psf|psfu|bin|ttf)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -76,6 +77,13 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveTtf() {
+    saveFont(font)
+    const buf = exportTtf(font)
+    download(new Blob([buf]), baseName(font.fileName.value) + '.ttf')
+    setOpen(false)
+  }
+
   return (
     <div class="relative" ref={ref}>
       <button
@@ -96,6 +104,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePsf}>
             Save as .psf
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveTtf}>
+            Save as .ttf
           </button>
         </div>
       )}
