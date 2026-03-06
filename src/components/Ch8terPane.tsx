@@ -10,6 +10,26 @@ const ICON = 18
 
 const BUILD_DATE = __BUILD_DATE__
 
+// Extract 8x8 font from a CP/M .com file by finding the space character (8 zero bytes)
+function extractCpmFont(buf: ArrayBuffer): Uint8Array {
+  const bytes = new Uint8Array(buf)
+  const bpg = 8 // 8x8 font: 8 bytes per glyph
+  // Search for 8 consecutive zero bytes (the space char at ASCII 32)
+  for (let i = 0; i <= bytes.length - bpg; i += bpg) {
+    let allZero = true
+    for (let b = 0; b < bpg; b++) {
+      if (bytes[i + b] !== 0) { allZero = false; break }
+    }
+    if (allZero) {
+      // Found space at position i — char 0 starts 32 glyphs back
+      const fontStart = i - 32 * bpg
+      if (fontStart < 0) continue
+      return bytes.slice(fontStart, bytes.length)
+    }
+  }
+  throw new Error('Could not find font data in .com file (no blank space glyph found)')
+}
+
 async function decompress(buf: ArrayBuffer, filename: string): Promise<ArrayBuffer> {
   if (!filename.endsWith('.gz')) return buf
   const ds = new DecompressionStream('gzip')
@@ -70,7 +90,7 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.bin,.bdf,.psf,.psfu,.gz'
+    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -109,6 +129,24 @@ export function Ch8terPane() {
           } catch (e) {
             alert(`Failed to parse PSF: ${(e as Error).message}`)
           }
+        })
+      } else if (lower.endsWith('.com')) {
+        file.arrayBuffer().then(buf => {
+          try {
+            const fontData = extractCpmFont(buf)
+            const font = createFont(fontData, file.name, 0)
+            recalcMetrics(font)
+            addFont(font)
+            charset.value = 'cpm'
+          } catch (e) {
+            alert(`Failed to extract font from .com: ${(e as Error).message}`)
+          }
+        })
+      } else if (lower.endsWith('.udg')) {
+        file.arrayBuffer().then(buf => {
+          const font = createFont(undefined, file.name, 0)
+          loadFont(font, buf)
+          addFont(font)
         })
       } else {
         file.arrayBuffer().then(buf => {
