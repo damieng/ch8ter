@@ -27,7 +27,7 @@ async function decompress(buf: ArrayBuffer, filename: string): Promise<ArrayBuff
   return out.buffer
 }
 
-function layoutPsfGlyphs(psf: PsfParseResult): { fontData: Uint8Array; startChar: number } {
+function layoutPsfGlyphs(psf: PsfParseResult): { fontData: Uint8Array; startChar: number; populated: Set<number> | null } {
   const bpr = Math.ceil(psf.glyphWidth / 8)
   const bpg = psf.glyphHeight * bpr
 
@@ -40,16 +40,19 @@ function layoutPsfGlyphs(psf: PsfParseResult): { fontData: Uint8Array; startChar
     }
     const totalSlots = maxCp - minCp + 1
     const out = new Uint8Array(totalSlots * bpg)
+    const populated = new Set<number>()
     for (const [cp, glyphIdx] of psf.unicodeMap) {
       const srcOff = glyphIdx * bpg
-      const dstOff = (cp - minCp) * bpg
+      const idx = cp - minCp
+      const dstOff = idx * bpg
       out.set(psf.fontData.subarray(srcOff, srcOff + bpg), dstOff)
+      populated.add(idx)
     }
-    return { fontData: out, startChar: minCp }
+    return { fontData: out, startChar: minCp, populated }
   }
 
   // No unicode table — treat as sequential from codepoint 0
-  return { fontData: psf.fontData, startChar: 0 }
+  return { fontData: psf.fontData, startChar: 0, populated: null }
 }
 
 export function Ch8terTitle() {
@@ -77,6 +80,14 @@ export function Ch8terPane() {
           try {
             const result = parseBdf(text)
             const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline, result.glyphMeta)
+            // Track which glyph slots were actually in the source file
+            const populated = new Set<number>()
+            if (result.glyphMeta) {
+              for (let j = 0; j < result.glyphMeta.length; j++) {
+                if (result.glyphMeta[j] !== null) populated.add(j)
+              }
+            }
+            font.populatedGlyphs.value = populated
             calcMissingMetrics(font)
             addFont(font)
             charset.value = 'imported'
@@ -88,9 +99,10 @@ export function Ch8terPane() {
         file.arrayBuffer().then(buf => decompress(buf, lower)).then(buf => {
           try {
             const result = parsePsf(buf)
-            const { fontData, startChar } = layoutPsfGlyphs(result)
+            const { fontData, startChar, populated } = layoutPsfGlyphs(result)
             const name = file.name.replace(/\.gz$/i, '')
             const font = createFont(fontData, name, startChar, result.glyphWidth, result.glyphHeight)
+            if (populated) font.populatedGlyphs.value = populated
             recalcMetrics(font)
             addFont(font)
             charset.value = 'imported'

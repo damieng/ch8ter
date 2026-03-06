@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
@@ -133,20 +133,25 @@ export function GlyphGrid({ font }: Props) {
     return () => { el.removeEventListener('scroll', onScroll); obs.disconnect(); cancelAnimationFrame(rafRef.current) }
   }, [])
 
-  // Build index of visible glyph indices (filter empty when toggle is on)
+  // Build index of visible glyph indices (charset filter + hide empty)
   const data = font.fontData.value
   const bpg = bytesPerGlyph(font)
+  const csFilter = charsetGlyphFilter(font)
   let visibleIndices: number[]
-  if (hideEmpty) {
+  if (hideEmpty || csFilter) {
     visibleIndices = []
     for (let i = 0; i < count; i++) {
-      const offset = i * bpg
-      let empty = true
-      for (let b = 0; b < bpg; b++) {
-        if (data[offset + b] !== 0) { empty = false; break }
+      if (csFilter && !csFilter(i)) continue
+      if (hideEmpty) {
+        const offset = i * bpg
+        let empty = true
+        for (let b = 0; b < bpg; b++) {
+          if (data[offset + b] !== 0) { empty = false; break }
+        }
+        const charCode = font.startChar.value + i
+        if (empty && charCode !== 32) continue
       }
-      const charCode = font.startChar.value + i
-      if (!empty || charCode === 32) visibleIndices.push(i)
+      visibleIndices.push(i)
     }
   } else {
     visibleIndices = Array.from({ length: count }, (_, i) => i)

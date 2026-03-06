@@ -15,6 +15,7 @@ export interface FontInstance {
   meta: Signal<FontMeta | null>
   encodings: Signal<number[] | null>
   glyphMeta: Signal<(GlyphMeta | null)[] | null>
+  populatedGlyphs: Signal<Set<number> | null>
   selectedGlyphs: Signal<Set<number>>
   lastClickedGlyph: Signal<number>
   baseline: Signal<number>
@@ -56,6 +57,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     meta: signal<FontMeta | null>(meta ?? null),
     encodings: signal<number[] | null>(encodings ?? null),
     glyphMeta: signal<(GlyphMeta | null)[] | null>(glyphMeta ?? null),
+    populatedGlyphs: signal<Set<number> | null>(null),
     selectedGlyphs: signal<Set<number>>(new Set([0])),
     lastClickedGlyph: signal(0),
     baseline: signal(baselineOverride ?? h - 1),
@@ -91,6 +93,7 @@ interface StoredFont {
   meta?: FontMeta | null
   encodings?: number[] | null
   glyphMeta?: (GlyphMeta | null)[] | null
+  populatedGlyphs?: number[] | null
 }
 
 // --- Window layout persistence ---
@@ -192,6 +195,7 @@ function loadFromStorage(): FontInstance[] | null {
     return stored.map(s => {
       const data = fromBase64(s.fontData)
       const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
+      if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       if (s.ascender != null) font.ascender.value = s.ascender
@@ -231,6 +235,7 @@ function saveToStorage() {
     meta: f.meta.value,
     encodings: f.encodings.value,
     glyphMeta: f.glyphMeta.value,
+    populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -383,46 +388,47 @@ interface CharsetDef {
   label: string
   overrides: Record<number, string>
   colorSystem?: string // matches name in COLOR_SYSTEMS for preview default
+  range?: [number, number] // codepoint range [lo, hi] inclusive — filters glyph grid
 }
 
 const CHARSETS_DEF = {
-  ascii: { label: 'ASCII', overrides: {} },
-  zx: { label: 'ZX Spectrum', colorSystem: 'ZX Spectrum', overrides: {
+  ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
+  zx: { label: 'ZX Spectrum', range: [32, 127] as [number, number], colorSystem: 'ZX Spectrum', overrides: {
     0x5E: '\u2191', // ↑ (up arrow instead of caret)
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
-  bbc: { label: 'BBC Micro', colorSystem: 'Acorn BBC Micro', overrides: {
+  bbc: { label: 'BBC Micro', range: [32, 127] as [number, number], colorSystem: 'Acorn BBC Micro', overrides: {
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
-  c64: { label: 'Commodore 64', colorSystem: 'Commodore 64', overrides: {
+  c64: { label: 'Commodore 64', range: [32, 127] as [number, number], colorSystem: 'Commodore 64', overrides: {
     0x5C: '\u00A3', // £ (pound instead of backslash)
     0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
     0x5F: '\u2190', // ← (left arrow instead of underscore)
     0x7F: '\u03C0', // π (pi)
   }},
-  atari: { label: 'Atari 8-bit', colorSystem: 'Atari 8-bit', overrides: {
+  atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
     // ATASCII: 0x7B-0x7F are control codes, not printable
     0x7B: '\u2666', // ♦ (spade-like in Atari set)
     0x7D: '\u2503', // clear screen (box drawing as placeholder)
     0x7E: '\u25C0', // delete char
     0x7F: '\u25B6', // tab
   }},
-  cpc: { label: 'Amstrad CPC', colorSystem: 'Amstrad CPC', overrides: {
+  cpc: { label: 'Amstrad CPC', range: [32, 127] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
     0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
     0x7F: '\u00A9', // © (copyright)
   }},
-  cga: { label: 'IBM CGA', colorSystem: 'Custom', overrides: {
+  cga: { label: 'IBM CGA', range: [32, 127] as [number, number], colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂ (house, CP437)
   }},
-  msx: { label: 'MSX', colorSystem: 'MSX (TMS9918)', overrides: {
+  msx: { label: 'MSX', range: [32, 127] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
     0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
   }},
-  amiga: { label: 'Amiga (ISO-8859-1)', colorSystem: 'Custom', overrides: {
+  amiga: { label: 'Amiga (ISO-8859-1)', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂
   }},
-  sam: { label: 'SAM Coupe', colorSystem: 'SAM Coup\u00e9', overrides: {
+  sam: { label: 'SAM Coupe', range: [32, 127] as [number, number], colorSystem: 'SAM Coup\u00e9', overrides: {
     0x60: '\u00A3', // £ (pound, inherited from Spectrum)
     0x7F: '\u00A9', // © (copyright)
   }},
@@ -454,6 +460,8 @@ export function charLabel(charCode: number, font?: FontInstance): string {
     return overrides[charCode]
   }
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
+  // ISO-8859-1 printable range (for Amiga and similar charsets)
+  if (charCode >= 160 && charCode <= 255) return String.fromCharCode(charCode)
   return hexLabel(charCode)
 }
 
@@ -468,6 +476,24 @@ export function charCodeFromKey(ch: string): number | null {
   }
   const code = ch.charCodeAt(0)
   if (code >= 32 && code <= 126) return code
+  return null
+}
+
+// Returns a filter predicate for which glyph indices to show, or null for "show all"
+export function charsetGlyphFilter(font: FontInstance): ((index: number) => boolean) | null {
+  const cs = charset.value
+  if (cs === 'imported') {
+    const pop = font.populatedGlyphs.value
+    if (pop) return (i: number) => pop.has(i)
+    return null
+  }
+  const def = CHARSETS[cs]
+  if (def?.range) {
+    const start = font.startChar.value
+    const lo = def.range[0] - start
+    const hi = def.range[1] - start
+    return (i: number) => i >= lo && i <= hi
+  }
   return null
 }
 
