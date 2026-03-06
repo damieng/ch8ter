@@ -415,9 +415,182 @@ const CHARSETS_DEF = {
     0x7E: '\u25C0', // delete char
     0x7F: '\u25B6', // tab
   }},
-  cpc: { label: 'Amstrad CPC', range: [32, 127] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
-    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
-    0x7F: '\u00A9', // © (copyright)
+  cpc: { label: 'Amstrad CPC', range: [0, 255] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
+    // 0x00-0x1F: control code graphics
+    0x00: '\u25FB', // ◻
+    0x01: '\u23BE', // ⎾
+    0x02: '\u23CA', // ⏊
+    0x03: '\u23CC', // ⏌
+    0x04: '\u26A1', // ⚡
+    0x05: '\u22A0', // ⊠
+    0x06: '\u2713', // ✓
+    0x07: '\u237E', // ⍾
+    0x08: '\u2190', // ←
+    0x09: '\u2192', // →
+    0x0A: '\u2193', // ↓
+    0x0B: '\u2191', // ↑
+    0x0C: '\u21A1', // ↡
+    0x0D: '\u21B2', // ↲
+    0x0E: '\u2297', // ⊗
+    0x0F: '\u2299', // ⊙
+    0x10: '\u229F', // ⊟
+    0x11: '\u25F7', // ◷
+    0x12: '\u25F6', // ◶
+    0x13: '\u25F5', // ◵
+    0x14: '\u25F4', // ◴
+    0x15: '\u237B', // ⍻
+    0x16: '\u238D', // ⎍
+    0x17: '\u22A3', // ⊣
+    0x18: '\u29D6', // ⧖
+    0x19: '\u237F', // ⍿
+    0x1A: '\u2426', // ␦
+    0x1B: '\u2296', // ⊖
+    0x1C: '\u25F0', // ◰
+    0x1D: '\u25F1', // ◱
+    0x1E: '\u25F2', // ◲
+    0x1F: '\u25F3', // ◳
+    // 0x27: right single quotation mark
+    0x27: '\u2019', // '
+    // 0x5E: up arrow
+    0x5E: '\u2191', // ↑
+    // 0x7F: DEL (not printable, but glyph exists)
+    0x7F: '\u2421', // ␡
+    // 0x80-0x8F: block elements (quadrants)
+    0x80: '\u00A0', // NBSP
+    0x81: '\u2598', // ▘
+    0x82: '\u259D', // ▝
+    0x83: '\u2580', // ▀
+    0x84: '\u2596', // ▖
+    0x85: '\u258C', // ▌
+    0x86: '\u259E', // ▞
+    0x87: '\u259B', // ▛
+    0x88: '\u2597', // ▗
+    0x89: '\u259A', // ▚
+    0x8A: '\u2590', // ▐
+    0x8B: '\u259C', // ▜
+    0x8C: '\u2584', // ▄
+    0x8D: '\u2599', // ▙
+    0x8E: '\u259F', // ▟
+    0x8F: '\u2588', // █
+    // 0x90-0x9F: box drawing
+    0x90: '\u00B7', // ·
+    0x91: '\u2575', // ╵
+    0x92: '\u2576', // ╶
+    0x93: '\u2514', // └
+    0x94: '\u2577', // ╷
+    0x95: '\u2502', // │
+    0x96: '\u250C', // ┌
+    0x97: '\u251C', // ├
+    0x98: '\u2574', // ╴
+    0x99: '\u2518', // ┘
+    0x9A: '\u2500', // ─
+    0x9B: '\u2534', // ┴
+    0x9C: '\u2510', // ┐
+    0x9D: '\u2524', // ┤
+    0x9E: '\u252C', // ┬
+    0x9F: '\u253C', // ┼
+    // 0xA0-0xAF: symbols
+    0xA0: '\u005E', // ^
+    0xA1: '\u00B4', // ´
+    0xA2: '\u00A8', // ¨
+    0xA3: '\u00A3', // £
+    0xA4: '\u00A9', // ©
+    0xA5: '\u00B6', // ¶
+    0xA6: '\u00A7', // §
+    0xA7: '\u2018', // '
+    0xA8: '\u00BC', // ¼
+    0xA9: '\u00BD', // ½
+    0xAA: '\u00BE', // ¾
+    0xAB: '\u00B1', // ±
+    0xAC: '\u00F7', // ÷
+    0xAD: '\u00AC', // ¬
+    0xAE: '\u00BF', // ¿
+    0xAF: '\u00A1', // ¡
+    // 0xB0-0xBF: Greek
+    0xB0: '\u03B1', // α
+    0xB1: '\u03B2', // β
+    0xB2: '\u03B3', // γ
+    0xB3: '\u03B4', // δ
+    0xB4: '\u03B5', // ε
+    0xB5: '\u03B8', // θ
+    0xB6: '\u03BB', // λ
+    0xB7: '\u03BC', // μ
+    0xB8: '\u03C0', // π
+    0xB9: '\u03C3', // σ
+    0xBA: '\u03C6', // φ
+    0xBB: '\u03C8', // ψ
+    0xBC: '\u03C7', // χ
+    0xBD: '\u03C9', // ω
+    0xBE: '\u03A3', // Σ
+    0xBF: '\u03A9', // Ω
+    // 0xC0-0xCF: diagonal box drawing & patterns
+    0xC0: '\uD83E\uDEA0', // 🮠 U+1FBA0
+    0xC1: '\uD83E\uDEA1', // 🮡 U+1FBA1
+    0xC2: '\uD83E\uDEA3', // 🮣 U+1FBA3
+    0xC3: '\uD83E\uDEA2', // 🮢 U+1FBA2
+    0xC4: '\uD83E\uDEA7', // 🮧 U+1FBA7
+    0xC5: '\uD83E\uDEA5', // 🮥 U+1FBA5
+    0xC6: '\uD83E\uDEA6', // 🮦 U+1FBA6
+    0xC7: '\uD83E\uDEA4', // 🮤 U+1FBA4
+    0xC8: '\uD83E\uDEA8', // 🮨 U+1FBA8
+    0xC9: '\uD83E\uDEA9', // 🮩 U+1FBA9
+    0xCA: '\uD83E\uDEAE', // 🮮 U+1FBAE
+    0xCB: '\u2573', // ╳
+    0xCC: '\u2571', // ╱
+    0xCD: '\u2572', // ╲
+    0xCE: '\uD83E\uDE95', // 🮕 U+1FB95
+    0xCF: '\u2592', // ▒
+    // 0xD0-0xDF: blocks & triangles
+    0xD0: '\u2594', // ▔
+    0xD1: '\u2595', // ▕
+    0xD2: '\u2581', // ▁
+    0xD3: '\u258F', // ▏
+    0xD4: '\u25E4', // ◤
+    0xD5: '\u25E5', // ◥
+    0xD6: '\u25E2', // ◢
+    0xD7: '\u25E3', // ◣
+    0xD8: '\uD83E\uDE8E', // 🮎 U+1FB8E
+    0xD9: '\uD83E\uDE8D', // 🮍 U+1FB8D
+    0xDA: '\uD83E\uDE8F', // 🮏 U+1FB8F
+    0xDB: '\uD83E\uDE8C', // 🮌 U+1FB8C
+    0xDC: '\uD83E\uDE9C', // 🮜 U+1FB9C
+    0xDD: '\uD83E\uDE9D', // 🮝 U+1FB9D
+    0xDE: '\uD83E\uDE9E', // 🮞 U+1FB9E
+    0xDF: '\uD83E\uDE9F', // 🮟 U+1FB9F
+    // 0xE0-0xEF: misc symbols
+    0xE0: '\u263A', // ☺
+    0xE1: '\u2639', // ☹
+    0xE2: '\u2663', // ♣
+    0xE3: '\u2666', // ♦
+    0xE4: '\u2665', // ♥
+    0xE5: '\u2660', // ♠
+    0xE6: '\u25CB', // ○
+    0xE7: '\u25CF', // ●
+    0xE8: '\u25A1', // □
+    0xE9: '\u25A0', // ■
+    0xEA: '\u2642', // ♂
+    0xEB: '\u2640', // ♀
+    0xEC: '\u2669', // ♩
+    0xED: '\u266A', // ♪
+    0xEE: '\u263C', // ☼
+    0xEF: '\uD807\uDC57', // 🚀 U+1CC57 (rocket)
+    // 0xF0-0xFF: arrows, stick figures, misc
+    0xF0: '\u2B61', // ⭡
+    0xF1: '\u2B63', // ⭣
+    0xF2: '\u2B60', // ⭠
+    0xF3: '\u2B62', // ⭢
+    0xF4: '\u25B2', // ▲
+    0xF5: '\u25BC', // ▼
+    0xF6: '\u25B6', // ▶
+    0xF7: '\u25C0', // ◀
+    0xF8: '\uD83E\uDFC6', // 🯆 U+1FBC6
+    0xF9: '\uD83E\uDFC5', // 🯅 U+1FBC5
+    0xFA: '\uD83E\uDFC7', // 🯇 U+1FBC7
+    0xFB: '\uD83E\uDFC8', // 🯈 U+1FBC8
+    0xFC: '\uD807\uDC63', // 💣 U+1CC63 (bomb)
+    0xFD: '\uD807\uDC64', // ☁ U+1CC64 (mushroom cloud)
+    0xFE: '\u2B65', // ⭥
+    0xFF: '\u2B64', // ⭤
   }},
   cga: { label: 'IBM CGA', range: [32, 127] as [number, number], colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂ (house, CP437)

@@ -20,6 +20,7 @@ import { writePsf } from '../psfWriter'
 import { exportTtf } from '../ttfExport'
 import { exportVarTtf } from '../ttfVarExport'
 import { writeYaff } from '../yaffWriter'
+import { ttfToWoff } from '../woffExport'
 import { writeDraw } from '../drawWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 
@@ -35,7 +36,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|yaff|draw)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -122,10 +123,26 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  async function saveWoff() {
+    saveFont(font)
+    const ttf = exportTtf(font)
+    const woff = await ttfToWoff(ttf)
+    download(new Blob([woff]), baseName(font.fileName.value) + '.woff')
+    setOpen(false)
+  }
+
   function saveVarTtf() {
     saveFont(font)
     const buf = exportVarTtf(font)
     download(new Blob([buf]), baseName(font.fileName.value) + '-variable.ttf')
+    setOpen(false)
+  }
+
+  async function saveVarWoff() {
+    saveFont(font)
+    const ttf = exportVarTtf(font)
+    const woff = await ttfToWoff(ttf)
+    download(new Blob([woff]), baseName(font.fileName.value) + '-variable.woff')
     setOpen(false)
   }
 
@@ -162,8 +179,14 @@ export function SaveBar({ font }: { font: FontInstance }) {
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveTtf}>
             Save as .ttf
           </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveWoff}>
+            Save as .woff
+          </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveVarTtf}>
             Save as .ttf (variable)
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveVarWoff}>
+            Save as .woff (variable)
           </button>
         </div>
       )}
