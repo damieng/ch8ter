@@ -19,6 +19,7 @@ import { writeBdf } from '../bdfWriter'
 import { writePsf } from '../psfWriter'
 import { exportTtf } from '../ttfExport'
 import { exportVarTtf } from '../ttfVarExport'
+import { writeYaff } from '../yaffWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 18
@@ -33,7 +34,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|yaff)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -91,6 +92,21 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveYaff() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const yaff = writeYaff({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      name: baseName(font.fileName.value),
+    })
+    download(new Blob([yaff], { type: 'text/plain' }), baseName(font.fileName.value) + '.yaff')
+    setOpen(false)
+  }
+
   function saveVarTtf() {
     saveFont(font)
     const buf = exportVarTtf(font)
@@ -121,6 +137,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePsf}>
             Save as .psf
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveYaff}>
+            Save as .yaff
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveTtf}>
             Save as .ttf
