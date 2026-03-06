@@ -13,9 +13,11 @@ An online bitmap font editor for retro computing character sets. Edit pixel-leve
 
 ### File formats
 
-- **Load**: `.ch8` (binary), `.bin` (binary), `.bdf` (Bitmap Distribution Format)
-- **Save**: `.ch8` binary export
-- BDF import preserves font metadata (copyright, foundry, family, weight, slant, metrics) and per-glyph Unicode encodings
+- **Load**: `.ch8`, `.bin`, `.udg`, `.com` (CP/M), `.bdf`, `.psf`/`.psfu` (+ `.gz`), `.yaff`, `.draw`, `.png`
+- **Save**: `.ch8`, `.udg`, `.bdf`, `.psf`, `.yaff`, `.draw`
+- **Export**: `.ttf`, `.woff`, `.ttf` (variable), `.woff` (variable)
+- BDF import preserves font metadata and per-glyph Unicode encodings
+- PNG import with auto-detection of scale, gaps, and borders
 
 ### Glyph editing
 
@@ -23,7 +25,7 @@ An online bitmap font editor for retro computing character sets. Edit pixel-leve
 - Adjustable zoom on both the pixel editor and the character grid
 - Per-glyph transforms: flip horizontal/vertical, rotate CW/CCW, invert, shift in all directions, center horizontally
 - Multi-select glyphs with click, Shift+click range, Ctrl+click toggle
-- Quick select by category: numbers, uppercase, lowercase, symbols
+- Quick select by category: all, numbers, uppercase, lowercase, symbols, invert selection
 - Batch transforms on entire selections
 - Clipboard support: copy/paste/cut glyph data as ASCII art
 - Undo/redo with up to 100 steps per font (Ctrl+Z / Ctrl+Y)
@@ -45,20 +47,23 @@ An online bitmap font editor for retro computing character sets. Edit pixel-leve
 
 ### Character sets & color palettes
 
-- 10 character set mappings: ASCII, ZX Spectrum, BBC Micro, C64, Atari (ATASCII), Amstrad CPC, IBM CGA, MSX, Amiga (ISO-8859-1), SAM Coupe
-- "Imported" charset using per-glyph Unicode codepoints from BDF files
+- 12 character set mappings: ASCII, ZX Spectrum, BBC Micro, C64, Atari (ATASCII), Amstrad CPC, Amstrad CP/M Plus, IBM CGA, MSX, Amiga (ISO-8859-1), SAM Coupe
+- "Imported" charset using per-glyph Unicode codepoints from BDF/PSF files
 - 14 authentic color palettes: ZX Spectrum, BBC Micro, C64, VIC-20, Amstrad CPC, Apple II, Atari (NTSC/PAL), Sinclair QL, IBM CGA, MSX (TMS9918), SAM Coupe, plus custom colors
 
 ### Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
+| Ctrl+A | Select all glyphs |
 | Ctrl+Z | Undo |
 | Ctrl+Y | Redo |
-| Ctrl+C | Copy glyph |
-| Ctrl+V | Paste glyph |
+| Ctrl+C | Copy glyph as ASCII art |
+| Ctrl+V | Paste glyph from ASCII art |
 | Ctrl+X | Cut glyph |
-| Delete | Clear glyph |
+| Ctrl+Arrow | Navigate between glyphs in the grid |
+| Arrow keys | Shift active glyph pixels in that direction |
+| Delete | Clear active glyph |
 | Any character | Jump to that glyph in the grid |
 
 ## Getting Started

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { fontTemplates } from '../fontTemplates'
-import { createFont, addFont } from '../store'
+import { createFont, addFont, charset } from '../store'
 
 const TILE_SCALE = 3
 const PREVIEW_TEXT = 'Abc'
@@ -101,10 +101,14 @@ export function NewFontDialog({ onClose }: Props) {
     if (selected >= 0 && tileData[selected]) {
       const tpl = fontTemplates[selected]
       const font = createFont(new Uint8Array(tileData[selected]!), `${tpl.name}.ch8`, 32)
+      font.hideEmpty.value = false
       addFont(font)
+      charset.value = tpl.charset
     } else {
       const font = createFont(new Uint8Array(96 * 8), 'untitled.ch8', 32)
+      font.hideEmpty.value = false
       addFont(font)
+      charset.value = 'ascii'
     }
     onClose()
   }

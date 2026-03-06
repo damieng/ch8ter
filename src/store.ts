@@ -25,6 +25,7 @@ export interface FontInstance {
   numericHeight: Signal<number>
   descender: Signal<number>
   gridZoom: Signal<number>
+  hideEmpty: Signal<boolean>
   dirty: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
   undoHistory: UndoHistory
@@ -67,6 +68,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     numericHeight: signal(-1),
     descender: signal(-1),
     gridZoom: signal(5),
+    hideEmpty: signal(true),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     undoHistory: new UndoHistory(),
