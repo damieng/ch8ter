@@ -11,9 +11,11 @@ import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId, storedFocusedId, storedPreviews } from './store'
 import { PreviewWindow } from './components/PreviewWindow'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
 export function App() {
+  const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
   const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
 
   const currentActiveId = activeFontId.value
@@ -63,7 +65,8 @@ export function App() {
   function handleClose(fontId: string) {
     const font = allFonts.find(f => f.id === fontId)
     if (font?.dirty.value) {
-      if (!confirm(`"${font.fileName.value}" has unsaved changes. Close anyway?`)) return
+      setConfirmClose({ fontId, font })
+      return
     }
     removeFont(fontId)
   }
@@ -150,6 +153,13 @@ export function App() {
         </DragWindow>
         )
       })}
+      {confirmClose && (
+        <ConfirmDialog
+          font={confirmClose.font}
+          onConfirm={() => { removeFont(confirmClose.fontId); setConfirmClose(null) }}
+          onCancel={() => setConfirmClose(null)}
+        />
+      )}
     </div>
   )
 }
