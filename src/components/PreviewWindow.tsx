@@ -11,51 +11,58 @@ import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { CenterHIcon } from './CenterHIcon'
 
-function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, title }: {
-  chipRef: RefObject<HTMLDivElement | null>
+function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, systems, systemIdx, onToggle, onFgPick, onBgPick, onSystemChange }: {
+  anchorRef: RefObject<HTMLDivElement | null>
   popupRef: RefObject<HTMLDivElement | null>
-  color: string
+  fg: string
+  bg: string
   open: boolean
   palette?: string[]
+  systems: typeof COLOR_SYSTEMS
+  systemIdx: number
   onToggle: () => void
-  onPick: (c: string) => void
-  title: string
+  onFgPick: (c: string) => void
+  onBgPick: (c: string) => void
+  onSystemChange: (idx: number) => void
 }) {
   const [pos, setPos] = useState({ x: 0, y: 0 })
-  const nativeRef = useRef<HTMLInputElement>(null)
+  const fgNativeRef = useRef<HTMLInputElement>(null)
+  const bgNativeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open && chipRef.current) {
-      const rect = chipRef.current.getBoundingClientRect()
+    if (open && anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect()
       setPos({ x: rect.left, y: rect.bottom + 4 })
     }
   }, [open])
 
-  function handleClick() {
-    if (palette) {
-      onToggle()
-    } else {
-      nativeRef.current?.click()
-    }
+  function paletteCols(len: number) {
+    return len > 16 ? 16 : Math.min(8, len)
   }
 
   return (
-    <div ref={chipRef as preact.Ref<HTMLDivElement>}>
+    <div ref={anchorRef as preact.Ref<HTMLDivElement>}>
       <button
-        class="w-6 h-6 rounded border-2 border-gray-400 hover:border-gray-600"
-        style={{ backgroundColor: color }}
-        onClick={handleClick}
-        title={title}
-      />
+        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center"
+        onClick={onToggle}
+        title="Foreground / Background colors"
+      >
+        <div class="relative" style={{ width: 22, height: 18 }}>
+          <div
+            class="absolute w-3.5 h-3.5 rounded-sm border border-gray-400"
+            style={{ backgroundColor: bg, right: 0, bottom: 0 }}
+          />
+          <div
+            class="absolute w-3.5 h-3.5 rounded-sm border border-gray-400 z-10"
+            style={{ backgroundColor: fg, left: 0, top: 0 }}
+          />
+        </div>
+      </button>
       {!palette && (
-        <input
-          ref={nativeRef}
-          type="color"
-          value={color}
-          onInput={(e) => onPick((e.target as HTMLInputElement).value)}
-          class="absolute opacity-0 pointer-events-none"
-          style={{ width: 0, height: 0 }}
-        />
+        <>
+          <input ref={fgNativeRef} type="color" value={fg} onInput={(e) => onFgPick((e.target as HTMLInputElement).value)} class="absolute opacity-0 pointer-events-none" style={{ width: 0, height: 0 }} />
+          <input ref={bgNativeRef} type="color" value={bg} onInput={(e) => onBgPick((e.target as HTMLInputElement).value)} class="absolute opacity-0 pointer-events-none" style={{ width: 0, height: 0 }} />
+        </>
       )}
       {open && palette && createPortal(
         <div
@@ -63,13 +70,41 @@ function ColorChip({ chipRef, popupRef, color, open, palette, onToggle, onPick, 
           class="fixed bg-white border border-gray-300 rounded shadow-lg p-2"
           style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
         >
-          <div class="grid gap-1" style={{ gridTemplateColumns: `repeat(${palette.length > 16 ? 16 : Math.min(8, palette.length)}, 1fr)` }}>
+          <div class="flex gap-1 mb-2">
+            <select
+              class="flex-1 px-2 py-1 bg-white rounded border border-gray-300 text-sm min-w-0"
+              value={systemIdx}
+              onChange={(e) => onSystemChange(parseInt((e.target as HTMLSelectElement).value))}
+            >
+              {systems.map((s, i) => (
+                <option key={i} value={i}>{s.name}</option>
+              ))}
+            </select>
+            <button
+              class="px-2 py-1 bg-white rounded border border-gray-300 text-sm hover:bg-gray-100"
+              onClick={() => { onFgPick(bg); onBgPick(fg) }}
+              title="Swap foreground/background"
+            >⇄</button>
+          </div>
+          <div class="text-xs text-gray-500 font-medium mb-1">Foreground</div>
+          <div class="grid gap-1 mb-2" style={{ gridTemplateColumns: `repeat(${paletteCols(palette.length)}, 1fr)` }}>
             {palette.map((c, i) => (
               <button
                 key={i}
-                class={`w-5 h-5 rounded border ${c === color ? 'border-blue-500 border-2' : 'border-gray-300'}`}
+                class={`w-5 h-5 rounded border ${c === fg ? 'border-blue-500 border-2' : 'border-gray-300'}`}
                 style={{ backgroundColor: c }}
-                onClick={() => onPick(c)}
+                onClick={() => onFgPick(c)}
+              />
+            ))}
+          </div>
+          <div class="text-xs text-gray-500 font-medium mb-1">Background</div>
+          <div class="grid gap-1" style={{ gridTemplateColumns: `repeat(${paletteCols(palette.length)}, 1fr)` }}>
+            {palette.map((c, i) => (
+              <button
+                key={i}
+                class={`w-5 h-5 rounded border ${c === bg ? 'border-blue-500 border-2' : 'border-gray-300'}`}
+                style={{ backgroundColor: c }}
+                onClick={() => onBgPick(c)}
               />
             ))}
           </div>
@@ -97,15 +132,12 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const [bg, setBg] = useState(stored?.bg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
   const [proportional, setProportional] = useState(stored?.proportional ?? false)
   const [lineHeight, setLineHeight] = useState(stored?.lineHeight ?? 8)
-  const [fgPickerOpen, setFgPickerOpen] = useState(false)
-  const [bgPickerOpen, setBgPickerOpen] = useState(false)
+  const [colorOpen, setColorOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<HTMLDivElement>(null)
-  const fgRef = useRef<HTMLDivElement>(null)
-  const bgRef = useRef<HTMLDivElement>(null)
-  const fgPopupRef = useRef<HTMLDivElement>(null)
-  const bgPopupRef = useRef<HTMLDivElement>(null)
+  const colorRef = useRef<HTMLDivElement>(null)
+  const colorPopupRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
@@ -173,8 +205,7 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
 
   // Click-outside for zoom and color pickers
   useClickOutside(zoomRef, () => setZoomOpen(false))
-  useClickOutside([fgRef, fgPopupRef], () => setFgPickerOpen(false))
-  useClickOutside([bgRef, bgPopupRef], () => setBgPickerOpen(false))
+  useClickOutside([colorRef, colorPopupRef], () => setColorOpen(false))
 
   const selStart = textareaRef.current?.selectionStart ?? 0
   const selEnd = textareaRef.current?.selectionEnd ?? 0
@@ -377,39 +408,23 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
             )
           )}
         </select>
-        <select
-          class="px-2 py-1 bg-white rounded border border-gray-300 text-sm"
-          value={systemIdx}
-          onChange={(e) => {
-            const idx = parseInt((e.target as HTMLSelectElement).value)
+        <ColorSwatch
+          anchorRef={colorRef}
+          popupRef={colorPopupRef}
+          fg={fg}
+          bg={bg}
+          open={colorOpen}
+          palette={system.palette}
+          systems={COLOR_SYSTEMS}
+          systemIdx={systemIdx}
+          onToggle={() => setColorOpen(!colorOpen)}
+          onFgPick={(c) => setFg(c)}
+          onBgPick={(c) => setBg(c)}
+          onSystemChange={(idx) => {
             setSystemIdx(idx)
             setFg(COLOR_SYSTEMS[idx].fg)
             setBg(COLOR_SYSTEMS[idx].bg)
           }}
-        >
-          {COLOR_SYSTEMS.map((s, i) => (
-            <option key={i} value={i}>{s.name}</option>
-          ))}
-        </select>
-        <ColorChip
-          chipRef={fgRef}
-          popupRef={fgPopupRef}
-          color={fg}
-          open={fgPickerOpen}
-          palette={system.palette}
-          onToggle={() => { setFgPickerOpen(!fgPickerOpen); setBgPickerOpen(false) }}
-          onPick={(c) => { setFg(c); setFgPickerOpen(false) }}
-          title="Foreground color"
-        />
-        <ColorChip
-          chipRef={bgRef}
-          popupRef={bgPopupRef}
-          color={bg}
-          open={bgPickerOpen}
-          palette={system.palette}
-          onToggle={() => { setBgPickerOpen(!bgPickerOpen); setFgPickerOpen(false) }}
-          onPick={(c) => { setBg(c); setBgPickerOpen(false) }}
-          title="Background color"
         />
         <button
           class={`p-1.5 rounded border ${proportional ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-white border-gray-300 hover:bg-blue-50'}`}
