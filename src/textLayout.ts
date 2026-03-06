@@ -11,39 +11,30 @@ export function wrapText(text: string, cols: number): WrapResult {
   const offsets: number[][] = []
   let pos = 0
   for (const paragraph of text.split('\n')) {
-    if (paragraph.length <= cols) {
-      lines.push(paragraph)
-      const lineOffsets: number[] = []
-      for (let i = 0; i < paragraph.length; i++) lineOffsets.push(pos + i)
-      offsets.push(lineOffsets)
-      pos += paragraph.length + 1
-      continue
-    }
+    const tokens = paragraph.match(/\S+| +/g) || []
     let line = ''
     let lineOffsets: number[] = []
-    let wordStart = pos
-    for (const word of paragraph.split(' ')) {
-      if (line.length === 0) {
-        line = word
-        lineOffsets = []
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
-      } else if (line.length + 1 + word.length <= cols) {
-        lineOffsets.push(wordStart - 1)
-        line += ' ' + word
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
+    let tokenPos = pos
+
+    for (const token of tokens) {
+      if (token[0] === ' ') {
+        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        line += token
       } else {
-        lines.push(line)
-        offsets.push(lineOffsets)
-        line = word
-        lineOffsets = []
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
+        if (line.length + token.length > cols && line.length > 0) {
+          lines.push(line)
+          offsets.push(lineOffsets)
+          line = ''
+          lineOffsets = []
+        }
+        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        line += token
       }
-      wordStart += word.length + 1
+      tokenPos += token.length
     }
-    if (line.length > 0) {
-      lines.push(line)
-      offsets.push(lineOffsets)
-    }
+
+    lines.push(line)
+    offsets.push(lineOffsets)
     pos += paragraph.length + 1
   }
   return { lines, offsets }
@@ -60,45 +51,38 @@ export function wrapTextProportional(
   const offsets: number[][] = []
   let pos = 0
   for (const paragraph of text.split('\n')) {
-    if (paragraph.length === 0) {
-      lines.push('')
-      offsets.push([])
-      pos += 1
-      continue
-    }
+    const tokens = paragraph.match(/\S+| +/g) || []
     let line = ''
     let lineOffsets: number[] = []
     let lineWidth = 0
-    let wordStart = pos
-    for (const word of paragraph.split(' ')) {
-      let wordWidth = 0
-      for (let i = 0; i < word.length; i++) wordWidth += charWidth(word[i])
-      const spaceWidth = charWidth(' ')
+    let tokenPos = pos
 
-      if (line.length === 0) {
-        line = word
-        lineOffsets = []
-        lineWidth = wordWidth
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
-      } else if (lineWidth + spaceWidth + wordWidth <= maxWidth) {
-        lineOffsets.push(wordStart - 1)
-        line += ' ' + word
-        lineWidth += spaceWidth + wordWidth
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
+    for (const token of tokens) {
+      if (token[0] === ' ') {
+        let tokenWidth = 0
+        for (let i = 0; i < token.length; i++) tokenWidth += charWidth(' ')
+        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        line += token
+        lineWidth += tokenWidth
       } else {
-        lines.push(line)
-        offsets.push(lineOffsets)
-        line = word
-        lineOffsets = []
-        lineWidth = wordWidth
-        for (let i = 0; i < word.length; i++) lineOffsets.push(wordStart + i)
+        let tokenWidth = 0
+        for (let i = 0; i < token.length; i++) tokenWidth += charWidth(token[i])
+        if (lineWidth + tokenWidth > maxWidth && line.length > 0) {
+          lines.push(line)
+          offsets.push(lineOffsets)
+          line = ''
+          lineOffsets = []
+          lineWidth = 0
+        }
+        for (let i = 0; i < token.length; i++) lineOffsets.push(tokenPos + i)
+        line += token
+        lineWidth += tokenWidth
       }
-      wordStart += word.length + 1
+      tokenPos += token.length
     }
-    if (line.length > 0) {
-      lines.push(line)
-      offsets.push(lineOffsets)
-    }
+
+    lines.push(line)
+    offsets.push(lineOffsets)
     pos += paragraph.length + 1
   }
   return { lines, offsets }

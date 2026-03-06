@@ -38,15 +38,15 @@ export const sampleTexts: SampleGroup[] = [
     items: [
       {
         name: 'Colossal Cave',
-        text: 'You are standing at the end of a road\nbefore a small brick building. Around\nyou is a forest. A small stream flows\nout of the building and down a gully.\n\n> GO NORTH\n\nYou are in the forest. The trees are\ntoo thick to see very far.\n\n> INVENTORY\n\nYou are carrying:\n  A brass lantern\n  A small bottle of water\n  Food rations',
+        text: 'You are standing at the end of a road before a small brick building. Around you is a forest. A small stream flows out of the building and down a gully.\n\n> GO NORTH\n\nYou are in the forest. The trees are too thick to see very far.\n\n> INVENTORY\n\nYou are carrying:\n  A brass lantern\n  A small bottle of water\n  Food rations',
       },
       {
         name: 'Zork-style',
-        text: 'West of House\nYou are standing in an open field west\nof a white house, with a boarded front\ndoor.\nThere is a small mailbox here.\n\n> OPEN MAILBOX\n\nOpening the small mailbox reveals a\nleaflet.\n\n> READ LEAFLET\n\nWELCOME TO ADVENTURE!\nYour quest begins here.',
+        text: 'West of House\nYou are standing in an open field west of a white house, with a boarded front door.\nThere is a small mailbox here.\n\n> OPEN MAILBOX\n\nOpening the small mailbox reveals a leaflet.\n\n> READ LEAFLET\n\nWELCOME TO ADVENTURE!\nYour quest begins here.',
       },
       {
         name: 'Dungeon',
-        text: 'The Cavern of Shadows\nDamp walls glisten in the torchlight.\nA narrow passage leads north. To the\neast, a heavy iron door stands ajar.\nYou can hear water dripping somewhere\nin the darkness.\n\nHP: 14/20  Gold: 37  Level: 3\n\n> SEARCH ROOM\n\nYou find a rusty key hidden beneath\na loose stone.',
+        text: 'The Cavern of Shadows\nDamp walls glisten in the torchlight. A narrow passage leads north. To the east, a heavy iron door stands ajar. You can hear water dripping somewhere in the darkness.\n\nHP: 14/20  Gold: 37  Level: 3\n\n> SEARCH ROOM\n\nYou find a rusty key hidden beneath a loose stone.',
       },
     ],
   },
