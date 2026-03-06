@@ -4,6 +4,7 @@ import { createFont, addFont, loadFont, charset, recalcMetrics, calcMissingMetri
 import { parseBdf } from '../bdfParser'
 import { parsePsf, type PsfParseResult } from '../psfParser'
 import { parseYaff } from '../yaffParser'
+import { parseDraw } from '../drawParser'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
 
@@ -91,12 +92,25 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.gz'
+    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
       const lower = file.name.toLowerCase()
-      if (lower.endsWith('.yaff')) {
+      if (lower.endsWith('.draw')) {
+        file.text().then(text => {
+          try {
+            const result = parseDraw(text)
+            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight)
+            font.populatedGlyphs.value = result.populated
+            recalcMetrics(font)
+            addFont(font)
+            charset.value = 'imported'
+          } catch (e) {
+            alert(`Failed to parse .draw: ${(e as Error).message}`)
+          }
+        })
+      } else if (lower.endsWith('.yaff')) {
         file.text().then(text => {
           try {
             const result = parseYaff(text)
