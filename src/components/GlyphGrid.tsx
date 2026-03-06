@@ -87,7 +87,7 @@ interface Props {
 }
 
 export function GlyphGrid({ font }: Props) {
-  const [hideEmpty, setHideEmpty] = useState(false)
+  const [hideEmpty, setHideEmpty] = useState(true)
   const count = glyphCount(font)
   const zoomLevel = font.gridZoom.value
   const tileSize = Math.max(font.glyphWidth.value, font.glyphHeight.value) * zoomLevel
