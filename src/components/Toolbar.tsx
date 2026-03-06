@@ -3,7 +3,7 @@ import { createPortal } from 'preact/compat'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  Save, Info, ChevronDown
+  Save, TypeOutline, Info, ChevronDown
 } from 'lucide-preact'
 import { CenterHIcon } from './CenterHIcon'
 import { IconBtn } from './IconBtn'
@@ -87,13 +87,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
-  function saveTtf() {
-    saveFont(font)
-    const buf = exportTtf(font)
-    download(new Blob([buf]), baseName(font.fileName.value) + '.ttf')
-    setOpen(false)
-  }
-
   function saveYaff() {
     const data = saveFont(font)
     const count = glyphCount(font)
@@ -120,29 +113,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphCount: count,
     })
     download(new Blob([draw], { type: 'text/plain' }), baseName(font.fileName.value) + '.draw')
-    setOpen(false)
-  }
-
-  async function saveWoff() {
-    saveFont(font)
-    const ttf = exportTtf(font)
-    const woff = await ttfToWoff(ttf)
-    download(new Blob([woff]), baseName(font.fileName.value) + '.woff')
-    setOpen(false)
-  }
-
-  function saveVarTtf() {
-    saveFont(font)
-    const buf = exportVarTtf(font)
-    download(new Blob([buf]), baseName(font.fileName.value) + '-variable.ttf')
-    setOpen(false)
-  }
-
-  async function saveVarWoff() {
-    saveFont(font)
-    const ttf = exportVarTtf(font)
-    const woff = await ttfToWoff(ttf)
-    download(new Blob([woff]), baseName(font.fileName.value) + '-variable.woff')
     setOpen(false)
   }
 
@@ -176,17 +146,70 @@ export function SaveBar({ font }: { font: FontInstance }) {
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveDraw}>
             Save as .draw
           </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveTtf}>
-            Save as .ttf
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function ExportBar({ font }: { font: FontInstance }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useClickOutside(ref, () => setOpen(false))
+
+  function exportTtfFile() {
+    saveFont(font)
+    const buf = exportTtf(font)
+    download(new Blob([buf]), baseName(font.fileName.value) + '.ttf')
+    setOpen(false)
+  }
+
+  async function exportWoff() {
+    saveFont(font)
+    const ttf = exportTtf(font)
+    const woff = await ttfToWoff(ttf)
+    download(new Blob([woff]), baseName(font.fileName.value) + '.woff')
+    setOpen(false)
+  }
+
+  function exportVarTtfFile() {
+    saveFont(font)
+    const buf = exportVarTtf(font)
+    download(new Blob([buf]), baseName(font.fileName.value) + '-variable.ttf')
+    setOpen(false)
+  }
+
+  async function exportVarWoff() {
+    saveFont(font)
+    const ttf = exportVarTtf(font)
+    const woff = await ttfToWoff(ttf)
+    download(new Blob([woff]), baseName(font.fileName.value) + '-variable.woff')
+    setOpen(false)
+  }
+
+  return (
+    <div class="relative" ref={ref}>
+      <button
+        class="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
+        onClick={() => setOpen(!open)}
+        title="Export"
+      >
+        <TypeOutline size={ICON} />
+        <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportTtfFile}>
+            Export as .ttf
           </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveWoff}>
-            Save as .woff
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportWoff}>
+            Export as .woff
           </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveVarTtf}>
-            Save as .ttf (variable)
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportVarTtfFile}>
+            Export as .ttf (variable)
           </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveVarWoff}>
-            Save as .woff (variable)
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportVarWoff}>
+            Export as .woff (variable)
           </button>
         </div>
       )}

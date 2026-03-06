@@ -5,7 +5,7 @@ import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
-import { SaveBar } from './Toolbar'
+import { SaveBar, ExportBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
 import { SelectDropdown } from './SelectDropdown'
 import { SizeDialog } from './SizeDialog'
@@ -315,6 +315,7 @@ export function GlyphGrid({ font }: Props) {
     <div class="flex flex-col h-full">
       <div class="flex items-center gap-4 mb-3 flex-wrap shrink-0">
         <SaveBar font={font} />
+        <ExportBar font={font} />
         <SelectDropdown font={font} />
         <ToolsDropdown font={font} />
         <SizeButton font={font} />
