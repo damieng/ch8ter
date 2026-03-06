@@ -7,6 +7,7 @@ import { parseYaff } from '../yaffParser'
 import { parseDraw } from '../drawParser'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
+import { PngImportDialog } from './PngImportDialog'
 
 const ICON = 18
 
@@ -88,16 +89,20 @@ export function Ch8terTitle() {
 
 export function Ch8terPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
+  const [pngFile, setPngFile] = useState<File | null>(null)
 
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.gz'
+    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.png,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
       const lower = file.name.toLowerCase()
-      if (lower.endsWith('.draw')) {
+      if (lower.endsWith('.png')) {
+        setPngFile(file)
+        return
+      } else if (lower.endsWith('.draw')) {
         file.text().then(text => {
           try {
             const result = parseDraw(text)
@@ -197,6 +202,7 @@ export function Ch8terPane() {
         <FilePlus size={ICON} />
       </IconBtn>
       {showNewDialog && <NewFontDialog onClose={() => setShowNewDialog(false)} />}
+      {pngFile && <PngImportDialog file={pngFile} onClose={() => setPngFile(null)} />}
       <IconBtn onClick={handleOpen} title="Open font file">
         <FolderOpen size={ICON} />
       </IconBtn>

@@ -820,6 +820,24 @@ export function selectLowercase(font: FontInstance) {
   const first = 97 - font.startChar.value
   if (first >= 0) font.lastClickedGlyph.value = first
 }
+export function selectAll(font: FontInstance) {
+  const count = glyphCount(font)
+  const result = new Set<number>()
+  for (let i = 0; i < count; i++) result.add(i)
+  font.selectedGlyphs.value = result
+  font.lastClickedGlyph.value = 0
+}
+export function invertSelection(font: FontInstance) {
+  const count = glyphCount(font)
+  const current = font.selectedGlyphs.value
+  const result = new Set<number>()
+  for (let i = 0; i < count; i++) {
+    if (!current.has(i)) result.add(i)
+  }
+  if (result.size === 0) return
+  font.selectedGlyphs.value = result
+}
+
 export function selectSymbols(font: FontInstance) {
   const s = font.startChar.value
   const count = glyphCount(font)

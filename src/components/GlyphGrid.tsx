@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, selectAll, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { GlyphTile } from './GlyphTile'
@@ -218,6 +218,12 @@ export function GlyphGrid({ font }: Props) {
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         redo(font)
+        e.preventDefault()
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        selectAll(font)
         e.preventDefault()
         return
       }

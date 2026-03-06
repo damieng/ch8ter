@@ -2,7 +2,7 @@ import { useState, useRef } from 'preact/hooks'
 import { ChevronDown, MousePointer } from 'lucide-preact'
 import {
   type FontInstance,
-  selectNumbers, selectUppercase, selectLowercase, selectSymbols
+  selectAll, selectNumbers, selectUppercase, selectLowercase, selectSymbols, invertSelection
 } from '../store'
 import { useClickOutside } from '../hooks/useClickOutside'
 
@@ -14,13 +14,14 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
 
   useClickOutside(ref, () => setOpen(false))
 
-  function item(label: string, fn: () => void) {
+  function item(label: string, fn: () => void, shortcut?: string) {
     return (
       <button
-        class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
+        class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
         onClick={() => { fn(); setOpen(false) }}
       >
         {label}
+        {shortcut && <span class="ml-auto text-xs text-gray-400 pl-4">{shortcut}</span>}
       </button>
     )
   }
@@ -37,10 +38,13 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
       </button>
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-40">
+          {item('All', () => selectAll(font), 'Ctrl+A')}
           {item('Numbers 0-9', () => selectNumbers(font))}
           {item('Uppercase A-Z', () => selectUppercase(font))}
           {item('Lowercase a-z', () => selectLowercase(font))}
           {item('Symbols', () => selectSymbols(font))}
+          <div class="border-t border-gray-200 my-1" />
+          {item('Invert Selection', () => invertSelection(font))}
         </div>
       )}
     </div>
