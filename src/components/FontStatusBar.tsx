@@ -21,7 +21,7 @@ export function FontStatusBar({ font }: { font: FontInstance }) {
         onClick={() => setMetaOpen(true)}
         title="Font properties"
       >
-        {propCount > 0 ? `${propCount} properties` : 'properties'}
+        {`${propCount} properties`}
       </button>
       <select
         class="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-500"

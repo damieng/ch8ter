@@ -117,39 +117,50 @@ function fd(data: Uint8Array, startChar: number, w: number, h: number): FontData
   return { data, startChar, w, h }
 }
 
+// Baseline is absolute (row index from top).
 export function calcBaseline(data: Uint8Array, startChar: number, w: number, h: number): number {
   const bot = scanBottom(fd(data, startChar, w, h), BASELINE_CHARS)
   return bot >= 0 ? bot + 1 : h - 1
 }
 
-export function calcAscender(data: Uint8Array, startChar: number, w: number, h: number): number {
-  return scanTop(fd(data, startChar, w, h), ASCENDER_CHARS)
+// All other metrics are relative to baseline (pixels above/below).
+// Above-baseline metrics: pixels above baseline (positive = higher).
+// Descender: pixels below baseline (positive = lower).
+// Returns -1 if not detectable.
+
+export function calcAscender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
+  const top = scanTop(fd(data, startChar, w, h), ASCENDER_CHARS)
+  return top >= 0 ? baseline - top : -1
 }
 
-export function calcCapHeight(data: Uint8Array, startChar: number, w: number, h: number): number {
-  return scanTop(fd(data, startChar, w, h), CAP_HEIGHT_CHARS)
+export function calcCapHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
+  const top = scanTop(fd(data, startChar, w, h), CAP_HEIGHT_CHARS)
+  return top >= 0 ? baseline - top : -1
 }
 
-export function calcXHeight(data: Uint8Array, startChar: number, w: number, h: number): number {
-  return scanTop(fd(data, startChar, w, h), X_HEIGHT_CHARS)
+export function calcXHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
+  const top = scanTop(fd(data, startChar, w, h), X_HEIGHT_CHARS)
+  return top >= 0 ? baseline - top : -1
 }
 
-export function calcNumericHeight(data: Uint8Array, startChar: number, w: number, h: number): number {
-  return scanTop(fd(data, startChar, w, h), NUM_HEIGHT_CHARS)
+export function calcNumericHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
+  const top = scanTop(fd(data, startChar, w, h), NUM_HEIGHT_CHARS)
+  return top >= 0 ? baseline - top : -1
 }
 
-export function calcDescender(data: Uint8Array, startChar: number, w: number, h: number): number {
+export function calcDescender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
   const bot = scanBottom(fd(data, startChar, w, h), DESCENDER_CHARS)
-  return bot >= 0 ? bot + 1 : -1
+  return bot >= 0 ? (bot + 1) - baseline : -1
 }
 
 export function calcAllMetrics(data: Uint8Array, startChar: number, w: number, h: number) {
+  const baseline = calcBaseline(data, startChar, w, h)
   return {
-    baseline: calcBaseline(data, startChar, w, h),
-    ascender: calcAscender(data, startChar, w, h),
-    capHeight: calcCapHeight(data, startChar, w, h),
-    xHeight: calcXHeight(data, startChar, w, h),
-    numericHeight: calcNumericHeight(data, startChar, w, h),
-    descender: calcDescender(data, startChar, w, h),
+    baseline,
+    ascender: calcAscender(data, startChar, w, h, baseline),
+    capHeight: calcCapHeight(data, startChar, w, h, baseline),
+    xHeight: calcXHeight(data, startChar, w, h, baseline),
+    numericHeight: calcNumericHeight(data, startChar, w, h, baseline),
+    descender: calcDescender(data, startChar, w, h, baseline),
   }
 }

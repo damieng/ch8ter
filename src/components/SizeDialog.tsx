@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks'
+import { Ruler } from 'lucide-preact'
 import { type FontInstance, resizeFont } from '../store'
 import {
   calcBaseline, calcAscender, calcCapHeight,
@@ -22,8 +23,12 @@ export function SizeDialog({ font, onClose }: Props) {
   const [anchorX, setAnchorX] = useState<'left' | 'center' | 'right'>('center')
   const [anchorY, setAnchorY] = useState<'top' | 'center' | 'bottom'>('center')
 
-  function calc(fn: (data: Uint8Array, start: number, w: number, h: number) => number) {
+  function calcAbs(fn: (data: Uint8Array, start: number, w: number, h: number) => number) {
     return fn(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value)
+  }
+
+  function calcRel(fn: (data: Uint8Array, start: number, w: number, h: number, baseline: number) => number) {
+    return fn(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value, baseline)
   }
 
   function handleApply() {
@@ -45,7 +50,21 @@ export function SizeDialog({ font, onClose }: Props) {
     numericHeight !== font.numericHeight.value || descender !== font.descender.value
 
   const metricInput = "w-14 px-2 py-1 border border-gray-300 rounded text-center text-sm"
-  const calcBtn = "px-2 py-1 rounded border border-gray-300 text-xs hover:bg-gray-50"
+  const calcBtn = "p-1 rounded border border-gray-300 hover:bg-gray-50"
+
+  function metricRow(label: string, value: number, setValue: (v: number) => void, calc: () => void, min = -1) {
+    return (
+      <div class="flex items-center gap-2">
+        <span class="text-sm w-24 shrink-0">{label}</span>
+        <input type="number" min={min} max={height} value={value}
+          onInput={(e) => setValue(parseInt((e.target as HTMLInputElement).value) ?? min)}
+          class={metricInput} />
+        <button class={calcBtn} onClick={calc} title={`Auto-detect ${label.toLowerCase()}`}>
+          <Ruler size={14} />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -97,50 +116,16 @@ export function SizeDialog({ font, onClose }: Props) {
 
           <hr class="border-gray-200" />
 
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">Ascender</span>
-            <input type="number" min={-1} max={height} value={ascender}
-              onInput={(e) => setAscender(parseInt((e.target as HTMLInputElement).value) ?? -1)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setAscender(calc(calcAscender))}>Calc</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">Cap height</span>
-            <input type="number" min={-1} max={height} value={capHeight}
-              onInput={(e) => setCapHeight(parseInt((e.target as HTMLInputElement).value) ?? -1)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setCapHeight(calc(calcCapHeight))}>Calc</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">Numeric height</span>
-            <input type="number" min={-1} max={height} value={numericHeight}
-              onInput={(e) => setNumericHeight(parseInt((e.target as HTMLInputElement).value) ?? -1)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setNumericHeight(calc(calcNumericHeight))}>Calc</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">x-height</span>
-            <input type="number" min={-1} max={height} value={xHeight}
-              onInput={(e) => setXHeight(parseInt((e.target as HTMLInputElement).value) ?? -1)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setXHeight(calc(calcXHeight))}>Calc</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">Baseline</span>
-            <input type="number" min={0} max={height} value={baseline}
-              onInput={(e) => setBaseline(parseInt((e.target as HTMLInputElement).value) ?? 0)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setBaseline(calc(calcBaseline))}>Calc</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm w-24">Descender</span>
-            <input type="number" min={-1} max={height} value={descender}
-              onInput={(e) => setDescender(parseInt((e.target as HTMLInputElement).value) ?? -1)}
-              class={metricInput} />
-            <button class={calcBtn} onClick={() => setDescender(calc(calcDescender))}>Calc</button>
+          <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+            {metricRow('Ascender', ascender, setAscender, () => setAscender(calcRel(calcAscender)))}
+            {metricRow('Cap height', capHeight, setCapHeight, () => setCapHeight(calcRel(calcCapHeight)))}
+            {metricRow('Descender', descender, setDescender, () => setDescender(calcRel(calcDescender)))}
+            {metricRow('Numeric height', numericHeight, setNumericHeight, () => setNumericHeight(calcRel(calcNumericHeight)))}
+            {metricRow('Baseline', baseline, setBaseline, () => setBaseline(calcAbs(calcBaseline)), 0)}
+            {metricRow('x-height', xHeight, setXHeight, () => setXHeight(calcRel(calcXHeight)))}
           </div>
 
-          <p class="text-xs text-gray-400">Set to -1 to hide a guideline. Metrics are listed top to bottom.</p>
+          <p class="text-xs text-gray-400">Set to -1 to hide a guideline.</p>
         </div>
 
         <div class="flex justify-end gap-2">

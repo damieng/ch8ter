@@ -86,21 +86,21 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const guidelines: [number, string][] = []
   const baseline = font.baseline.value
 
-  // Blue guidelines - only show if relevant to current character
+  // Blue guidelines - convert relative-to-baseline values to absolute rows
   if (font.ascender.value >= 0 && (charFlags & Metric.Ascender))
-    guidelines.push([font.ascender.value, '#3b82f6'])
+    guidelines.push([baseline - font.ascender.value, '#3b82f6'])
   if (font.capHeight.value >= 0 && (charFlags & Metric.CapHeight))
-    guidelines.push([font.capHeight.value, '#3b82f6'])
+    guidelines.push([baseline - font.capHeight.value, '#3b82f6'])
   if (font.numericHeight.value >= 0 && (charFlags & Metric.NumHeight))
-    guidelines.push([font.numericHeight.value, '#3b82f6'])
+    guidelines.push([baseline - font.numericHeight.value, '#3b82f6'])
   if (font.xHeight.value >= 0 && (charFlags & Metric.XHeight))
-    guidelines.push([font.xHeight.value, '#3b82f6'])
+    guidelines.push([baseline - font.xHeight.value, '#3b82f6'])
   // Baseline always shown (red)
   if (baseline >= 0 && baseline <= h)
     guidelines.push([baseline, '#ef4444'])
-  // Descender
+  // Descender: pixels below baseline
   if (font.descender.value >= 0 && (charFlags & Metric.Descender))
-    guidelines.push([font.descender.value, '#3b82f6'])
+    guidelines.push([baseline + font.descender.value, '#3b82f6'])
 
   return (
     <div ref={containerRef} class="w-full h-full flex items-center justify-center">

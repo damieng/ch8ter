@@ -736,6 +736,7 @@ export function createBoldVariant(font: FontInstance) {
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
   const newFont = createFont(bold, name, font.startChar.value, w, h)
+  recalcMetrics(newFont)
   addFont(newFont)
 }
 
@@ -768,6 +769,7 @@ export function createOutlineVariant(font: FontInstance) {
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-outline$1')
   const newFont = createFont(outline, name, font.startChar.value, w, h)
+  recalcMetrics(newFont)
   addFont(newFont)
 }
 
@@ -864,6 +866,7 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
   const newFont = createFont(oblique, name, font.startChar.value, w, h)
+  recalcMetrics(newFont)
   addFont(newFont)
 }
 
@@ -879,6 +882,7 @@ export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
   font.selectedGlyphs.value = new Set([0])
   font.lastClickedGlyph.value = 0
   font.undoHistory.clear()
+  recalcMetrics(font)
 }
 
 // Resize all glyphs in a font to new dimensions
