@@ -18,6 +18,7 @@ import { GlyphMetaDialog } from './GlyphMetaDialog'
 import { writeBdf } from '../bdfWriter'
 import { writePsf } from '../psfWriter'
 import { exportTtf } from '../ttfExport'
+import { exportVarTtf } from '../ttfVarExport'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 18
@@ -84,6 +85,13 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveVarTtf() {
+    saveFont(font)
+    const buf = exportVarTtf(font)
+    download(new Blob([buf]), baseName(font.fileName.value) + '-variable.ttf')
+    setOpen(false)
+  }
+
   return (
     <div class="relative" ref={ref}>
       <button
@@ -107,6 +115,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveTtf}>
             Save as .ttf
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveVarTtf}>
+            Save as .ttf (variable)
           </button>
         </div>
       )}
