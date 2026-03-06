@@ -10,6 +10,10 @@ const ICON = 18
 
 const BUILD_DATE = __BUILD_DATE__
 
+function toCh8Name(filename: string): string {
+  return filename.replace(/\.(bdf|psf|psfu|psf\.gz|psfu\.gz|bin)$/i, '.ch8')
+}
+
 async function decompress(buf: ArrayBuffer, filename: string): Promise<ArrayBuffer> {
   if (!filename.endsWith('.gz')) return buf
   const ds = new DecompressionStream('gzip')
@@ -76,7 +80,7 @@ export function Ch8terPane() {
         file.text().then(text => {
           try {
             const result = parseBdf(text)
-            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline, result.glyphMeta)
+            const font = createFont(result.fontData, toCh8Name(file.name), result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline, result.glyphMeta)
             addFont(font)
             charset.value = 'imported'
           } catch (e) {
@@ -88,7 +92,7 @@ export function Ch8terPane() {
           try {
             const result = parsePsf(buf)
             const { fontData, startChar } = layoutPsfGlyphs(result)
-            const font = createFont(fontData, file.name, startChar, result.glyphWidth, result.glyphHeight)
+            const font = createFont(fontData, toCh8Name(file.name), startChar, result.glyphWidth, result.glyphHeight)
             addFont(font)
             charset.value = 'imported'
           } catch (e) {
