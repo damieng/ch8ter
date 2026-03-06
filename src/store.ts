@@ -393,7 +393,7 @@ interface CharsetDef {
 
 const CHARSETS_DEF = {
   ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
-  zx: { label: 'ZX Spectrum', range: [32, 127] as [number, number], colorSystem: 'ZX Spectrum', overrides: {
+  zx: { label: 'ZX Spectrum', range: [32, 127] as [number, number], colorSystem: 'Sinclair ZX Spectrum', overrides: {
     0x5E: '\u2191', // ↑ (up arrow instead of caret)
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)

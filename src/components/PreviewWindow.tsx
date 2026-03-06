@@ -126,8 +126,9 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const [textKey, setTextKey] = useState(stored?.textKey ?? '0-0')
   const [zoom, setZoom] = useState(stored?.zoom ?? 2)
   const [zoomOpen, setZoomOpen] = useState(false)
-  const initSysIdx = stored?.systemIdx ?? COLOR_SYSTEMS.findIndex(s => s.name === 'ZX Spectrum')
-  const [systemIdx, setSystemIdx] = useState(initSysIdx >= 0 ? initSysIdx : 0)
+  const rawSysIdx = stored?.systemIdx ?? COLOR_SYSTEMS.findIndex(s => s.name === 'Sinclair ZX Spectrum')
+  const initSysIdx = rawSysIdx >= 0 && rawSysIdx < COLOR_SYSTEMS.length ? rawSysIdx : 0
+  const [systemIdx, setSystemIdx] = useState(initSysIdx)
   const [fg, setFg] = useState(stored?.fg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].fg)
   const [bg, setBg] = useState(stored?.bg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
   const [proportional, setProportional] = useState(stored?.proportional ?? false)
