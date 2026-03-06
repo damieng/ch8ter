@@ -1,4 +1,5 @@
 import { useState, useRef } from 'preact/hooks'
+import { createPortal } from 'preact/compat'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
@@ -81,8 +82,9 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Create Oblique...', () => setObliqueOpen(true))}
         </div>
       )}
-      {obliqueOpen && (
-        <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />
+      {obliqueOpen && createPortal(
+        <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />,
+        document.body,
       )}
     </div>
   )

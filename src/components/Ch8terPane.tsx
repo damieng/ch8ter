@@ -32,7 +32,7 @@ export function Ch8terPane() {
         file.text().then(text => {
           try {
             const result = parseBdf(text)
-            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline)
+            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, result.encodings, result.baseline, result.glyphMeta)
             addFont(font)
             charset.value = 'imported'
           } catch (e) {

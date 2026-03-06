@@ -16,6 +16,13 @@ export interface FontMeta {
   properties: Record<string, string>  // all STARTPROPERTIES values
 }
 
+export interface GlyphMeta {
+  name?: string              // STARTCHAR name
+  swidth?: [number, number]  // SWIDTH
+  dwidth?: [number, number]  // DWIDTH
+  bbx?: [number, number, number, number] // BBX w, h, offX, offY
+}
+
 export interface BdfParseResult {
   glyphWidth: number
   glyphHeight: number
@@ -23,6 +30,7 @@ export interface BdfParseResult {
   fontData: Uint8Array
   meta: FontMeta
   encodings: number[] // per-glyph Unicode codepoint (index -> codepoint)
+  glyphMeta: (GlyphMeta | null)[] // per-glyph metadata (index-aligned with encodings)
   baseline?: number   // row index (0-based from top)
 }
 
@@ -114,6 +122,7 @@ export function parseBdf(text: string): BdfParseResult {
   const bpg = cellH * bpr
   const fontData = new Uint8Array(totalGlyphs * bpg)
   const encodings = new Array<number>(totalGlyphs)
+  const glyphMetaArr: (GlyphMeta | null)[] = new Array(totalGlyphs).fill(null)
   for (let e = 0; e < totalGlyphs; e++) encodings[e] = minEnc + e
   // Main parse: write directly to fontData
   while (i < lines.length) {
@@ -122,7 +131,8 @@ export function parseBdf(text: string): BdfParseResult {
 
     if (line.startsWith('STARTCHAR ')) {
       let encoding = -1
-      let bbxH = fontBBH, bbxOffX = fontBBOffX, bbxOffY = fontBBOffY
+      let bbxW = fontBBW, bbxH = fontBBH, bbxOffX = fontBBOffX, bbxOffY = fontBBOffY
+      const gm: GlyphMeta = { name: line.substring(10).trim() }
       i++
 
       // Parse glyph header
@@ -131,11 +141,19 @@ export function parseBdf(text: string): BdfParseResult {
         if (gl === 'BITMAP') { i++; break }
         if (gl.startsWith('ENCODING ')) {
           encoding = parseInt(gl.substring(9))
+        } else if (gl.startsWith('SWIDTH ')) {
+          const parts = gl.split(/\s+/)
+          gm.swidth = [parseInt(parts[1]), parseInt(parts[2])]
+        } else if (gl.startsWith('DWIDTH ')) {
+          const parts = gl.split(/\s+/)
+          gm.dwidth = [parseInt(parts[1]), parseInt(parts[2])]
         } else if (gl.startsWith('BBX ')) {
           const parts = gl.split(/\s+/)
+          bbxW = parseInt(parts[1])
           bbxH = parseInt(parts[2])
           bbxOffX = parseInt(parts[3])
           bbxOffY = parseInt(parts[4])
+          gm.bbx = [bbxW, bbxH, bbxOffX, bbxOffY]
         }
         i++
       }
@@ -148,6 +166,7 @@ export function parseBdf(text: string): BdfParseResult {
       }
 
       const idx = encoding - minEnc
+      glyphMetaArr[idx] = gm
       const base = idx * bpg
       const px = bbxOffX - fontBBOffX
       const py = (fontBBH + fontBBOffY) - (bbxOffY + bbxH)
@@ -192,6 +211,7 @@ export function parseBdf(text: string): BdfParseResult {
     fontData,
     meta,
     encodings,
+    glyphMeta: glyphMetaArr,
     baseline,
   }
 }

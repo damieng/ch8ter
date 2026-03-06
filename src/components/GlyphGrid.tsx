@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
+import { createPortal } from 'preact/compat'
 import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
 import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS } from '../store'
 import { execClearGlyph, execPasteGlyph, undo, redo } from '../undoHistory'
@@ -53,7 +54,10 @@ function SizeButton({ font }: { font: FontInstance }) {
         <Maximize2 size={16} />
         {font.glyphWidth.value}×{font.glyphHeight.value}
       </button>
-      {open && <SizeDialog font={font} onClose={() => setOpen(false)} />}
+      {open && createPortal(
+        <SizeDialog font={font} onClose={() => setOpen(false)} />,
+        document.body,
+      )}
     </>
   )
 }

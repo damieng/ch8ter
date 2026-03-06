@@ -1,6 +1,6 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
-import type { FontMeta } from './bdfParser'
+import type { FontMeta, GlyphMeta } from './bdfParser'
 
 // --- Font Instance ---
 
@@ -13,6 +13,7 @@ export interface FontInstance {
   fileName: Signal<string>
   meta: Signal<FontMeta | null>
   encodings: Signal<number[] | null>
+  glyphMeta: Signal<(GlyphMeta | null)[] | null>
   selectedGlyphs: Signal<Set<number>>
   lastClickedGlyph: Signal<number>
   baseline: Signal<number>
@@ -32,7 +33,7 @@ export function bytesPerGlyph(font: FontInstance): number {
 
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number): FontInstance {
+export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number, glyphMeta?: (GlyphMeta | null)[]): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
@@ -48,6 +49,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     fileName: signal(name ?? 'untitled.ch8'),
     meta: signal<FontMeta | null>(meta ?? null),
     encodings: signal<number[] | null>(encodings ?? null),
+    glyphMeta: signal<(GlyphMeta | null)[] | null>(glyphMeta ?? null),
     selectedGlyphs: signal<Set<number>>(new Set([0])),
     lastClickedGlyph: signal(0),
     baseline: signal(baselineOverride ?? h - 1),
@@ -72,6 +74,7 @@ interface StoredFont {
   baseline?: number
   meta?: FontMeta | null
   encodings?: number[] | null
+  glyphMeta?: (GlyphMeta | null)[] | null
 }
 
 // --- Window layout persistence ---
@@ -172,7 +175,7 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline)
+      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       return font
@@ -192,6 +195,7 @@ function saveToStorage() {
     baseline: f.baseline.value,
     meta: f.meta.value,
     encodings: f.encodings.value,
+    glyphMeta: f.glyphMeta.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -211,6 +215,8 @@ effect(() => {
     f.startChar.value
     f.glyphWidth.value
     f.glyphHeight.value
+    f.meta.value
+    f.glyphMeta.value
   }
   saveToStorage()
 })
@@ -317,7 +323,7 @@ const CHARSETS_DEF = {
     0x5F: '\u2190', // ← (left arrow instead of underscore)
     0x7F: '\u03C0', // π (pi)
   }},
-  atari: { label: 'Atari 8-bit', colorSystem: 'Atari 8-bit (NTSC)', overrides: {
+  atari: { label: 'Atari 8-bit', colorSystem: 'Atari 8-bit', overrides: {
     // ATASCII: 0x7B-0x7F are control codes, not printable
     0x7B: '\u2666', // ♦ (spade-like in Atari set)
     0x7D: '\u2503', // clear screen (box drawing as placeholder)
