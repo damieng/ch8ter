@@ -8,16 +8,20 @@ export interface SampleGroup {
   items: SampleText[]
 }
 
+const PANGRAMS = [
+  'The quick brown fox jumps over the lazy dog.',
+  'Pack my box with five dozen liquor jugs.',
+  'How vexingly quick daft zebras jump!',
+  'Sphinx of black quartz, judge my vow.',
+  'Jackdaws love my big sphinx of quartz.',
+  'The five boxing wizards jump quickly.',
+]
+
 export const sampleTexts: SampleGroup[] = [
   {
     group: 'Pangrams',
     items: [
-      { name: 'Quick brown fox', text: 'The quick brown fox jumps over the lazy dog.' },
-      { name: 'Pack my box', text: 'Pack my box with five dozen liquor jugs.' },
-      { name: 'How vexingly', text: 'How vexingly quick daft zebras jump!' },
-      { name: 'Sphinx of quartz', text: 'Sphinx of black quartz, judge my vow.' },
-      { name: 'Jackdaws', text: 'Jackdaws love my big sphinx of quartz.' },
-      { name: 'Wizard', text: 'The five boxing wizards jump quickly.' },
+      { name: 'Pangrams', text: PANGRAMS.join('\n\n') },
     ],
   },
   {
@@ -65,6 +69,10 @@ export const sampleTexts: SampleGroup[] = [
         name: 'Z80 assembly',
         text: '; Clear screen routine\nclear_screen:\n    ld hl, $4000    ; Screen start\n    ld de, $4001\n    ld bc, $17FF    ; Screen length\n    ld (hl), 0\n    ldir\n    ret\n\n; Print string @ HL\nprint_str:\n    ld a, (hl)\n    or a\n    ret z\n    rst $10\n    inc hl\n    jr @print_str',
       },
+      {
+        name: '6502 assembly',
+        text: '; Print message to screen\n        *= $C000\n\nPRINT   LDX #$00\nLOOP    LDA MSG,X\n        BEQ DONE\n        JSR $FFD2       ; CHROUT\n        INX\n        BNE LOOP\nDONE    RTS\n\nMSG     .TEXT "READY."\n        .BYTE $0D,$00\n\n; Delay routine\nDELAY   LDY #$FF\nOUTER   LDX #$FF\nINNER   DEX\n        BNE INNER\n        DEY\n        BNE OUTER\n        RTS',
+      },
     ],
   },
   {
@@ -82,23 +90,15 @@ export const sampleTexts: SampleGroup[] = [
         name: 'Alice in Wonderland',
         text: 'Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, "and what is the use of a book," thought Alice "without pictures or conversations?"\n\nSo she was considering in her own mind whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.',
       },
-      {
-        name: 'War of the Worlds',
-        text: 'No one would have believed in the last\nyears of the nineteenth century that\nthis world was being watched keenly and\nclosely by intelligences greater than\nman\'s and yet as mortal as his own;\nthat as men busied themselves about\ntheir various concerns they were\nscrutinised and studied.',
-      },
-      {
-        name: 'A Christmas Carol',
-        text: 'Marley was dead: to begin with. There\nis no doubt whatever about that. The\nregister of his burial was signed by\nthe clergyman, the clerk, the\nundertaker, and the chief mourner.\nScrooge signed it. And Scrooge\'s name\nwas good upon \'Change, for anything\nhe chose to put his hand to.',
-      },
-      {
-        name: 'Treasure Island',
-        text: 'Squire Trelawney, Dr. Livesey, and the\nrest of these gentlemen having asked me\nto write down the whole particulars\nabout Treasure Island, from the\nbeginning to the end, keeping nothing\nback but the bearings of the island,\nI take up my pen in the year of grace\n17-- and go back to the time when my\nfather kept the Admiral Benbow inn.',
-      },
     ],
   },
   {
     group: 'Games',
     items: [
+      {
+        name: 'Intro screen',
+        text: '================================\n\n***     CRYSTAL  CAVERNS     ***\n\n================================\n\n  1. Start new game\n  2. Continue saved game\n  3. Difficulty: NORMAL\n  4. Sound: ON\n  5. Controls: KEYBOARD\n\n  0. Begin adventure!\n\n--------------------------------\n  A game by Pixel Forge Studios\n  (c) 1986 Pixel Forge Ltd.\n================================',
+      },
       {
         name: 'High scores',
         text: '  ** HIGH SCORES **\n\n1. ACE ...... 99,950\n2. BOB ...... 87,200\n3. CAT ...... 76,100\n4. DAN ...... 65,300\n5. EVE ...... 54,800\n6. FAY ...... 43,600\n7. GUS ...... 32,400\n8. HAL ...... 21,000\n9. IVY ...... 10,500\n10 JAY ......  5,250',
