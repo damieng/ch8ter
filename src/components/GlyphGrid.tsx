@@ -100,7 +100,7 @@ export function GlyphGrid({ font }: Props) {
   const canvasH = Math.round(tileSize * gh / maxDim)
   const border = 4 // border-2 = 2px * 2 sides
   const pad = 2    // p-0.5 = 1px * 2 sides
-  const labelHeight = 18 // text-sm + mt-0.5
+  const labelHeight = 20 // text-sm leading-tight + mt-0.5
   const gap = 2
   const tileOuterW = canvasW + border + pad + gap
   const tileOuterH = canvasH + border + pad + labelHeight + gap
