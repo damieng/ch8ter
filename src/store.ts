@@ -405,6 +405,10 @@ export type Charset = keyof typeof CHARSETS_DEF
 export const CHARSETS: Record<Charset, CharsetDef> = CHARSETS_DEF
 export const charset = signal<Charset>('zx')
 
+function hexLabel(charCode: number): string {
+  return '0x' + charCode.toString(16).toUpperCase().padStart(2, '0')
+}
+
 export function charLabel(charCode: number, font?: FontInstance): string {
   if (charset.value === 'imported' && font) {
     const enc = font.encodings.value
@@ -414,16 +418,15 @@ export function charLabel(charCode: number, font?: FontInstance): string {
       if (cp > 32 && cp !== 0x7F) {
         try { return String.fromCodePoint(cp) } catch { /* invalid codepoint */ }
       }
-      return ''
+      return hexLabel(charCode)
     }
   }
   const overrides = CHARSETS[charset.value]?.overrides
   if (overrides && overrides[charCode]) {
     return overrides[charCode]
   }
-  if (charCode === 0x7F) return ''
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
-  return ''
+  return hexLabel(charCode)
 }
 
 // Reverse lookup: given a typed character, find its char code in the font.

@@ -68,7 +68,7 @@ export function GlyphTile({ font, index, size, selected, active, onClick }: Prop
     >
       <canvas ref={canvasRef} width={canvasW} height={canvasH} class="block" />
       <span class="text-sm leading-tight mt-0.5">
-        {label || '\u00B7'}
+        {label}
       </span>
     </div>
   )

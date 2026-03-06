@@ -2,12 +2,55 @@ import { useState } from 'preact/hooks'
 import { FilePlus, FolderOpen } from 'lucide-preact'
 import { createFont, addFont, loadFont, charset } from '../store'
 import { parseBdf } from '../bdfParser'
+import { parsePsf, type PsfParseResult } from '../psfParser'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
 
 const ICON = 18
 
 const BUILD_DATE = __BUILD_DATE__
+
+async function decompress(buf: ArrayBuffer, filename: string): Promise<ArrayBuffer> {
+  if (!filename.endsWith('.gz')) return buf
+  const ds = new DecompressionStream('gzip')
+  const reader = new Blob([buf]).stream().pipeThrough(ds).getReader()
+  const chunks: Uint8Array[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+  }
+  const total = chunks.reduce((s, c) => s + c.length, 0)
+  const out = new Uint8Array(total)
+  let off = 0
+  for (const c of chunks) { out.set(c, off); off += c.length }
+  return out.buffer
+}
+
+function layoutPsfGlyphs(psf: PsfParseResult): { fontData: Uint8Array; startChar: number } {
+  const bpr = Math.ceil(psf.glyphWidth / 8)
+  const bpg = psf.glyphHeight * bpr
+
+  if (psf.unicodeMap && psf.unicodeMap.size > 0) {
+    // Map glyphs by unicode codepoint into a contiguous range
+    let minCp = 0x7FFFFFFF, maxCp = 0
+    for (const cp of psf.unicodeMap.keys()) {
+      if (cp < minCp) minCp = cp
+      if (cp > maxCp) maxCp = cp
+    }
+    const totalSlots = maxCp - minCp + 1
+    const out = new Uint8Array(totalSlots * bpg)
+    for (const [cp, glyphIdx] of psf.unicodeMap) {
+      const srcOff = glyphIdx * bpg
+      const dstOff = (cp - minCp) * bpg
+      out.set(psf.fontData.subarray(srcOff, srcOff + bpg), dstOff)
+    }
+    return { fontData: out, startChar: minCp }
+  }
+
+  // No unicode table — treat as sequential from codepoint 0
+  return { fontData: psf.fontData, startChar: 0 }
+}
 
 export function Ch8terTitle() {
   return (
@@ -24,11 +67,12 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.bin,.bdf'
+    input.accept = '.ch8,.bin,.bdf,.psf,.psfu,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
-      if (file.name.toLowerCase().endsWith('.bdf')) {
+      const lower = file.name.toLowerCase()
+      if (lower.endsWith('.bdf')) {
         file.text().then(text => {
           try {
             const result = parseBdf(text)
@@ -39,13 +83,25 @@ export function Ch8terPane() {
             alert(`Failed to parse BDF: ${(e as Error).message}`)
           }
         })
+      } else if (lower.endsWith('.psf') || lower.endsWith('.psfu') || lower.endsWith('.psf.gz') || lower.endsWith('.psfu.gz')) {
+        file.arrayBuffer().then(buf => decompress(buf, lower)).then(buf => {
+          try {
+            const result = parsePsf(buf)
+            const { fontData, startChar } = layoutPsfGlyphs(result)
+            const font = createFont(fontData, file.name, startChar, result.glyphWidth, result.glyphHeight)
+            addFont(font)
+            charset.value = 'imported'
+          } catch (e) {
+            alert(`Failed to parse PSF: ${(e as Error).message}`)
+          }
+        })
       } else {
         file.arrayBuffer().then(buf => {
           const font = createFont()
           loadFont(font, buf)
           font.fileName.value = file.name
           addFont(font)
-          if (file.name.toLowerCase().endsWith('.ch8')) {
+          if (lower.endsWith('.ch8')) {
             charset.value = 'zx'
           }
         })
