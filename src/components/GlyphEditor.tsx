@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
 import { type FontInstance, getPixel, setPixel } from '../store'
 import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
+import { getCharMetrics, Metric } from '../charMetrics'
 
 export function GlyphEditor({ font }: { font: FontInstance }) {
   const painting = useRef<boolean | null>(null)
@@ -69,12 +70,37 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const gridW = cellSize * w + gap * (w + 1)
   const gridH = cellSize * h + gap * (h + 1)
 
+  // Determine which guidelines to show based on the current character
+  const charCode = font.startChar.value + font.lastClickedGlyph.value
+  const charFlags = getCharMetrics(charCode)
+
+  // Guide sits at top edge of row: row 0 = top of grid, row h = bottom of grid
+  function guideY(row: number): number {
+    if (row < 0 || row > h) return -1
+    if (row === 0) return 0
+    if (row === h) return gridH - gap
+    return gap + row * (cellSize + gap) - gap
+  }
+
+  // Build guideline list: [row, color]
+  const guidelines: [number, string][] = []
   const baseline = font.baseline.value
-  // Baseline line sits between row (baseline-1) and row (baseline)
-  // Y position: padding + baseline rows * (cellSize + gap)
-  const baselineY = baseline > 0 && baseline < h
-    ? gap + baseline * (cellSize + gap) - gap
-    : -1
+
+  // Blue guidelines - only show if relevant to current character
+  if (font.ascender.value >= 0 && (charFlags & Metric.Ascender))
+    guidelines.push([font.ascender.value, '#3b82f6'])
+  if (font.capHeight.value >= 0 && (charFlags & Metric.CapHeight))
+    guidelines.push([font.capHeight.value, '#3b82f6'])
+  if (font.numericHeight.value >= 0 && (charFlags & Metric.NumHeight))
+    guidelines.push([font.numericHeight.value, '#3b82f6'])
+  if (font.xHeight.value >= 0 && (charFlags & Metric.XHeight))
+    guidelines.push([font.xHeight.value, '#3b82f6'])
+  // Baseline always shown (red)
+  if (baseline >= 0 && baseline <= h)
+    guidelines.push([baseline, '#ef4444'])
+  // Descender
+  if (font.descender.value >= 0 && (charFlags & Metric.Descender))
+    guidelines.push([font.descender.value, '#3b82f6'])
 
   return (
     <div ref={containerRef} class="w-full h-full flex items-center justify-center">
@@ -91,19 +117,24 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
         }}
       >
         {cells}
-        {baselineY >= 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: `${baselineY}px`,
-              height: `${gap}px`,
-              backgroundColor: '#ef4444',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
+        {guidelines.map(([row, color], i) => {
+          const y = guideY(row)
+          if (y < 0) return null
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: `${y}px`,
+                height: `${gap}px`,
+                backgroundColor: color,
+                pointerEvents: 'none',
+              }}
+            />
+          )
+        })}
       </div>
     </div>
   )

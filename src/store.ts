@@ -1,6 +1,7 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { calcAllMetrics } from './charMetrics'
 
 // --- Font Instance ---
 
@@ -17,6 +18,11 @@ export interface FontInstance {
   selectedGlyphs: Signal<Set<number>>
   lastClickedGlyph: Signal<number>
   baseline: Signal<number>
+  ascender: Signal<number>
+  capHeight: Signal<number>
+  xHeight: Signal<number>
+  numericHeight: Signal<number>
+  descender: Signal<number>
   gridZoom: Signal<number>
   dirty: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
@@ -53,6 +59,11 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     selectedGlyphs: signal<Set<number>>(new Set([0])),
     lastClickedGlyph: signal(0),
     baseline: signal(baselineOverride ?? h - 1),
+    ascender: signal(-1),
+    capHeight: signal(-1),
+    xHeight: signal(-1),
+    numericHeight: signal(-1),
+    descender: signal(-1),
     gridZoom: signal(5),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
@@ -72,6 +83,11 @@ interface StoredFont {
   glyphWidth?: number
   glyphHeight?: number
   baseline?: number
+  ascender?: number
+  capHeight?: number
+  xHeight?: number
+  numericHeight?: number
+  descender?: number
   meta?: FontMeta | null
   encodings?: number[] | null
   glyphMeta?: (GlyphMeta | null)[] | null
@@ -178,6 +194,20 @@ function loadFromStorage(): FontInstance[] | null {
       const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
+      if (s.ascender != null) font.ascender.value = s.ascender
+      if (s.capHeight != null) font.capHeight.value = s.capHeight
+      if (s.xHeight != null) font.xHeight.value = s.xHeight
+      if (s.numericHeight != null) font.numericHeight.value = s.numericHeight
+      if (s.descender != null) font.descender.value = s.descender
+      // Auto-calc metrics if not stored
+      if (s.ascender == null) {
+        const m = calcAllMetrics(data, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8)
+        font.ascender.value = m.ascender
+        font.capHeight.value = m.capHeight
+        font.xHeight.value = m.xHeight
+        font.numericHeight.value = m.numericHeight
+        font.descender.value = m.descender
+      }
       return font
     })
   } catch {
@@ -193,6 +223,11 @@ function saveToStorage() {
     glyphWidth: f.glyphWidth.value,
     glyphHeight: f.glyphHeight.value,
     baseline: f.baseline.value,
+    ascender: f.ascender.value,
+    capHeight: f.capHeight.value,
+    xHeight: f.xHeight.value,
+    numericHeight: f.numericHeight.value,
+    descender: f.descender.value,
     meta: f.meta.value,
     encodings: f.encodings.value,
     glyphMeta: f.glyphMeta.value,
@@ -217,9 +252,25 @@ effect(() => {
     f.glyphHeight.value
     f.meta.value
     f.glyphMeta.value
+    f.baseline.value
+    f.ascender.value
+    f.capHeight.value
+    f.xHeight.value
+    f.numericHeight.value
+    f.descender.value
   }
   saveToStorage()
 })
+
+export function recalcMetrics(font: FontInstance) {
+  const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value)
+  font.baseline.value = m.baseline
+  font.ascender.value = m.ascender
+  font.capHeight.value = m.capHeight
+  font.xHeight.value = m.xHeight
+  font.numericHeight.value = m.numericHeight
+  font.descender.value = m.descender
+}
 
 function isEmptyUntitled(f: FontInstance): boolean {
   if (f.dirty.value) return false
