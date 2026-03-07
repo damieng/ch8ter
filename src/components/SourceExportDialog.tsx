@@ -53,10 +53,11 @@ export function SourceExportDialog({ font, onClose }: Props) {
               <Download size={14} /> Download
             </button>
             <button
-              class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 text-sm"
+              class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold ml-1"
               onClick={onClose}
+              title="Close"
             >
-              Close
+              ×
             </button>
           </div>
         </div>
