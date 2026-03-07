@@ -13,24 +13,17 @@ const ICON = 18
 
 const BUILD_DATE = __BUILD_DATE__
 
-// Extract 8x8 font from a CP/M .com file by finding the space character (8 zero bytes)
-function extractCpmFont(buf: ArrayBuffer): Uint8Array {
+// Extract font from a PSF2AMS CP/M .com file
+// Header is 512 bytes; glyph height at offset 0x2F; font data starts at offset 512; always 256 glyphs
+function extractCpmFont(buf: ArrayBuffer): { fontData: Uint8Array; glyphHeight: number } {
   const bytes = new Uint8Array(buf)
-  const bpg = 8 // 8x8 font: 8 bytes per glyph
-  // Search for 8 consecutive zero bytes (the space char at ASCII 32)
-  for (let i = 0; i <= bytes.length - bpg; i += bpg) {
-    let allZero = true
-    for (let b = 0; b < bpg; b++) {
-      if (bytes[i + b] !== 0) { allZero = false; break }
-    }
-    if (allZero) {
-      // Found space at position i — char 0 starts 32 glyphs back
-      const fontStart = i - 32 * bpg
-      if (fontStart < 0) continue
-      return bytes.slice(fontStart, bytes.length)
-    }
-  }
-  throw new Error('Could not find font data in .com file (no blank space glyph found)')
+  if (bytes.length < 512) throw new Error('File too small to be a CP/M font .com')
+  const glyphHeight = bytes[0x2F]
+  if (glyphHeight === 0 || glyphHeight > 64) throw new Error(`Unexpected glyph height at 0x2F: ${glyphHeight}`)
+  const bpg = glyphHeight // 8px wide = 1 byte per row
+  const expected = 512 + 256 * bpg
+  if (bytes.length < expected) throw new Error(`File too small for ${glyphHeight}px font (expected ${expected} bytes)`)
+  return { fontData: bytes.slice(512, 512 + 256 * bpg), glyphHeight }
 }
 
 async function decompress(buf: ArrayBuffer, filename: string): Promise<ArrayBuffer> {
@@ -166,8 +159,8 @@ export function Ch8terPane() {
       } else if (lower.endsWith('.com')) {
         file.arrayBuffer().then(buf => {
           try {
-            const fontData = extractCpmFont(buf)
-            const font = createFont(fontData, file.name, 0)
+            const { fontData, glyphHeight } = extractCpmFont(buf)
+            const font = createFont(fontData, file.name, 0, 8, glyphHeight)
             recalcMetrics(font)
             addFont(font)
             charset.value = 'cpm'

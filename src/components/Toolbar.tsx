@@ -22,6 +22,7 @@ import { exportVarTtf } from '../ttfVarExport'
 import { writeYaff } from '../yaffWriter'
 import { ttfToWoff } from '../woffExport'
 import { writeDraw } from '../drawWriter'
+import { exportCpm } from '../cpmExport'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from './SourceExportDialog'
 
@@ -117,6 +118,13 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveCpm() {
+    const data = saveFont(font)
+    const com = exportCpm(font.glyphHeight.value, data)
+    download(new Blob([com.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
+    setOpen(false)
+  }
+
   return (
     <div class="relative" ref={ref}>
       <button
@@ -146,6 +154,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveDraw}>
             Save as .draw
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
+            Save as CP/M Plus .com
           </button>
         </div>
       )}
