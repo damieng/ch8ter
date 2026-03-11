@@ -5,6 +5,7 @@ import { parseBdf } from '../bdfParser'
 import { parsePsf, type PsfParseResult } from '../psfParser'
 import { parseYaff } from '../yaffParser'
 import { parseDraw } from '../drawParser'
+import { parseFzx } from '../fzxParser'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
 import { PngImportDialog } from './PngImportDialog'
@@ -87,7 +88,7 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.png,.gz'
+    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.png,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -154,6 +155,19 @@ export function Ch8terPane() {
             charset.value = 'imported'
           } catch (e) {
             alert(`Failed to parse PSF: ${(e as Error).message}`)
+          }
+        })
+      } else if (lower.endsWith('.fzx')) {
+        file.arrayBuffer().then(buf => {
+          try {
+            const result = parseFzx(buf)
+            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, undefined, undefined, undefined, result.glyphMeta)
+            font.populatedGlyphs.value = result.populated
+            recalcMetrics(font)
+            addFont(font)
+            charset.value = 'imported'
+          } catch (e) {
+            alert(`Failed to parse FZX: ${(e as Error).message}`)
           }
         })
       } else if (lower.endsWith('.com')) {

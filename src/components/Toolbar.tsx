@@ -23,6 +23,7 @@ import { writeYaff } from '../yaffWriter'
 import { ttfToWoff } from '../woffExport'
 import { writeDraw } from '../drawWriter'
 import { exportCpm } from '../cpmExport'
+import { writeFzx } from '../fzxWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from './SourceExportDialog'
 
@@ -38,7 +39,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -118,6 +119,21 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveFzx() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const fzx = writeFzx({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      glyphMeta: font.glyphMeta.value,
+    })
+    download(new Blob([fzx.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fzx')
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -154,6 +170,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveDraw}>
             Save as .draw
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFzx}>
+            Save as .fzx
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com
