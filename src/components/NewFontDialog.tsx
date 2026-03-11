@@ -2,17 +2,18 @@ import { useState } from 'preact/hooks'
 import { type Charset, createFont, addFont, charset } from '../store'
 
 const CODEPAGES: { value: Charset; label: string; startChar: number; glyphCount: number }[] = [
+  { value: 'amiga', label: 'Amiga (ISO-8859-1)', startChar: 32, glyphCount: 224 },
+  { value: 'cpc', label: 'Amstrad CPC', startChar: 0, glyphCount: 256 },
+  { value: 'cpm', label: 'Amstrad CP/M Plus', startChar: 0, glyphCount: 256 },
   { value: 'ascii', label: 'ASCII', startChar: 32, glyphCount: 95 },
-  { value: 'zx', label: 'ZX Spectrum', startChar: 32, glyphCount: 96 },
+  { value: 'atari', label: 'Atari 8-bit', startChar: 32, glyphCount: 96 },
   { value: 'bbc', label: 'BBC Micro', startChar: 32, glyphCount: 96 },
   { value: 'c64', label: 'Commodore 64', startChar: 32, glyphCount: 96 },
-  { value: 'atari', label: 'Atari 8-bit', startChar: 32, glyphCount: 96 },
-  { value: 'cpc', label: 'Amstrad CPC', startChar: 0, glyphCount: 256 },
-  { value: 'cga', label: 'IBM CGA', startChar: 32, glyphCount: 96 },
+  { value: 'cp437', label: 'DOS (CP437)', startChar: 0, glyphCount: 256 },
+  { value: 'cp850', label: 'DOS (CP850)', startChar: 0, glyphCount: 256 },
   { value: 'msx', label: 'MSX', startChar: 32, glyphCount: 96 },
-  { value: 'amiga', label: 'Amiga (ISO-8859-1)', startChar: 32, glyphCount: 224 },
   { value: 'sam', label: 'SAM Coupe', startChar: 32, glyphCount: 96 },
-  { value: 'cpm', label: 'Amstrad CP/M Plus', startChar: 0, glyphCount: 256 },
+  { value: 'zx', label: 'ZX Spectrum', startChar: 32, glyphCount: 96 },
 ]
 
 interface Props {

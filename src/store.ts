@@ -394,28 +394,8 @@ interface CharsetDef {
 }
 
 const CHARSETS_DEF = {
-  ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
-  zx: { label: 'ZX Spectrum', range: [32, 127] as [number, number], colorSystem: 'Sinclair ZX Spectrum', overrides: {
-    0x5E: '\u2191', // ↑ (up arrow instead of caret)
-    0x60: '\u00A3', // £ (pound instead of backtick)
-    0x7F: '\u00A9', // © (copyright)
-  }},
-  bbc: { label: 'BBC Micro', range: [32, 127] as [number, number], colorSystem: 'Acorn BBC Micro', overrides: {
-    0x60: '\u00A3', // £ (pound instead of backtick)
-    0x7F: '\u00A9', // © (copyright)
-  }},
-  c64: { label: 'Commodore 64', range: [32, 127] as [number, number], colorSystem: 'Commodore 64', overrides: {
-    0x5C: '\u00A3', // £ (pound instead of backslash)
-    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
-    0x5F: '\u2190', // ← (left arrow instead of underscore)
-    0x7F: '\u03C0', // π (pi)
-  }},
-  atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
-    // ATASCII: 0x7B-0x7F are control codes, not printable
-    0x7B: '\u2666', // ♦ (spade-like in Atari set)
-    0x7D: '\u2503', // clear screen (box drawing as placeholder)
-    0x7E: '\u25C0', // delete char
-    0x7F: '\u25B6', // tab
+  amiga: { label: 'Amiga (ISO-8859-1)', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
+    0x7F: '\u2302', // ⌂
   }},
   cpc: { label: 'Amstrad CPC', range: [0, 255] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
     // 0x00-0x1F: control code graphics
@@ -594,18 +574,91 @@ const CHARSETS_DEF = {
     0xFE: '\u2B65', // ⭥
     0xFF: '\u2B64', // ⭤
   }},
-  cga: { label: 'IBM CGA', range: [32, 127] as [number, number], colorSystem: 'Custom', overrides: {
-    0x7F: '\u2302', // ⌂ (house, CP437)
-  }},
-  msx: { label: 'MSX', range: [32, 127] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
-    0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
-  }},
-  amiga: { label: 'Amiga (ISO-8859-1)', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cp437: { label: 'DOS (CP437)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+    0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
+    0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
+    0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',
+    0x0C: '\u2640', 0x0D: '\u266A', 0x0E: '\u266B', 0x0F: '\u263C',
+    0x10: '\u25BA', 0x11: '\u25C4', 0x12: '\u2195', 0x13: '\u203C',
+    0x14: '\u00B6', 0x15: '\u00A7', 0x16: '\u25AC', 0x17: '\u21A8',
+    0x18: '\u2191', 0x19: '\u2193', 0x1A: '\u2192', 0x1B: '\u2190',
+    0x1C: '\u221F', 0x1D: '\u2194', 0x1E: '\u25B2', 0x1F: '\u25BC',
     0x7F: '\u2302', // ⌂
+    0x80: '\u00C7', 0x81: '\u00FC', 0x82: '\u00E9', 0x83: '\u00E2',
+    0x84: '\u00E4', 0x85: '\u00E0', 0x86: '\u00E5', 0x87: '\u00E7',
+    0x88: '\u00EA', 0x89: '\u00EB', 0x8A: '\u00E8', 0x8B: '\u00EF',
+    0x8C: '\u00EE', 0x8D: '\u00EC', 0x8E: '\u00C4', 0x8F: '\u00C5',
+    0x90: '\u00C9', 0x91: '\u00E6', 0x92: '\u00C6', 0x93: '\u00F4',
+    0x94: '\u00F6', 0x95: '\u00F2', 0x96: '\u00FB', 0x97: '\u00F9',
+    0x98: '\u00FF', 0x99: '\u00D6', 0x9A: '\u00DC', 0x9B: '\u00A2',
+    0x9C: '\u00A3', 0x9D: '\u00A5', 0x9E: '\u20A7', 0x9F: '\u0192',
+    0xA0: '\u00E1', 0xA1: '\u00ED', 0xA2: '\u00F3', 0xA3: '\u00FA',
+    0xA4: '\u00F1', 0xA5: '\u00D1', 0xA6: '\u00AA', 0xA7: '\u00BA',
+    0xA8: '\u00BF', 0xA9: '\u2310', 0xAA: '\u00AC', 0xAB: '\u00BD',
+    0xAC: '\u00BC', 0xAD: '\u00A1', 0xAE: '\u00AB', 0xAF: '\u00BB',
+    0xB0: '\u2591', 0xB1: '\u2592', 0xB2: '\u2593', 0xB3: '\u2502',
+    0xB4: '\u2524', 0xB5: '\u2561', 0xB6: '\u2562', 0xB7: '\u2556',
+    0xB8: '\u2555', 0xB9: '\u2563', 0xBA: '\u2551', 0xBB: '\u2557',
+    0xBC: '\u255D', 0xBD: '\u255C', 0xBE: '\u255B', 0xBF: '\u2510',
+    0xC0: '\u2514', 0xC1: '\u2534', 0xC2: '\u252C', 0xC3: '\u251C',
+    0xC4: '\u2500', 0xC5: '\u253C', 0xC6: '\u255E', 0xC7: '\u255F',
+    0xC8: '\u255A', 0xC9: '\u2554', 0xCA: '\u2569', 0xCB: '\u2566',
+    0xCC: '\u2560', 0xCD: '\u2550', 0xCE: '\u256C', 0xCF: '\u2567',
+    0xD0: '\u2568', 0xD1: '\u2564', 0xD2: '\u2565', 0xD3: '\u2559',
+    0xD4: '\u2558', 0xD5: '\u2552', 0xD6: '\u2553', 0xD7: '\u256B',
+    0xD8: '\u256A', 0xD9: '\u2518', 0xDA: '\u250C', 0xDB: '\u2588',
+    0xDC: '\u2584', 0xDD: '\u258C', 0xDE: '\u2590', 0xDF: '\u2580',
+    0xE0: '\u03B1', 0xE1: '\u00DF', 0xE2: '\u0393', 0xE3: '\u03C0',
+    0xE4: '\u03A3', 0xE5: '\u03C3', 0xE6: '\u00B5', 0xE7: '\u03C4',
+    0xE8: '\u03A6', 0xE9: '\u0398', 0xEA: '\u03A9', 0xEB: '\u03B4',
+    0xEC: '\u221E', 0xED: '\u03C6', 0xEE: '\u03B5', 0xEF: '\u2229',
+    0xF0: '\u2261', 0xF1: '\u00B1', 0xF2: '\u2265', 0xF3: '\u2264',
+    0xF4: '\u2320', 0xF5: '\u2321', 0xF6: '\u00F7', 0xF7: '\u2248',
+    0xF8: '\u00B0', 0xF9: '\u2219', 0xFA: '\u00B7', 0xFB: '\u221A',
+    0xFC: '\u207F', 0xFD: '\u00B2', 0xFE: '\u25A0', 0xFF: '\u00A0',
   }},
-  sam: { label: 'SAM Coupe', range: [32, 127] as [number, number], colorSystem: 'SAM Coup\u00e9', overrides: {
-    0x60: '\u00A3', // £ (pound, inherited from Spectrum)
-    0x7F: '\u00A9', // © (copyright)
+  cp850: { label: 'DOS (CP850)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+    0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
+    0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
+    0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',
+    0x0C: '\u2640', 0x0D: '\u266A', 0x0E: '\u266B', 0x0F: '\u263C',
+    0x10: '\u25BA', 0x11: '\u25C4', 0x12: '\u2195', 0x13: '\u203C',
+    0x14: '\u00B6', 0x15: '\u00A7', 0x16: '\u25AC', 0x17: '\u21A8',
+    0x18: '\u2191', 0x19: '\u2193', 0x1A: '\u2192', 0x1B: '\u2190',
+    0x1C: '\u221F', 0x1D: '\u2194', 0x1E: '\u25B2', 0x1F: '\u25BC',
+    0x7F: '\u2302', // ⌂
+    0x80: '\u00C7', 0x81: '\u00FC', 0x82: '\u00E9', 0x83: '\u00E2',
+    0x84: '\u00E4', 0x85: '\u00E0', 0x86: '\u00E5', 0x87: '\u00E7',
+    0x88: '\u00EA', 0x89: '\u00EB', 0x8A: '\u00E8', 0x8B: '\u00EF',
+    0x8C: '\u00EE', 0x8D: '\u00EC', 0x8E: '\u00C4', 0x8F: '\u00C5',
+    0x90: '\u00C9', 0x91: '\u00E6', 0x92: '\u00C6', 0x93: '\u00F4',
+    0x94: '\u00F6', 0x95: '\u00F2', 0x96: '\u00FB', 0x97: '\u00F9',
+    0x98: '\u00FF', 0x99: '\u00D6', 0x9A: '\u00DC', 0x9B: '\u00D8',
+    0x9C: '\u00A3', 0x9D: '\u00D8', 0x9E: '\u00D7', 0x9F: '\u0192',
+    0xA0: '\u00E1', 0xA1: '\u00ED', 0xA2: '\u00F3', 0xA3: '\u00FA',
+    0xA4: '\u00F1', 0xA5: '\u00D1', 0xA6: '\u00AA', 0xA7: '\u00BA',
+    0xA8: '\u00BF', 0xA9: '\u00AE', 0xAA: '\u00AC', 0xAB: '\u00BD',
+    0xAC: '\u00BC', 0xAD: '\u00A1', 0xAE: '\u00AB', 0xAF: '\u00BB',
+    0xB0: '\u2591', 0xB1: '\u2592', 0xB2: '\u2593', 0xB3: '\u2502',
+    0xB4: '\u2524', 0xB5: '\u00C1', 0xB6: '\u00C2', 0xB7: '\u00C0',
+    0xB8: '\u00A9', 0xB9: '\u2563', 0xBA: '\u2551', 0xBB: '\u2557',
+    0xBC: '\u255D', 0xBD: '\u00A2', 0xBE: '\u00A5', 0xBF: '\u2510',
+    0xC0: '\u2514', 0xC1: '\u2534', 0xC2: '\u252C', 0xC3: '\u251C',
+    0xC4: '\u2500', 0xC5: '\u253C', 0xC6: '\u00E3', 0xC7: '\u00C3',
+    0xC8: '\u255A', 0xC9: '\u2554', 0xCA: '\u2569', 0xCB: '\u2566',
+    0xCC: '\u2560', 0xCD: '\u2550', 0xCE: '\u256C', 0xCF: '\u00A4',
+    0xD0: '\u00F0', 0xD1: '\u00D0', 0xD2: '\u00CA', 0xD3: '\u00CB',
+    0xD4: '\u00C8', 0xD5: '\u0131', 0xD6: '\u00CD', 0xD7: '\u00CE',
+    0xD8: '\u00CF', 0xD9: '\u2518', 0xDA: '\u250C', 0xDB: '\u2588',
+    0xDC: '\u2584', 0xDD: '\u00A6', 0xDE: '\u00CC', 0xDF: '\u2580',
+    0xE0: '\u00D3', 0xE1: '\u00DF', 0xE2: '\u00D4', 0xE3: '\u00D2',
+    0xE4: '\u00F5', 0xE5: '\u00D5', 0xE6: '\u00B5', 0xE7: '\u00FE',
+    0xE8: '\u00DE', 0xE9: '\u00DA', 0xEA: '\u00DB', 0xEB: '\u00D9',
+    0xEC: '\u00FD', 0xED: '\u00DD', 0xEE: '\u00AF', 0xEF: '\u00B4',
+    0xF0: '\u00AD', 0xF1: '\u00B1', 0xF2: '\u2017', 0xF3: '\u00BE',
+    0xF4: '\u00B6', 0xF5: '\u00A7', 0xF6: '\u00F7', 0xF7: '\u00B8',
+    0xF8: '\u00B0', 0xF9: '\u00A8', 0xFA: '\u00B7', 0xFB: '\u00B9',
+    0xFC: '\u00B3', 0xFD: '\u00B2', 0xFE: '\u25A0', 0xFF: '\u00A0',
   }},
   cpm: { label: 'Amstrad CP/M Plus', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
     // 0x00-0x1F: Greek & math symbols
@@ -648,12 +701,153 @@ const CHARSETS_DEF = {
     // 0xFC-0xFF: double-shaft arrows & equivalence
     0xFC: '\u21D2', 0xFD: '\u21D0', 0xFE: '\u21D4', 0xFF: '\u2261',
   }},
+  ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
+  atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
+    // ATASCII: 0x7B-0x7F are control codes, not printable
+    0x7B: '\u2666', // ♦ (spade-like in Atari set)
+    0x7D: '\u2503', // clear screen (box drawing as placeholder)
+    0x7E: '\u25C0', // delete char
+    0x7F: '\u25B6', // tab
+  }},
+  bbc: { label: 'BBC Micro', range: [32, 127] as [number, number], colorSystem: 'Acorn BBC Micro', overrides: {
+    0x60: '\u00A3', // £ (pound instead of backtick)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+  c64: { label: 'Commodore 64', range: [32, 127] as [number, number], colorSystem: 'Commodore 64', overrides: {
+    0x5C: '\u00A3', // £ (pound instead of backslash)
+    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
+    0x5F: '\u2190', // ← (left arrow instead of underscore)
+    0x7F: '\u03C0', // π (pi)
+  }},
   imported: { label: 'Imported', overrides: {} },
+  msx: { label: 'MSX', range: [32, 127] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
+    0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
+  }},
+  sam: { label: 'SAM Coupe', range: [32, 127] as [number, number], colorSystem: 'SAM Coup\u00e9', overrides: {
+    0x60: '\u00A3', // £ (pound, inherited from Spectrum)
+    0x7F: '\u00A9', // © (copyright)
+  }},
+  zx: { label: 'ZX Spectrum', range: [32, 127] as [number, number], colorSystem: 'Sinclair ZX Spectrum', overrides: {
+    0x5E: '\u2191', // ↑ (up arrow instead of caret)
+    0x60: '\u00A3', // £ (pound instead of backtick)
+    0x7F: '\u00A9', // © (copyright)
+  }},
 }
 
 export type Charset = keyof typeof CHARSETS_DEF
 export const CHARSETS: Record<Charset, CharsetDef> = CHARSETS_DEF
 export const charset = signal<Charset>('zx')
+
+// Resolve a codepoint to its Unicode character under a given charset
+function cpToUnicode(cp: number, cs: Charset): string {
+  return CHARSETS[cs].overrides[cp] ?? String.fromCodePoint(cp)
+}
+
+// Build reverse lookup: Unicode character → codepoint for a charset (0-255)
+function buildUnicodeReverse(cs: Charset): Map<string, number> {
+  const def = CHARSETS[cs]
+  const map = new Map<string, number>()
+  for (let cp = 0; cp < 256; cp++) {
+    const ch = def.overrides[cp] ?? String.fromCodePoint(cp)
+    if (!map.has(ch)) map.set(ch, cp)
+  }
+  return map
+}
+
+// Switch charset with Unicode-aware glyph remapping
+export function switchCharset(newCs: Charset) {
+  const oldCs = charset.value
+  if (newCs === oldCs) return
+
+  const font = fonts.value.find(f => f.id === activeFontId.value)
+  if (font && oldCs !== 'imported' && newCs !== 'imported') {
+    remapFontForCharset(font, oldCs, newCs)
+  }
+
+  charset.value = newCs
+}
+
+function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset) {
+  const newDef = CHARSETS[newCs]
+  const newRange = newDef.range ?? [32, 126]
+
+  const oldStart = font.startChar.value
+  const oldCount = glyphCount(font)
+  const bpr = Math.ceil(font.glyphWidth.value / 8)
+  const bpg = font.glyphHeight.value * bpr
+  const oldData = font.fontData.value
+  const oldGm = font.glyphMeta.value
+
+  // New font covers both the new charset range and any existing positions
+  const newStart = Math.min(oldStart, newRange[0])
+  const newEnd = Math.max(oldStart + oldCount - 1, newRange[1])
+  const newCount = newEnd - newStart + 1
+  const newData = new Uint8Array(newCount * bpg)
+  const newGlyphMeta: (typeof oldGm extends null ? never : NonNullable<typeof oldGm>)[number][] | null =
+    oldGm ? new Array(newCount).fill(null) : null
+  const newPop = new Set<number>()
+
+  const reverse = buildUnicodeReverse(newCs)
+  const filled = new Set<number>()
+
+  // First pass: place glyphs that have a mapped position in the new charset
+  // Second pass: place unmapped glyphs at their original codepoint if available
+  interface PendingGlyph { oldIdx: number; oldCp: number }
+  const unmapped: PendingGlyph[] = []
+
+  for (let i = 0; i < oldCount; i++) {
+    const offset = i * bpg
+    let hasData = false
+    for (let b = 0; b < bpg; b++) {
+      if (oldData[offset + b]) { hasData = true; break }
+    }
+    if (!hasData && (oldStart + i) !== 32) continue
+
+    const oldCp = oldStart + i
+    const unicode = cpToUnicode(oldCp, oldCs)
+    const newCp = reverse.get(unicode)
+
+    if (newCp !== undefined) {
+      const newIdx = newCp - newStart
+      if (newIdx >= 0 && newIdx < newCount && !filled.has(newIdx)) {
+        newData.set(oldData.subarray(offset, offset + bpg), newIdx * bpg)
+        filled.add(newIdx)
+        if (hasData) newPop.add(newIdx)
+        if (newGlyphMeta && oldGm?.[i]) newGlyphMeta[newIdx] = oldGm[i]
+        continue
+      }
+    }
+
+    unmapped.push({ oldIdx: i, oldCp })
+  }
+
+  // Place unmapped glyphs at their original codepoint position as fallback
+  for (const { oldIdx, oldCp } of unmapped) {
+    const fallbackIdx = oldCp - newStart
+    if (fallbackIdx >= 0 && fallbackIdx < newCount && !filled.has(fallbackIdx)) {
+      const offset = oldIdx * bpg
+      newData.set(oldData.subarray(offset, offset + bpg), fallbackIdx * bpg)
+      filled.add(fallbackIdx)
+      newPop.add(fallbackIdx)
+      if (newGlyphMeta && oldGm?.[oldIdx]) newGlyphMeta[fallbackIdx] = oldGm[oldIdx]
+    }
+  }
+
+  font.startChar.value = newStart
+  font.fontData.value = newData
+  font.savedSnapshot.value = new Uint8Array(newData)
+  if (newGlyphMeta) font.glyphMeta.value = newGlyphMeta
+  font.populatedGlyphs.value = newPop
+
+  // Remap selection: follow the active glyph's Unicode character
+  const activeOldIdx = font.lastClickedGlyph.value
+  const activeOldCp = oldStart + activeOldIdx
+  const activeUnicode = cpToUnicode(activeOldCp, oldCs)
+  const activeNewCp = reverse.get(activeUnicode) ?? activeOldCp
+  const activeNewIdx = Math.max(0, activeNewCp - newStart)
+  font.selectedGlyphs.value = new Set([activeNewIdx])
+  font.lastClickedGlyph.value = activeNewIdx
+}
 
 function hexLabel(charCode: number): string {
   return '0x' + charCode.toString(16).toUpperCase().padStart(2, '0')

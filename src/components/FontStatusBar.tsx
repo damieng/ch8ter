@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
-import { type FontInstance, glyphCount, charset, CHARSETS, type Charset } from '../store'
+import { type FontInstance, glyphCount, switchCharset, charset, CHARSETS, type Charset } from '../store'
 import { MetaDialog } from './MetaDialog'
 
 export function FontStatusBar({ font }: { font: FontInstance }) {
@@ -26,7 +26,7 @@ export function FontStatusBar({ font }: { font: FontInstance }) {
       <select
         class="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-500"
         value={charset.value}
-        onChange={(e) => { charset.value = (e.target as HTMLSelectElement).value as Charset }}
+        onChange={(e) => { switchCharset((e.target as HTMLSelectElement).value as Charset) }}
       >
         {Object.entries(CHARSETS).map(([key, def]) => (
           <option key={key} value={key}>{def.label}</option>

@@ -134,24 +134,21 @@ export function GlyphGrid({ font }: Props) {
     return () => { el.removeEventListener('scroll', onScroll); obs.disconnect(); cancelAnimationFrame(rafRef.current) }
   }, [])
 
-  // Build index of visible glyph indices (charset filter + hide empty)
+  // Build index of visible glyph indices (hide empty only — charset filter used for muting labels)
   const data = font.fontData.value
   const bpg = bytesPerGlyph(font)
   const csFilter = charsetGlyphFilter(font)
   let visibleIndices: number[]
-  if (hideEmpty || csFilter) {
+  if (hideEmpty) {
     visibleIndices = []
     for (let i = 0; i < count; i++) {
-      if (csFilter && !csFilter(i)) continue
-      if (hideEmpty) {
-        const offset = i * bpg
-        let empty = true
-        for (let b = 0; b < bpg; b++) {
-          if (data[offset + b] !== 0) { empty = false; break }
-        }
-        const charCode = font.startChar.value + i
-        if (empty && charCode !== 32) continue
+      const offset = i * bpg
+      let empty = true
+      for (let b = 0; b < bpg; b++) {
+        if (data[offset + b] !== 0) { empty = false; break }
       }
+      const charCode = font.startChar.value + i
+      if (empty && charCode !== 32) continue
       visibleIndices.push(i)
     }
   } else {
@@ -192,6 +189,7 @@ export function GlyphGrid({ font }: Props) {
             size={tileSize}
             selected={selectedSet.has(i)}
             active={i === activeIdx}
+            muted={csFilter != null && !csFilter(i)}
             onClick={(e: MouseEvent) => {
               selectGlyph(font, i, e.shiftKey, e.ctrlKey || e.metaKey)
               activeFontId.value = font.id

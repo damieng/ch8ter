@@ -7,10 +7,11 @@ interface Props {
   size: number
   selected?: boolean
   active?: boolean
+  muted?: boolean
   onClick?: (e: MouseEvent) => void
 }
 
-export function GlyphTile({ font, index, size, selected, active, onClick }: Props) {
+export function GlyphTile({ font, index, size, selected, active, muted, onClick }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const w = font.glyphWidth.value
@@ -67,7 +68,7 @@ export function GlyphTile({ font, index, size, selected, active, onClick }: Prop
       title={`${charCode} (0x${charCode.toString(16).toUpperCase()})${label ? ' ' + label : ''}`}
     >
       <canvas ref={canvasRef} width={canvasW} height={canvasH} class="block" />
-      <span class="text-sm leading-tight mt-0.5">
+      <span class={`text-sm leading-tight mt-0.5${muted ? ' text-gray-300' : ''}`}>
         {label}
       </span>
     </div>

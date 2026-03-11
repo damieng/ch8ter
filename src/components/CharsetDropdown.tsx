@@ -1,6 +1,6 @@
 import { useState, useRef } from 'preact/hooks'
 import { ChevronDown, Type } from 'lucide-preact'
-import { charset, CHARSETS } from '../store'
+import { switchCharset, charset, CHARSETS } from '../store'
 import type { Charset } from '../store'
 import { useClickOutside } from '../hooks/useClickOutside'
 
@@ -32,7 +32,7 @@ export function CharsetDropdown() {
               class={`flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded ${
                 charset.value === key ? 'font-bold' : ''
               }`}
-              onClick={() => { charset.value = key as Charset; setOpen(false) }}
+              onClick={() => { switchCharset(key as Charset); setOpen(false) }}
             >
               {def.label}
             </button>
