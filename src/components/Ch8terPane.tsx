@@ -1,12 +1,13 @@
 import { useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
 import { FilePlus, FolderOpen } from 'lucide-preact'
-import { createFont, addFont, loadFont, charset, recalcMetrics, calcMissingMetrics } from '../store'
+import { createFont, addFont, loadFont, charset, recalcMetrics, calcMissingMetrics, type Charset } from '../store'
 import { parseBdf } from '../bdfParser'
 import { parsePsf, type PsfParseResult } from '../psfParser'
 import { parseYaff } from '../yaffParser'
 import { parseDraw } from '../drawParser'
 import { parseFzx } from '../fzxParser'
+import { bdfCharsetMap } from '../codepages'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
 import { PngImportDialog } from './PngImportDialog'
@@ -177,7 +178,18 @@ export function Ch8terPane() {
             font.populatedGlyphs.value = populated
             calcMissingMetrics(font)
             addFont(font)
-            charset.value = 'imported'
+            // Auto-detect charset from BDF CHARSET_REGISTRY/CHARSET_ENCODING
+            let detectedCharset: Charset = 'imported'
+            if (result.meta?.properties) {
+              const reg = result.meta.properties.CHARSET_REGISTRY ?? ''
+              const enc = result.meta.properties.CHARSET_ENCODING ?? ''
+              if (reg) {
+                const key = `${reg}-${enc}`
+                const mapped = bdfCharsetMap[key]
+                if (mapped) detectedCharset = mapped as Charset
+              }
+            }
+            charset.value = detectedCharset
           } catch (e) {
             alert(`Failed to parse BDF: ${(e as Error).message}`)
           }

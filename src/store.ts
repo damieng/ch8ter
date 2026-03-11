@@ -2,6 +2,7 @@ import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './bdfParser'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
+import { standardCodepages } from './codepages'
 
 // --- Font Instance ---
 
@@ -386,15 +387,23 @@ effect(() => {
 
 // --- Charset (global display preference) ---
 
-interface CharsetDef {
+interface CharsetDefRaw {
   label: string
+  extends?: string
   overrides: Record<number, string>
   colorSystem?: string // matches name in COLOR_SYSTEMS for preview default
   range?: [number, number] // codepoint range [lo, hi] inclusive — filters glyph grid
 }
 
-const CHARSETS_DEF = {
-  amiga: { label: 'Amiga (ISO-8859-1)', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
+interface CharsetDef {
+  label: string
+  overrides: Record<number, string>
+  colorSystem?: string
+  range?: [number, number]
+}
+
+const CHARSETS_RAW = {
+  amiga: { label: 'Amiga (ISO-8859-1)', extends: 'iso8859_1', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂
   }},
   cpc: { label: 'Amstrad CPC', range: [0, 255] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
@@ -720,8 +729,40 @@ const CHARSETS_DEF = {
     0x7F: '\u03C0', // π (pi)
   }},
   imported: { label: 'Imported', overrides: {} },
-  msx: { label: 'MSX', range: [32, 127] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
-    0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
+  ...standardCodepages,
+  msx: { label: 'MSX International', extends: 'cp437', range: [0, 255] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
+    // 0x00-0x1F: control codes (no printable glyphs in standard mode)
+    0x00: '\u0000', 0x01: '\u0001', 0x02: '\u0002', 0x03: '\u0003',
+    0x04: '\u0004', 0x05: '\u0005', 0x06: '\u0008', 0x07: '\u0009',
+    0x08: '\u000A', 0x09: '\u000B', 0x0A: '\u000C', 0x0B: '\u000D',
+    0x0C: '\u000E', 0x0D: '\u000F', 0x0E: '\u0010', 0x0F: '\u001B',
+    0x10: '\u0011', 0x11: '\u0012', 0x12: '\u0013', 0x13: '\u0014',
+    0x14: '\u0015', 0x15: '\u0016', 0x16: '\u0017', 0x17: '\u0018',
+    0x18: '\u0019', 0x19: '\u001A', 0x1A: '\u001B', 0x1B: '\u001C',
+    0x1C: '\u001D', 0x1D: '\u001E', 0x1E: '\u001F', 0x1F: '\u007F',
+    0x7F: '\u25B6', // ► (triangle)
+    // 0xB0-0xBF: accented characters and symbols (differs from CP437 box drawing)
+    0xB0: '\u00C3', 0xB1: '\u00E3', 0xB2: '\u0128', 0xB3: '\u0129',
+    0xB4: '\u00D5', 0xB5: '\u00F5', 0xB6: '\u0170', 0xB7: '\u0171',
+    0xB8: '\u0132', 0xB9: '\u0133', 0xBA: '\u00BE', 0xBB: '\u223D',
+    0xBC: '\u25CA', 0xBD: '\u2030', 0xBE: '\u00B6', 0xBF: '\u00A7',
+    // 0xC0-0xDA: graphic blocks (differs from CP437 box drawing)
+    0xC0: '\u2582', 0xC1: '\u259A', 0xC2: '\u2586', 0xC3: '\uD83E\uDEA2',
+    0xC4: '\u25AC', 0xC5: '\uD83E\uDEA5', 0xC6: '\u258E', 0xC7: '\u259E',
+    0xC8: '\u258A', 0xC9: '\uD83E\uDEA7', 0xCA: '\uD83E\uDEAA',
+    0xCB: '\uD83E\uDEB9', 0xCC: '\uD83E\uDEB8',
+    0xCD: '\uD83E\uDE6D', 0xCE: '\uD83E\uDE6F',
+    0xCF: '\uD83E\uDE6C', 0xD0: '\uD83E\uDE6E',
+    0xD1: '\uD83E\uDEBA', 0xD2: '\uD83E\uDEBB',
+    0xD3: '\u2598', 0xD4: '\u2597', 0xD5: '\u259D', 0xD6: '\u2596',
+    0xD7: '\uD83E\uDEB6',
+    0xD8: '\u0394', 0xD9: '\u2021', 0xDA: '\u03C9',
+    // 0xED: diameter sign instead of CP437 phi
+    0xED: '\u2300',
+    // 0xEE: element-of instead of CP437 epsilon
+    0xEE: '\u2208',
+    // 0xFF: cursor (not printable)
+    0xFF: '\u2588',
   }},
   sam: { label: 'SAM Coupe', range: [32, 127] as [number, number], colorSystem: 'SAM Coup\u00e9', overrides: {
     0x60: '\u00A3', // £ (pound, inherited from Spectrum)
@@ -734,8 +775,28 @@ const CHARSETS_DEF = {
   }},
 }
 
-export type Charset = keyof typeof CHARSETS_DEF
-export const CHARSETS: Record<Charset, CharsetDef> = CHARSETS_DEF
+export type Charset = keyof typeof CHARSETS_RAW
+
+// Resolve extends chains to flatten overrides
+function resolveCharsets(raw: Record<string, CharsetDefRaw>): Record<string, CharsetDef> {
+  const resolved: Record<string, CharsetDef> = {}
+  function resolve(key: string): CharsetDef {
+    if (resolved[key]) return resolved[key]
+    const entry = raw[key]
+    if (!entry) throw new Error(`Unknown charset: ${key}`)
+    let overrides = entry.overrides
+    if (entry.extends) {
+      const base = resolve(entry.extends)
+      overrides = { ...base.overrides, ...entry.overrides }
+    }
+    resolved[key] = { label: entry.label, overrides, colorSystem: entry.colorSystem, range: entry.range }
+    return resolved[key]
+  }
+  for (const key of Object.keys(raw)) resolve(key)
+  return resolved
+}
+
+export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RAW) as Record<Charset, CharsetDef>
 export const charset = signal<Charset>('zx')
 
 // Resolve a codepoint to its Unicode character under a given charset
