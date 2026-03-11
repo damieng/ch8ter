@@ -1,115 +1,38 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
-import { fontTemplates } from '../fontTemplates'
-import { createFont, addFont, charset } from '../store'
+import { useState } from 'preact/hooks'
+import { type Charset, createFont, addFont, charset } from '../store'
 
-const TILE_SCALE = 3
-const PREVIEW_TEXT = 'Abc'
-const START_CHAR = 32
-
-function renderText(ctx: CanvasRenderingContext2D, data: Uint8Array, text: string, scale: number, fg: string, gw = 8, gh = 8) {
-  const bpr = Math.ceil(gw / 8)
-  const bpg = gh * bpr
-  const w = text.length * gw * scale
-  const h = gh * scale
-  ctx.canvas.width = w
-  ctx.canvas.height = h
-  ctx.fillStyle = '#e2e8f0'
-  ctx.fillRect(0, 0, w, h)
-  ctx.fillStyle = fg
-  for (let c = 0; c < text.length; c++) {
-    const glyphIdx = text.charCodeAt(c) - START_CHAR
-    if (glyphIdx < 0 || glyphIdx >= data.length / bpg) continue
-    const offset = glyphIdx * bpg
-    for (let y = 0; y < gh; y++) {
-      for (let x = 0; x < gw; x++) {
-        const byteIdx = offset + y * bpr + Math.floor(x / 8)
-        if (data[byteIdx] & (0x80 >> (x % 8))) {
-          ctx.fillRect(c * gw * scale + x * scale, y * scale, scale, scale)
-        }
-      }
-    }
-  }
-}
-
-function FontTile({ name, data, selected, onClick }: {
-  name: string
-  data: Uint8Array | null
-  selected: boolean
-  onClick: () => void
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    if (!canvasRef.current || !data) return
-    const ctx = canvasRef.current.getContext('2d')!
-    renderText(ctx, data, PREVIEW_TEXT, TILE_SCALE, '#1e293b')
-  }, [data])
-
-  return (
-    <button
-      class={`flex flex-col items-center gap-1 p-2 rounded border ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-      onClick={onClick}
-    >
-      {data ? (
-        <canvas
-          ref={canvasRef}
-          class="block"
-          style={{ imageRendering: 'pixelated' }}
-        />
-      ) : (
-        <div class="flex items-center justify-center" style={{ width: PREVIEW_TEXT.length * 8 * TILE_SCALE, height: 8 * TILE_SCALE }}>
-
-          <span class="text-xs text-gray-400">...</span>
-        </div>
-      )}
-      <span class="text-xs">{name}</span>
-    </button>
-  )
-}
-
-// Cache fetched font data
-const fontCache = new Map<string, Uint8Array>()
-
-async function fetchFont(file: string): Promise<Uint8Array> {
-  const cached = fontCache.get(file)
-  if (cached) return cached
-  const resp = await fetch(`${import.meta.env.BASE_URL}fonts/${file}`)
-  const buf = await resp.arrayBuffer()
-  const data = new Uint8Array(buf)
-  fontCache.set(file, data)
-  return data
-}
+const CODEPAGES: { value: Charset; label: string; startChar: number; glyphCount: number }[] = [
+  { value: 'ascii', label: 'ASCII', startChar: 32, glyphCount: 95 },
+  { value: 'zx', label: 'ZX Spectrum', startChar: 32, glyphCount: 96 },
+  { value: 'bbc', label: 'BBC Micro', startChar: 32, glyphCount: 96 },
+  { value: 'c64', label: 'Commodore 64', startChar: 32, glyphCount: 96 },
+  { value: 'atari', label: 'Atari 8-bit', startChar: 32, glyphCount: 96 },
+  { value: 'cpc', label: 'Amstrad CPC', startChar: 0, glyphCount: 256 },
+  { value: 'cga', label: 'IBM CGA', startChar: 32, glyphCount: 96 },
+  { value: 'msx', label: 'MSX', startChar: 32, glyphCount: 96 },
+  { value: 'amiga', label: 'Amiga (ISO-8859-1)', startChar: 32, glyphCount: 224 },
+  { value: 'sam', label: 'SAM Coupe', startChar: 32, glyphCount: 96 },
+  { value: 'cpm', label: 'Amstrad CP/M Plus', startChar: 0, glyphCount: 256 },
+]
 
 interface Props {
   onClose: () => void
 }
 
 export function NewFontDialog({ onClose }: Props) {
-  const [selected, setSelected] = useState(-1) // -1 = blank
-  const [tileData, setTileData] = useState<(Uint8Array | null)[]>(fontTemplates.map(() => null))
-
-  // Fetch all font tiles on mount
-  useEffect(() => {
-    fontTemplates.forEach((tpl, i) => {
-      fetchFont(tpl.file).then(data => {
-        setTileData(prev => { const next = [...prev]; next[i] = data; return next })
-      })
-    })
-  }, [])
+  const [width, setWidth] = useState(8)
+  const [height, setHeight] = useState(8)
+  const [codepage, setCodepage] = useState<Charset>('ascii')
 
   function handleCreate() {
-    if (selected >= 0 && tileData[selected]) {
-      const tpl = fontTemplates[selected]
-      const font = createFont(new Uint8Array(tileData[selected]!), `${tpl.name}.ch8`, 32)
-      font.hideEmpty.value = false
-      addFont(font)
-      charset.value = tpl.charset
-    } else {
-      const font = createFont(new Uint8Array(96 * 8), 'untitled.ch8', 32)
-      font.hideEmpty.value = false
-      addFont(font)
-      charset.value = 'ascii'
-    }
+    const cp = CODEPAGES.find(c => c.value === codepage)!
+    const bpr = Math.ceil(width / 8)
+    const bpg = height * bpr
+    const data = new Uint8Array(cp.glyphCount * bpg)
+    const font = createFont(data, 'untitled', cp.startChar, width, height)
+    font.hideEmpty.value = false
+    addFont(font)
+    charset.value = codepage
     onClose()
   }
 
@@ -118,28 +41,46 @@ export function NewFontDialog({ onClose }: Props) {
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 max-h-[90vh]" style={{ width: 520 }}>
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4" style={{ width: 340 }}>
         <h2 class="font-bold text-lg">New Font</h2>
 
-        <div class="grid gap-2 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          <button
-            class={`flex flex-col items-center gap-1 p-2 rounded border ${selected === -1 ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-            onClick={() => setSelected(-1)}
-          >
-            <div class="flex items-center justify-center" style={{ width: PREVIEW_TEXT.length * 8 * TILE_SCALE, height: 8 * TILE_SCALE }}>
-              <span class="text-gray-300 text-lg font-light">Empty</span>
-            </div>
-            <span class="text-xs">Blank</span>
-          </button>
-          {fontTemplates.map((tpl, i) => (
-            <FontTile
-              key={i}
-              name={tpl.name}
-              data={tileData[i]}
-              selected={selected === i}
-              onClick={() => setSelected(i)}
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <label class="text-sm w-20 text-right">Width</label>
+            <input
+              type="number"
+              min={1}
+              max={32}
+              value={width}
+              onInput={(e) => setWidth(Math.max(1, Math.min(32, parseInt((e.target as HTMLInputElement).value) || 1)))}
+              class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
             />
-          ))}
+            <span class="text-xs text-gray-400">px</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm w-20 text-right">Height</label>
+            <input
+              type="number"
+              min={1}
+              max={64}
+              value={height}
+              onInput={(e) => setHeight(Math.max(1, Math.min(64, parseInt((e.target as HTMLInputElement).value) || 1)))}
+              class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
+            />
+            <span class="text-xs text-gray-400">px</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm w-20 text-right">Codepage</label>
+            <select
+              value={codepage}
+              onChange={(e) => setCodepage((e.target as HTMLSelectElement).value as Charset)}
+              class="border border-gray-300 rounded px-2 py-1 text-sm flex-1"
+            >
+              {CODEPAGES.map(cp => (
+                <option key={cp.value} value={cp.value}>{cp.label} ({cp.glyphCount} glyphs)</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div class="flex justify-end gap-2">
