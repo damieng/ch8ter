@@ -77,6 +77,8 @@ npm run dev
 
 Vite + Preact + @preact/signals + TypeScript + Tailwind CSS + Lucide icons
 
+Claude Code was used extensively in the creation of this tool.
+
 ## License
 
 MIT
