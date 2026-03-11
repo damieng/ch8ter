@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks'
+import { signal } from '@preact/signals'
 import { FilePlus, FolderOpen } from 'lucide-preact'
 import { createFont, addFont, loadFont, charset, recalcMetrics, calcMissingMetrics } from '../store'
 import { parseBdf } from '../bdfParser'
@@ -12,7 +13,38 @@ import { PngImportDialog } from './PngImportDialog'
 
 const ICON = 18
 
-const BUILD_DATE = __BUILD_DATE__
+const APP_VERSION = __APP_VERSION__
+
+const CHANGELOG: { version: string; changes: string[] }[] = [
+  {
+    version: '0.9.0',
+    changes: [
+      'New Font dialog with size and codepage selection',
+      'FZX font format load and save',
+      'DOS CP437 and CP850 codepage support',
+      'Unicode-aware glyph remapping when switching codepages',
+      'Out-of-codepage glyphs shown with muted labels',
+    ],
+  },
+  {
+    version: '0.8.0',
+    changes: [
+      'CP/M Plus .com font load and save',
+      'Source code export: C#, TypeScript, hex ASM formats',
+      'Source code export: C, Rust, Z80, 6502, 68000, x86',
+    ],
+  },
+  {
+    version: '0.7.0',
+    changes: [
+      'BDF, PSF, YAFF, .draw format support',
+      'TTF/WOFF export with variable font support',
+      'PNG import for sprite sheets',
+      'Font metrics: baseline, ascender, cap height, x-height, descender',
+      'Glyph editor with pixel tools and transforms',
+    ],
+  },
+]
 
 // Extract font from a PSF2AMS CP/M .com file
 // Header is 512 bytes; glyph height at offset 0x2F; font data starts at offset 512; always 256 glyphs
@@ -72,11 +104,19 @@ function layoutPsfGlyphs(psf: PsfParseResult): { fontData: Uint8Array; startChar
   return { fontData: psf.fontData, startChar: 0, populated: null }
 }
 
+const showChangelog = signal(false)
+
 export function Ch8terTitle() {
   return (
     <span class="flex items-center w-full">
       <span class="font-black tracking-tight">Ch8ter</span>
-      <span class="ml-auto font-normal text-xs text-gray-400">{BUILD_DATE}</span>
+      <button
+        class="ml-auto font-normal text-xs text-gray-400 hover:text-blue-500"
+        onClick={(e) => { e.stopPropagation(); showChangelog.value = !showChangelog.value }}
+        title="Show changelog"
+      >
+        v{APP_VERSION}
+      </button>
     </span>
   )
 }
@@ -204,26 +244,40 @@ export function Ch8terPane() {
   }
 
   return (
-    <div class="flex items-center gap-3 px-3 py-2">
-      <IconBtn onClick={() => setShowNewDialog(true)} title="New font">
-        <FilePlus size={ICON} />
-      </IconBtn>
-      {showNewDialog && <NewFontDialog onClose={() => setShowNewDialog(false)} />}
-      {pngFile && <PngImportDialog file={pngFile} onClose={() => setPngFile(null)} />}
-      <IconBtn onClick={handleOpen} title="Open font file">
-        <FolderOpen size={ICON} />
-      </IconBtn>
-      <span class="w-px h-6 bg-gray-300 mx-0.5" />
-      <div class="flex flex-col">
-        <span class="text-sm text-gray-600">Online Bitmap Font Editor</span>
-        <a
-          class="text-sm text-blue-500 hover:text-blue-700 underline"
-          href="https://github.com/damieng/ch8ter"
-          target="_blank"
-        >
-          https://github.com/damieng/ch8ter
-        </a>
+    <div>
+      <div class="flex items-center gap-3 px-3 py-2">
+        <IconBtn onClick={() => setShowNewDialog(true)} title="New font">
+          <FilePlus size={ICON} />
+        </IconBtn>
+        {showNewDialog && <NewFontDialog onClose={() => setShowNewDialog(false)} />}
+        {pngFile && <PngImportDialog file={pngFile} onClose={() => setPngFile(null)} />}
+        <IconBtn onClick={handleOpen} title="Open font file">
+          <FolderOpen size={ICON} />
+        </IconBtn>
+        <span class="w-px h-6 bg-gray-300 mx-0.5" />
+        <div class="flex flex-col">
+          <span class="text-sm text-gray-600">Online Bitmap Font Editor</span>
+          <a
+            class="text-sm text-blue-500 hover:text-blue-700 underline"
+            href="https://github.com/damieng/ch8ter"
+            target="_blank"
+          >
+            https://github.com/damieng/ch8ter
+          </a>
+        </div>
       </div>
+      {showChangelog.value && (
+        <div class="px-3 pb-3 border-t border-gray-200 mt-1 pt-2 max-h-48 overflow-y-auto">
+          {CHANGELOG.map(release => (
+            <div key={release.version} class="mb-2 last:mb-0">
+              <div class="text-xs font-bold text-gray-600">v{release.version}</div>
+              <ul class="text-xs text-gray-500 ml-3 list-disc">
+                {release.changes.map((c, i) => <li key={i}>{c}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
