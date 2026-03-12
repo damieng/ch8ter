@@ -20,6 +20,7 @@ interface GdosFontWriteParams {
   ascender: number
   descender: number
   name: string
+  fontName: string
   meta: FontMeta | null
 }
 
@@ -42,7 +43,7 @@ function rightmostPixel(
 
 export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
   const { fontData, glyphWidth, glyphHeight, startChar, glyphCount,
-          glyphMeta, baseline, ascender, descender, name, meta } = params
+          glyphMeta, baseline, ascender, descender, name, fontName, meta } = params
   const props = meta?.properties ?? {}
 
   const bpr = Math.ceil(glyphWidth / 8)
@@ -111,8 +112,8 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
   view.setUint16(0, faceId, LE)     // face ID
   view.setUint16(2, faceSize, LE)   // face size (points)
 
-  // Face name: 32 bytes — prefer stored family name, fall back to filename
-  const faceName = (meta?.family || name).substring(0, 31)
+  // Face name: 32 bytes — prefer font name, then stored family, then filename
+  const faceName = (fontName || meta?.family || name).substring(0, 31)
   for (let i = 0; i < 32; i++) {
     out[4 + i] = i < faceName.length ? faceName.charCodeAt(i) : 0
   }

@@ -9,6 +9,7 @@ interface Props {
 
 export function MetaDialog({ font, onClose }: Props) {
   const meta = font.meta.value
+  const [fontName, setFontName] = useState(font.fontName.value)
   const [properties, setProperties] = useState<Record<string, string>>(() =>
     meta ? { ...meta.properties } : {}
   )
@@ -36,6 +37,7 @@ export function MetaDialog({ font, onClose }: Props) {
   }
 
   function handleSave() {
+    font.fontName.value = fontName
     const updated: FontMeta = {
       ...(meta || { properties: {} }),
       properties: { ...properties },
@@ -61,6 +63,16 @@ export function MetaDialog({ font, onClose }: Props) {
     >
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-3 min-w-[400px] max-w-[500px] max-h-[80vh]">
         <h2 class="font-bold text-lg">Font Properties</h2>
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium w-16 shrink-0">Name</span>
+          <input
+            type="text" value={fontName}
+            onInput={(e) => setFontName((e.target as HTMLInputElement).value)}
+            class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm min-w-0"
+            placeholder="Font name"
+          />
+        </div>
+        <hr class="border-gray-200" />
         <div class="overflow-y-auto flex flex-col gap-1 min-h-0">
           {keys.length === 0 && (
             <p class="text-sm text-gray-400 italic">No properties. Add one below.</p>

@@ -13,6 +13,7 @@ export interface FontInstance {
   glyphHeight: Signal<number>
   startChar: Signal<number>
   fileName: Signal<string>
+  fontName: Signal<string>
   meta: Signal<FontMeta | null>
   encodings: Signal<number[] | null>
   glyphMeta: Signal<(GlyphMeta | null)[] | null>
@@ -40,6 +41,16 @@ export function bytesPerGlyph(font: FontInstance): number {
   return font.glyphHeight.value * bytesPerRow(font)
 }
 
+function nameFromFile(filename: string): string {
+  // Strip extension, then trailing numbers/brackets like "10", "(1)", "_14"
+  return filename
+    .replace(/\.\w+$/i, '')
+    .replace(/[\s_-]*(\(\d+\)|\d+)$/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim()
+}
+
 let nextFontId = 1
 
 export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number, glyphMeta?: (GlyphMeta | null)[]): FontInstance {
@@ -56,6 +67,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     glyphHeight: signal(h),
     startChar: signal(start ?? 32),
     fileName: signal(name ?? 'untitled.ch8'),
+    fontName: signal(meta?.family || nameFromFile(name ?? 'untitled')),
     meta: signal<FontMeta | null>(meta ?? null),
     encodings: signal<number[] | null>(encodings ?? null),
     glyphMeta: signal<(GlyphMeta | null)[] | null>(glyphMeta ?? null),
@@ -83,6 +95,7 @@ const LAYOUT_KEY = 'ch8ter-layout'
 
 interface StoredFont {
   fileName: string
+  fontName?: string
   startChar: number
   fontData: string // base64
   glyphWidth?: number
@@ -199,6 +212,7 @@ function loadFromStorage(): FontInstance[] | null {
     return stored.map(s => {
       const data = fromBase64(s.fontData)
       const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
+      if (s.fontName) font.fontName.value = s.fontName
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
       if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
       font.savedSnapshot.value = new Uint8Array(data)
@@ -227,6 +241,7 @@ function loadFromStorage(): FontInstance[] | null {
 function saveToStorage() {
   const stored: StoredFont[] = fonts.value.map(f => ({
     fileName: f.fileName.value,
+    fontName: f.fontName.value || undefined,
     startChar: f.startChar.value,
     fontData: toBase64(f.fontData.value),
     glyphWidth: f.glyphWidth.value,
@@ -258,6 +273,7 @@ effect(() => {
   for (const f of allFonts) {
     f.fontData.value
     f.fileName.value
+    f.fontName.value
     f.startChar.value
     f.glyphWidth.value
     f.glyphHeight.value

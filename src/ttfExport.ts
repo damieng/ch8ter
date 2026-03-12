@@ -433,7 +433,7 @@ export function exportTtf(font: FontInstance): ArrayBuffer {
   const ascent = baseline * scale
   const lineGap = (h - baseline) * scale
 
-  const baseName = font.fileName.value.replace(/\.\w+$/, '')
+  const baseName = font.fontName.value || font.fileName.value.replace(/\.\w+$/, '')
 
   // Build glyph data
   const glyphs: GlyphData[] = []

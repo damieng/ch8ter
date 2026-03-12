@@ -528,7 +528,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   const lineGap = (glyphH - baseline) * scale
   const half = scale / 2
 
-  const baseName = font.fileName.value.replace(/\.\w+$/, '')
+  const baseName = font.fontName.value || font.fileName.value.replace(/\.\w+$/, '')
 
   // Glyph layout:
   // 0: .notdef (empty)

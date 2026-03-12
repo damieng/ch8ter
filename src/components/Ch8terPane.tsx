@@ -162,6 +162,7 @@ export function Ch8terPane() {
           try {
             const result = parseYaff(text)
             const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight)
+            if (result.name) font.fontName.value = result.name
             font.populatedGlyphs.value = result.populated
             recalcMetrics(font)
             addFont(font)

@@ -72,6 +72,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
       baseline: font.baseline.value,
       meta: font.meta.value,
       glyphMeta: font.glyphMeta.value,
+      fontName: font.fontName.value,
     })
     download(new Blob([bdf], { type: 'text/plain' }), baseName(font.fileName.value) + '.bdf')
     setOpen(false)
@@ -100,7 +101,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphHeight: font.glyphHeight.value,
       startChar: font.startChar.value,
       glyphCount: count,
-      name: baseName(font.fileName.value),
+      name: font.fontName.value || baseName(font.fileName.value),
     })
     download(new Blob([yaff], { type: 'text/plain' }), baseName(font.fileName.value) + '.yaff')
     setOpen(false)
@@ -149,6 +150,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
       ascender: font.ascender.value,
       descender: font.descender.value,
       name: baseName(font.fileName.value),
+      fontName: font.fontName.value,
       meta: font.meta.value,
     })
     download(new Blob([fnt.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
