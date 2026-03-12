@@ -1,6 +1,6 @@
 import './app.css'
 import { Fragment } from 'preact'
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { GlyphEditor } from './components/GlyphEditor'
 import { GlyphGrid } from './components/GlyphGrid'
 import { Toolbar } from './components/Toolbar'
@@ -9,7 +9,7 @@ import { EditorTitle } from './components/EditorTitle'
 import { CharSetTitle } from './components/CharSetTitle'
 import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont, previews, closePreview, lastOpenedPreviewId, storedFocusedId, storedPreviews } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews } from './store'
 import { PreviewWindow } from './components/PreviewWindow'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
@@ -18,38 +18,11 @@ export function App() {
   const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
   const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
 
-  const currentActiveId = activeFontId.value
-  const initialActiveId = useRef<string | null>(currentActiveId)
-  useEffect(() => {
-    // Skip the initial mount — restored focusedId takes precedence
-    if (currentActiveId === initialActiveId.current) return
-    initialActiveId.current = null
-    if (currentActiveId && fonts.value.some(f => f.id === currentActiveId)) {
-      setFocus(currentActiveId)
-    }
-  }, [currentActiveId])
-
-  const lastPreview = lastOpenedPreviewId.value
-  const initialPreview = useRef(lastPreview)
-  useEffect(() => {
-    if (lastPreview === initialPreview.current) return
-    initialPreview.current = null
-    if (lastPreview) setFocus(lastPreview)
-  }, [lastPreview])
-
   const allFonts = fonts.value
   const TOP = 100
 
-  // Focused font brings both its editor and grid to top
-  // Focused preview or ch8ter just brings itself to top
   function getZIndex(windowId: string): number {
-    // Extract the font id for paired windows
-    const pairedFontId = windowId.startsWith('editor-') ? windowId.slice(7) : windowId
-
-    if (pairedFontId === focusedId) {
-      return windowId.startsWith('editor-') ? TOP - 1 : TOP
-    }
-    return 1
+    return windowId === focusedId ? TOP : 1
   }
 
   function setFocus(id: string) {
@@ -57,8 +30,8 @@ export function App() {
     storedFocusedId.value = id
   }
 
-  function focusFont(fontId: string) {
-    setFocus(fontId)
+  function focusFont(windowId: string, fontId: string) {
+    setFocus(windowId)
     activeFontId.value = fontId
   }
 
@@ -98,7 +71,7 @@ export function App() {
             initialH={440}
             resizable
             zIndex={getZIndex(`editor-${font.id}`)}
-            onFocus={() => focusFont(font.id)}
+            onFocus={() => focusFont(`editor-${font.id}`, font.id)}
           >
             <div class="flex flex-col gap-2 p-2 h-full">
               <div class="flex-1 min-h-0">
@@ -117,8 +90,8 @@ export function App() {
             initialH={600}
             resizable
             statusBar={<FontStatusBar font={font} />}
-            zIndex={getZIndex(font.id)}
-            onFocus={() => focusFont(font.id)}
+            zIndex={getZIndex(`grid-${font.id}`)}
+            onFocus={() => focusFont(`grid-${font.id}`, font.id)}
             onClose={() => handleClose(font.id)}
           >
             <div class="p-3 h-full flex flex-col overflow-hidden">
