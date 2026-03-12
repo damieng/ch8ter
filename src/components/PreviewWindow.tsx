@@ -132,7 +132,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const [fg, setFg] = useState(stored?.fg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].fg)
   const [bg, setBg] = useState(stored?.bg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
   const [proportional, setProportional] = useState(stored?.proportional ?? false)
-  const [lineHeight, setLineHeight] = useState(stored?.lineHeight ?? 8)
   const [colorOpen, setColorOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -142,7 +141,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
-  const [selTick, setSelTick] = useState(0)
   const dragging = useRef(false)
   const dragAnchor = useRef(0)
   const clickCount = useRef(0)
@@ -168,14 +166,14 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     }
   }, [initialText])
 
-  useEffect(() => {
-    updatePreviewSettings(previewId, {
-      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, proportional, lineHeight,
-    })
-  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, proportional, lineHeight])
-
   const gw = font?.glyphWidth.value ?? 8
   const gh = font?.glyphHeight.value ?? 8
+
+  useEffect(() => {
+    updatePreviewSettings(previewId, {
+      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, proportional, lineHeight: gh,
+    })
+  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, proportional, gh])
 
   const [cols, setCols] = useState(32)
 
@@ -233,19 +231,46 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
   const selected = focused ? selectedCells(offsets, selStart, selEnd) : new Set<string>()
 
+  const renderCanvas = useCallback(() => {
+    if (!canvasRef.current || !font) return
+    renderText({
+      canvas: canvasRef.current,
+      font,
+      lines: wrappedLines,
+      attrs,
+      scale: zoom,
+      cols,
+      fg,
+      bg,
+      cursorPos,
+      showCursor: cursorVisible,
+      selected,
+      proportional,
+      lineHeight: gh,
+    })
+  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh])
+
+  // Normal reactive render
+  useEffect(renderCanvas, [renderCanvas])
+
+  // Extra safety: force a few redraws shortly after mount in case layout/font/text
+  // settle slightly later than initial effect timing.
   useEffect(() => {
-    if (canvasRef.current && font) {
-      renderText({
-        canvas: canvasRef.current, font, lines: wrappedLines, attrs, scale: zoom, cols,
-        fg, bg, cursorPos, showCursor: cursorVisible, selected, proportional, lineHeight,
-      })
-    }
-  }, [font?.fontData.value, font?.id, text, zoom, cols, fg, bg, cursorPos?.row, cursorPos?.col, cursorVisible, selStart, selEnd, selTick, proportional, lineHeight])
+    let ticks = 0
+    const id = window.setInterval(() => {
+      ticks += 1
+      renderCanvas()
+      if (ticks >= 5) {
+        window.clearInterval(id)
+      }
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [renderCanvas])
 
   function hitTest(clientX: number, clientY: number): number {
     if (!canvasRef.current) return 0
     const rect = canvasRef.current.getBoundingClientRect()
-    const rowH = lineHeight * zoom
+    const rowH = gh * zoom
     const clickRow = Math.floor((clientY - rect.top) / rowH)
     const clickX = clientX - rect.left
 
@@ -360,19 +385,16 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     if (textareaRef.current) {
       setText(textareaRef.current.value)
       resetBlink()
-      setSelTick(t => t + 1)
     }
   }
 
   function handleSelectionChange() {
-    setSelTick(t => t + 1)
     resetBlink()
   }
 
   useEffect(() => {
     function onSelectionChange() {
       if (document.activeElement === textareaRef.current) {
-        setSelTick(t => t + 1)
         resetBlink()
       }
     }
@@ -434,16 +456,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
         >
           <CenterHIcon size={14} />
         </button>
-        <select
-          class="px-2 py-1 bg-white rounded border border-gray-300 text-sm"
-          value={lineHeight}
-          onChange={(e) => setLineHeight(parseInt((e.target as HTMLSelectElement).value))}
-          title="Line height"
-        >
-          {[4, 5, 6, 7, 8, 9, 10].map(h => (
-            <option key={h} value={h}>{h}px</option>
-          ))}
-        </select>
         <div class="relative ml-auto" ref={zoomRef}>
           <button
             class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"
