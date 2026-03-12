@@ -24,6 +24,7 @@ import { ttfToWoff } from '../woffExport'
 import { writeDraw } from '../drawWriter'
 import { exportCpm } from '../cpmExport'
 import { writeFzx } from '../fzxWriter'
+import { writeGdosFont } from '../gdosFontWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from './SourceExportDialog'
 
@@ -39,7 +40,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -134,6 +135,26 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveFnt() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const fnt = writeGdosFont({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      glyphMeta: font.glyphMeta.value,
+      baseline: font.baseline.value,
+      ascender: font.ascender.value,
+      descender: font.descender.value,
+      name: baseName(font.fileName.value),
+      meta: font.meta.value,
+    })
+    download(new Blob([fnt.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -173,6 +194,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFzx}>
             Save as .fzx
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFnt}>
+            Save as Atari ST .fnt
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com

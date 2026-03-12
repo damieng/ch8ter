@@ -134,6 +134,15 @@ export function GlyphGrid({ font }: Props) {
     return () => { el.removeEventListener('scroll', onScroll); obs.disconnect(); cancelAnimationFrame(rafRef.current) }
   }, [])
 
+  // Reset scroll position when font changes so tiles are visible immediately
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) {
+      el.scrollTop = 0
+      setScrollTop(0)
+    }
+  }, [font.id])
+
   // Build index of visible glyph indices (hide empty only — charset filter used for muting labels)
   const data = font.fontData.value
   const bpg = bytesPerGlyph(font)

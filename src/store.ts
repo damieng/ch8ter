@@ -97,6 +97,7 @@ interface StoredFont {
   encodings?: number[] | null
   glyphMeta?: (GlyphMeta | null)[] | null
   populatedGlyphs?: number[] | null
+  hideEmpty?: boolean
 }
 
 // --- Window layout persistence ---
@@ -199,6 +200,7 @@ function loadFromStorage(): FontInstance[] | null {
       const data = fromBase64(s.fontData)
       const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
+      if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       if (s.ascender != null) font.ascender.value = s.ascender
@@ -239,6 +241,7 @@ function saveToStorage() {
     encodings: f.encodings.value,
     glyphMeta: f.glyphMeta.value,
     populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
+    hideEmpty: f.hideEmpty.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -266,6 +269,7 @@ effect(() => {
     f.xHeight.value
     f.numericHeight.value
     f.descender.value
+    f.hideEmpty.value
   }
   saveToStorage()
 })
@@ -711,6 +715,29 @@ const CHARSETS_RAW = {
     0xFC: '\u21D2', 0xFD: '\u21D0', 0xFE: '\u21D4', 0xFF: '\u2261',
   }},
   ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
+  atarist: { label: 'Atari ST', extends: 'cp437', range: [32, 255] as [number, number], overrides: {
+    // Differences from CP437 per unicode.org/Public/MAPPINGS/VENDORS/MISC/ATARIST.TXT
+    0x9E: '\u00DF', // ß (CP437 has ₧)
+    // 0xB0-0xBF: accented chars, ligatures, symbols (CP437 has box drawing)
+    0xB0: '\u00E3', 0xB1: '\u00F5', 0xB2: '\u00D8', 0xB3: '\u00F8',
+    0xB4: '\u0153', 0xB5: '\u0152', 0xB6: '\u00C0', 0xB7: '\u00C3',
+    0xB8: '\u00D5', 0xB9: '\u00A8', 0xBA: '\u00B4', 0xBB: '\u2020',
+    0xBC: '\u00B6', 0xBD: '\u00A9', 0xBE: '\u00AE', 0xBF: '\u2122',
+    // 0xC0-0xDF: ij/IJ, Hebrew, section, logical and, infinity (CP437 has box drawing)
+    0xC0: '\u0133', 0xC1: '\u0132', 0xC2: '\u05D0', 0xC3: '\u05D1',
+    0xC4: '\u05D2', 0xC5: '\u05D3', 0xC6: '\u05D4', 0xC7: '\u05D5',
+    0xC8: '\u05D6', 0xC9: '\u05D7', 0xCA: '\u05D8', 0xCB: '\u05D9',
+    0xCC: '\u05DB', 0xCD: '\u05DC', 0xCE: '\u05DE', 0xCF: '\u05E0',
+    0xD0: '\u05E1', 0xD1: '\u05E2', 0xD2: '\u05E4', 0xD3: '\u05E6',
+    0xD4: '\u05E7', 0xD5: '\u05E8', 0xD6: '\u05E9', 0xD7: '\u05EA',
+    0xD8: '\u05DF', 0xD9: '\u05DA', 0xDA: '\u05DD', 0xDB: '\u05E3',
+    0xDC: '\u05E5', 0xDD: '\u00A7', 0xDE: '\u2227', 0xDF: '\u221E',
+    // 0xE0-0xFF: mostly same as CP437 except these
+    0xEC: '\u222E', // ∮ (CP437 has ∞)
+    0xEE: '\u2208', // ∈ (CP437 has ε)
+    0xFE: '\u00B3', // ³ (CP437 has ■)
+    0xFF: '\u00AF', // ¯ (CP437 has NBSP)
+  }},
   atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
     // ATASCII: 0x7B-0x7F are control codes, not printable
     0x7B: '\u2666', // ♦ (spade-like in Atari set)

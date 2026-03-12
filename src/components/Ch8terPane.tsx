@@ -7,6 +7,7 @@ import { parsePsf, type PsfParseResult } from '../psfParser'
 import { parseYaff } from '../yaffParser'
 import { parseDraw } from '../drawParser'
 import { parseFzx } from '../fzxParser'
+import { parseGdosFont } from '../gdosFontParser'
 import { bdfCharsetMap } from '../codepages'
 import { IconBtn } from './IconBtn'
 import { NewFontDialog } from './NewFontDialog'
@@ -17,6 +18,12 @@ const ICON = 18
 const APP_VERSION = __APP_VERSION__
 
 const CHANGELOG: { version: string; changes: string[] }[] = [
+  {
+    version: '0.9.1',
+    changes: [
+      'Atari ST GDOS .fnt font format load and save',
+    ],
+  },
   {
     version: '0.9.0',
     changes: [
@@ -129,7 +136,7 @@ export function Ch8terPane() {
   function handleOpen() {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.png,.gz'
+    input.accept = '.ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.png,.gz'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -220,6 +227,21 @@ export function Ch8terPane() {
             charset.value = 'imported'
           } catch (e) {
             alert(`Failed to parse FZX: ${(e as Error).message}`)
+          }
+        })
+      } else if (lower.endsWith('.fnt')) {
+        file.arrayBuffer().then(buf => {
+          try {
+            const result = parseGdosFont(buf)
+            const font = createFont(result.fontData, file.name, result.startChar, result.glyphWidth, result.glyphHeight, result.meta, undefined, result.baseline, result.glyphMeta)
+            font.populatedGlyphs.value = result.populated
+            font.ascender.value = result.ascender
+            font.descender.value = result.descender
+            calcMissingMetrics(font)
+            addFont(font)
+            charset.value = 'atarist'
+          } catch (e) {
+            alert(`Failed to parse GDOS .fnt: ${(e as Error).message}`)
           }
         })
       } else if (lower.endsWith('.com')) {

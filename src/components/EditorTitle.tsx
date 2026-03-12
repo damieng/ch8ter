@@ -7,7 +7,7 @@ export function EditorTitle({ font }: { font: FontInstance }) {
   const labelStr = label ? ` "${label}"` : ''
   return (
     <span>
-      Glyph {glyphIdx}{labelStr} — {font.fileName.value}
+      Glyph{labelStr} — {font.fileName.value}
     </span>
   )
 }
