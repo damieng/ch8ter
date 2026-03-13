@@ -47,6 +47,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
+  const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
   function saveCh8() {
     const data = saveFont(font)
@@ -176,12 +177,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
       </button>
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
+          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
             Save as .ch8
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveUdg}>
+          </button>}
+          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveUdg}>
             Save as .udg
-          </button>
+          </button>}
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBdf}>
             Save as .bdf
           </button>
