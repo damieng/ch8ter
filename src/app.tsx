@@ -1,16 +1,15 @@
 import './app.css'
 import { Fragment } from 'preact'
 import { useState } from 'preact/hooks'
-import { GlyphEditor } from './components/GlyphEditor'
-import { GlyphGrid } from './components/GlyphGrid'
+import { GlyphEditor } from './panes/GlyphEditor'
+import { FontPane, FontPaneTitle } from './panes/FontPane'
 import { Toolbar } from './components/Toolbar'
-import { DragWindow } from './components/DragWindow'
+import { BasePane } from './components/BasePane'
 import { EditorTitle } from './components/EditorTitle'
-import { CharSetTitle } from './components/CharSetTitle'
-import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
+import { Ch8terPane, Ch8terTitle } from './panes/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews } from './store'
-import { PreviewWindow } from './components/PreviewWindow'
+import { PreviewPane } from './panes/PreviewPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
@@ -47,7 +46,7 @@ export function App() {
   return (
     <div class="relative w-screen h-screen overflow-hidden bg-gray-200">
       {/* Ch8ter pane */}
-      <DragWindow
+      <BasePane
         title={<Ch8terTitle />}
         windowId="ch8ter"
         initialX={16}
@@ -57,12 +56,12 @@ export function App() {
         onFocus={() => setFocus('ch8ter')}
       >
         <Ch8terPane />
-      </DragWindow>
+      </BasePane>
 
       {/* Per-font: Glyph Editor + Font windows */}
       {allFonts.map((font, i) => (
         <Fragment key={font.id}>
-          <DragWindow
+          <BasePane
             title={<EditorTitle font={font} />}
             windowId={`editor-${font.id}`}
             initialX={16 + i * 30}
@@ -79,10 +78,10 @@ export function App() {
               </div>
               <Toolbar font={font} />
             </div>
-          </DragWindow>
+          </BasePane>
 
-          <DragWindow
-            title={<CharSetTitle font={font} />}
+          <BasePane
+            title={<FontPaneTitle font={font} />}
             windowId={`grid-${font.id}`}
             initialX={420 + i * 30}
             initialY={16 + i * 30}
@@ -95,9 +94,9 @@ export function App() {
             onClose={() => handleClose(font.id)}
           >
             <div class="p-3 h-full flex flex-col overflow-hidden">
-              <GlyphGrid font={font} />
+              <FontPane font={font} />
             </div>
-          </DragWindow>
+          </BasePane>
         </Fragment>
       ))}
 
@@ -109,7 +108,7 @@ export function App() {
         const sampleName = sampleTexts[gi]?.items[ii]?.name ?? ''
         const previewTitle = `Preview Text — ${sampleName} — ${pFont?.fileName.value ?? ''}`
         return (
-        <DragWindow
+        <BasePane
           key={p.id}
           title={previewTitle}
           windowId={p.id}
@@ -122,8 +121,8 @@ export function App() {
           onFocus={() => setFocus(p.id)}
           onClose={() => closePreview(p.id)}
         >
-          <PreviewWindow previewId={p.id} initialFontId={p.fontId} />
-        </DragWindow>
+          <PreviewPane previewId={p.id} initialFontId={p.fontId} />
+        </BasePane>
         )
       })}
       {confirmClose && (

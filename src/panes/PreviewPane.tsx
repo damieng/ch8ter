@@ -119,7 +119,7 @@ interface Props {
   initialFontId: string
 }
 
-export function PreviewWindow({ previewId, initialFontId }: Props) {
+export function PreviewPane({ previewId, initialFontId }: Props) {
   const stored = storedPreviews.value.find(s => s.id === previewId)
   const [selectedFontId, setSelectedFontId] = useState(stored?.selectedFontId ?? initialFontId)
   const [textKey, setTextKey] = useState(stored?.textKey ?? '0-0')

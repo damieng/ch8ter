@@ -18,7 +18,7 @@ import { parseFzx } from "../fileFormats/fzxParser"
 import { parseGdosFont } from "../fileFormats/gdosFontParser"
 import { parseCpm } from "../fileFormats/cpmParser"
 import { bdfCharsetMap } from "../codepages"
-import { IconBtn } from "./IconBtn"
+import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
 

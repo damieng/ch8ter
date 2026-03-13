@@ -4,12 +4,16 @@ import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
 import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, selectAll, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
-import { GlyphTile } from './GlyphTile'
-import { SaveBar, ExportBar } from './Toolbar'
-import { ToolsDropdown } from './ToolsDropdown'
-import { SelectDropdown } from './SelectDropdown'
+import { GlyphTile } from '../components/GlyphTile'
+import { SaveBar, ExportBar } from '../components/Toolbar'
+import { ToolsDropdown } from '../components/ToolsDropdown'
+import { SelectDropdown } from '../components/SelectDropdown'
 import { MetricsDialog } from '../dialogs/MetricsDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
+
+export function FontPaneTitle({ font }: { font: FontInstance }) {
+  return <span>Font — {font.fileName.value} ({font.spacing.value})</span>
+}
 
 function ZoomDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
@@ -86,7 +90,7 @@ interface Props {
   font: FontInstance
 }
 
-export function GlyphGrid({ font }: Props) {
+export function FontPane({ font }: Props) {
   const hideEmpty = font.hideEmpty.value
   const setHideEmpty = (v: boolean) => { font.hideEmpty.value = v }
   const count = glyphCount(font)
