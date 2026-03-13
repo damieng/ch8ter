@@ -26,7 +26,7 @@ export function CharsetDropdown() {
       </button>
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-44">
-          {Object.entries(CHARSETS).map(([key, def]) => (
+          {Object.entries(CHARSETS).sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true })).map(([key, def]) => (
             <button
               key={key}
               class={`flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded ${

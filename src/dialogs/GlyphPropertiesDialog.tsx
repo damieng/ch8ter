@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { type FontInstance, glyphCount } from '../store'
-import type { GlyphMeta } from '../bdfParser'
+import type { GlyphMeta } from '../fileFormats/bdfParser'
 
 interface Props {
   font: FontInstance
@@ -8,7 +8,7 @@ interface Props {
   onClose: () => void
 }
 
-export function GlyphMetaDialog({ font, glyphIdx, onClose }: Props) {
+export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
   const gc = glyphCount(font)
   const charCode = font.startChar.value + glyphIdx
   const existing = font.glyphMeta.value?.[glyphIdx] ?? null

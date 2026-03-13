@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, selectAll, activeFontId, openPreview, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, selectAll, activeFontId, openPreview, openGlyphEditor, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
-import { GlyphTile } from './GlyphTile'
-import { SaveBar, ExportBar } from './Toolbar'
-import { ToolsDropdown } from './ToolsDropdown'
-import { SelectDropdown } from './SelectDropdown'
-import { SizeDialog } from './SizeDialog'
+import { GlyphTile } from '../components/GlyphTile'
+import { SaveBar, ExportBar } from '../components/Toolbar'
+import { ToolsDropdown } from '../components/ToolsDropdown'
+import { SelectDropdown } from '../components/SelectDropdown'
+import { MetricsDialog } from '../dialogs/MetricsDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
+
+export function FontPaneTitle({ font }: { font: FontInstance }) {
+  return <span>Font — {font.fileName.value} ({font.spacing.value})</span>
+}
 
 function ZoomDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
@@ -55,7 +59,7 @@ function SizeButton({ font }: { font: FontInstance }) {
         {font.glyphWidth.value}×{font.glyphHeight.value}
       </button>
       {open && createPortal(
-        <SizeDialog font={font} onClose={() => setOpen(false)} />,
+        <MetricsDialog font={font} onClose={() => setOpen(false)} />,
         document.body,
       )}
     </>
@@ -86,7 +90,7 @@ interface Props {
   font: FontInstance
 }
 
-export function GlyphGrid({ font }: Props) {
+export function FontPane({ font }: Props) {
   const hideEmpty = font.hideEmpty.value
   const setHideEmpty = (v: boolean) => { font.hideEmpty.value = v }
   const count = glyphCount(font)
@@ -133,6 +137,15 @@ export function GlyphGrid({ font }: Props) {
     update()
     return () => { el.removeEventListener('scroll', onScroll); obs.disconnect(); cancelAnimationFrame(rafRef.current) }
   }, [])
+
+  // Reset scroll position when font changes so tiles are visible immediately
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) {
+      el.scrollTop = 0
+      setScrollTop(0)
+    }
+  }, [font.id])
 
   // Build index of visible glyph indices (hide empty only — charset filter used for muting labels)
   const data = font.fontData.value
@@ -193,6 +206,9 @@ export function GlyphGrid({ font }: Props) {
             onClick={(e: MouseEvent) => {
               selectGlyph(font, i, e.shiftKey, e.ctrlKey || e.metaKey)
               activeFontId.value = font.id
+              if (!e.shiftKey && !(e.ctrlKey || e.metaKey)) {
+                openGlyphEditor(font)
+              }
             }}
           />
         </div>

@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void
 }
 
-export function SizeDialog({ font, onClose }: Props) {
+export function MetricsDialog({ font, onClose }: Props) {
   const [width, setWidth] = useState(font.glyphWidth.value)
   const [height, setHeight] = useState(font.glyphHeight.value)
   const [baseline, setBaseline] = useState(font.baseline.value)
@@ -112,6 +112,10 @@ export function SizeDialog({ font, onClose }: Props) {
                 </button>
               ))}
             </div>
+            <span class="ml-2 text-xs text-gray-500">
+              Spacing:&nbsp;
+              {font.spacing.value === 'proportional' ? 'Proportional (read-only)' : 'Monospace'}
+            </span>
           </div>
 
           <hr class="border-gray-200" />

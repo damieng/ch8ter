@@ -14,18 +14,19 @@ import {
   saveFont, glyphCount
 } from '../store'
 import { execTransformGlyph } from '../undoHistory'
-import { GlyphMetaDialog } from './GlyphMetaDialog'
-import { writeBdf } from '../bdfWriter'
-import { writePsf } from '../psfWriter'
-import { exportTtf } from '../ttfExport'
-import { exportVarTtf } from '../ttfVarExport'
-import { writeYaff } from '../yaffWriter'
-import { ttfToWoff } from '../woffExport'
-import { writeDraw } from '../drawWriter'
-import { exportCpm } from '../cpmExport'
-import { writeFzx } from '../fzxWriter'
+import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
+import { writeBdf } from '../fileFormats/bdfWriter'
+import { writePsf } from '../fileFormats/psfWriter'
+import { exportTtf } from '../fileFormats/ttfExport'
+import { exportVarTtf } from '../fileFormats/ttfVarExport'
+import { writeYaff } from '../fileFormats/yaffWriter'
+import { ttfToWoff } from '../fileFormats/woffExport'
+import { writeDraw } from '../fileFormats/drawWriter'
+import { exportCpm } from '../fileFormats/cpmExport'
+import { writeFzx } from '../fileFormats/fzxWriter'
+import { writeGdosFont } from '../fileFormats/gdosFontWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { SourceExportDialog } from './SourceExportDialog'
+import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 
 const ICON = 18
 
@@ -39,13 +40,14 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
+  const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
   function saveCh8() {
     const data = saveFont(font)
@@ -71,6 +73,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
       baseline: font.baseline.value,
       meta: font.meta.value,
       glyphMeta: font.glyphMeta.value,
+      fontName: font.fontName.value,
     })
     download(new Blob([bdf], { type: 'text/plain' }), baseName(font.fileName.value) + '.bdf')
     setOpen(false)
@@ -99,7 +102,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphHeight: font.glyphHeight.value,
       startChar: font.startChar.value,
       glyphCount: count,
-      name: baseName(font.fileName.value),
+      name: font.fontName.value || baseName(font.fileName.value),
     })
     download(new Blob([yaff], { type: 'text/plain' }), baseName(font.fileName.value) + '.yaff')
     setOpen(false)
@@ -134,6 +137,27 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveFnt() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const fnt = writeGdosFont({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      glyphMeta: font.glyphMeta.value,
+      baseline: font.baseline.value,
+      ascender: font.ascender.value,
+      descender: font.descender.value,
+      name: baseName(font.fileName.value),
+      fontName: font.fontName.value,
+      meta: font.meta.value,
+    })
+    download(new Blob([fnt.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -153,12 +177,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
       </button>
       {open && (
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
+          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
             Save as .ch8
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveUdg}>
+          </button>}
+          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveUdg}>
             Save as .udg
-          </button>
+          </button>}
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBdf}>
             Save as .bdf
           </button>
@@ -173,6 +197,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFzx}>
             Save as .fzx
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFnt}>
+            Save as Atari ST .fnt
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com
@@ -271,7 +298,7 @@ export function Toolbar({ font }: { font: FontInstance }) {
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes, 'Center H')} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
       <IconBtn onClick={() => setGlyphMetaOpen(true)} title="Glyph properties"><Info size={ICON} /></IconBtn>
       {glyphMetaOpen && createPortal(
-        <GlyphMetaDialog font={font} glyphIdx={font.lastClickedGlyph.value} onClose={() => setGlyphMetaOpen(false)} />,
+        <GlyphPropertiesDialog font={font} glyphIdx={font.lastClickedGlyph.value} onClose={() => setGlyphMetaOpen(false)} />,
         document.body,
       )}
     </div>

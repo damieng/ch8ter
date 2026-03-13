@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'preact/hooks'
 import { Copy, Download } from 'lucide-preact'
 import { type FontInstance } from '../store'
-import { exportSource, SOURCE_FORMATS, type SourceFormat } from '../sourceExport'
+import { exportSource, SOURCE_FORMATS, type SourceFormat } from '../fileFormats/sourceExport'
 
 interface Props {
   font: FontInstance

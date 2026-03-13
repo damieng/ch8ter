@@ -1,7 +1,8 @@
 // Canvas rendering for the bitmap font text preview.
 
 import type { FontInstance } from './store'
-import { glyphBounds } from './textLayout'
+import { glyphAdvance } from './store'
+import { isFixedWidth } from './unicodeRanges'
 
 export interface RenderOptions {
   canvas: HTMLCanvasElement
@@ -51,22 +52,6 @@ export function renderText({
     }
   }
 
-  function drawGlyphProp(glyphIdx: number, gx: number, rowY: number, boundsLeft: number, charW: number) {
-    const base = glyphIdx * bpg
-    for (let y = 0; y < gh; y++) {
-      const py = rowY + glyphYOff + y * scale
-      if (py + scale <= rowY || py >= rowY + rowH) continue
-      for (let x = 0; x < gw; x++) {
-        const byteIdx = base + y * bpr + Math.floor(x / 8)
-        if (data[byteIdx] & (0x80 >> (x % 8))) {
-          const px = (x - boundsLeft) * scale
-          if (px >= 0 && px < charW) {
-            ctx.fillRect(gx + px, py, scale, scale)
-          }
-        }
-      }
-    }
-  }
 
   if (!proportional) {
     const newW = cols * cellW
@@ -112,20 +97,16 @@ export function renderText({
       ctx.fillRect(cursorPos.col * cellW, cursorPos.row * rowH, scale, rowH)
     }
   } else {
-    const eIdx = 'e'.charCodeAt(0) - startChar
-    const eWidth = (eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
-    const gap = 1
-    function adv(ch: string) {
-      if (ch === ' ') return eWidth + gap
-      const gi = ch.charCodeAt(0) - startChar
-      if (gi >= 0 && gi < gc) return (glyphBounds(data, gi, gw, gh).width || 1) + gap
-      return 1 + gap
+    function charAdv(gi: number) {
+      if (gi < 0 || gi >= gc) return cellW
+      if (isFixedWidth(startChar + gi)) return cellW
+      return glyphAdvance(font, gi) * scale
     }
 
     let maxLineWidth = 0
     for (const line of lines) {
       let w = 0
-      for (let i = 0; i < line.length; i++) w += adv(line[i]) * scale
+      for (let i = 0; i < line.length; i++) w += charAdv(line.charCodeAt(i) - startChar)
       if (w > maxLineWidth) maxLineWidth = w
     }
 
@@ -142,36 +123,18 @@ export function renderText({
       const rowAttrs = attrs[row] || []
       const oy = row * rowH
       for (let col = 0; col < lines[row].length; col++) {
-        const ch = lines[row][col]
-        const charCode = ch.charCodeAt(0)
+        const charCode = lines[row].charCodeAt(col)
         const glyphIdx = charCode - startChar
         const isSel = selected.has(`${row},${col}`)
         const inv = rowAttrs[col] === 1
         const cFg = inv ? bg : fg
         const cBg = inv ? fg : bg
-        const advance = adv(ch) * scale
+        const advance = charAdv(glyphIdx)
 
         if (inv) {
           ctx.fillStyle = cBg
           ctx.fillRect(xPos, oy, advance, rowH)
         }
-
-        if (charCode === 32) {
-          if (isSel) {
-            ctx.fillStyle = cFg
-            ctx.fillRect(xPos, oy, advance, rowH)
-          }
-          xPos += advance
-          continue
-        }
-
-        if (glyphIdx < 0 || glyphIdx >= gc) {
-          xPos += advance
-          continue
-        }
-
-        const bounds = glyphBounds(data, glyphIdx)
-        const charW = (bounds.width || 1) * scale
 
         if (isSel) {
           ctx.fillStyle = cFg
@@ -181,7 +144,9 @@ export function renderText({
           ctx.fillStyle = cFg
         }
 
-        drawGlyphProp(glyphIdx, xPos, oy, bounds.left, charW)
+        if (glyphIdx >= 0 && glyphIdx < gc) {
+          drawGlyph(glyphIdx, xPos, oy)
+        }
         xPos += advance
       }
 
@@ -196,7 +161,7 @@ export function renderText({
       if (row < lines.length && cursorPos.col < lines[row].length) {
         let xPos = 0
         for (let col = 0; col < cursorPos.col; col++) {
-          xPos += adv(lines[row][col]) * scale
+          xPos += charAdv(lines[row].charCodeAt(col) - startChar)
         }
         ctx.fillStyle = fg
         ctx.fillRect(xPos, row * rowH, scale, rowH)

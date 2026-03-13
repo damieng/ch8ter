@@ -3,13 +3,13 @@ import type { RefObject } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
 import { ZoomIn } from 'lucide-preact'
-import { fonts, storedPreviews, updatePreviewSettings } from '../store'
+import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
+import { isFixedWidth } from '../unicodeRanges'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
-import { wrapText, wrapTextProportional, cursorPosition, selectedCells, glyphBounds, propCharAdvance } from '../textLayout'
+import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
 import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { CenterHIcon } from './CenterHIcon'
 
 function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, systems, systemIdx, onToggle, onFgPick, onBgPick, onSystemChange }: {
   anchorRef: RefObject<HTMLDivElement | null>
@@ -120,7 +120,7 @@ interface Props {
   initialFontId: string
 }
 
-export function PreviewWindow({ previewId, initialFontId }: Props) {
+export function PreviewPane({ previewId, initialFontId }: Props) {
   const stored = storedPreviews.value.find(s => s.id === previewId)
   const [selectedFontId, setSelectedFontId] = useState(stored?.selectedFontId ?? initialFontId)
   const [textKey, setTextKey] = useState(stored?.textKey ?? '0-0')
@@ -131,8 +131,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const [systemIdx, setSystemIdx] = useState(initSysIdx)
   const [fg, setFg] = useState(stored?.fg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].fg)
   const [bg, setBg] = useState(stored?.bg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
-  const [proportional, setProportional] = useState(stored?.proportional ?? false)
-  const [lineHeight, setLineHeight] = useState(stored?.lineHeight ?? 8)
   const [colorOpen, setColorOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -142,7 +140,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
-  const [selTick, setSelTick] = useState(0)
   const dragging = useRef(false)
   const dragAnchor = useRef(0)
   const clickCount = useRef(0)
@@ -150,6 +147,7 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
 
   const allFonts = fonts.value
   const font = allFonts.find(f => f.id === selectedFontId) ?? allFonts[0]
+  const proportional = font?.spacing.value === 'proportional'
   const system = COLOR_SYSTEMS[systemIdx]
 
   const initialText = useMemo(() => {
@@ -168,14 +166,14 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     }
   }, [initialText])
 
-  useEffect(() => {
-    updatePreviewSettings(previewId, {
-      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, proportional, lineHeight,
-    })
-  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, proportional, lineHeight])
-
   const gw = font?.glyphWidth.value ?? 8
   const gh = font?.glyphHeight.value ?? 8
+
+  useEffect(() => {
+    updatePreviewSettings(previewId, {
+      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, lineHeight: gh,
+    })
+  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, gh])
 
   const [cols, setCols] = useState(32)
 
@@ -212,40 +210,67 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const selEnd = textareaRef.current?.selectionEnd ?? 0
 
   const wrapResult = useMemo(() => {
-    if (!proportional) {
+    if (!proportional || !font) {
       return wrapText(text, cols)
     }
-    const data = font?.fontData.value
-    const start = font?.startChar.value ?? 32
+    const start = font.startChar.value
     const bpr = Math.ceil(gw / 8)
     const bpg = gh * bpr
+    const data = font.fontData.value
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-    const eIdx = 'e'.charCodeAt(0) - start
-    const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
-    const gap = 1
     const maxPixelWidth = cols * gw
-    return wrapTextProportional(text, maxPixelWidth, (ch) =>
-      data ? propCharAdvance(ch, data, start, gc, eWidth, gap, gw, gh) : gw
-    )
-  }, [text, cols, proportional, font?.fontData.value, font?.startChar.value, gw, gh])
+    return wrapTextProportional(text, maxPixelWidth, (ch) => {
+      const cp = ch.charCodeAt(0)
+      const gi = cp - start
+      if (isFixedWidth(cp)) return gw
+      return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
+    })
+  }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh])
 
   const { lines: wrappedLines, offsets, attrs } = wrapResult
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
   const selected = focused ? selectedCells(offsets, selStart, selEnd) : new Set<string>()
 
+  const renderCanvas = useCallback(() => {
+    if (!canvasRef.current || !font) return
+    renderText({
+      canvas: canvasRef.current,
+      font,
+      lines: wrappedLines,
+      attrs,
+      scale: zoom,
+      cols,
+      fg,
+      bg,
+      cursorPos,
+      showCursor: cursorVisible,
+      selected,
+      proportional,
+      lineHeight: gh,
+    })
+  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh])
+
+  // Normal reactive render
+  useEffect(renderCanvas, [renderCanvas])
+
+  // Extra safety: force a few redraws shortly after mount in case layout/font/text
+  // settle slightly later than initial effect timing.
   useEffect(() => {
-    if (canvasRef.current && font) {
-      renderText({
-        canvas: canvasRef.current, font, lines: wrappedLines, attrs, scale: zoom, cols,
-        fg, bg, cursorPos, showCursor: cursorVisible, selected, proportional, lineHeight,
-      })
-    }
-  }, [font?.fontData.value, font?.id, text, zoom, cols, fg, bg, cursorPos?.row, cursorPos?.col, cursorVisible, selStart, selEnd, selTick, proportional, lineHeight])
+    let ticks = 0
+    const id = window.setInterval(() => {
+      ticks += 1
+      renderCanvas()
+      if (ticks >= 5) {
+        window.clearInterval(id)
+      }
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [renderCanvas])
 
   function hitTest(clientX: number, clientY: number): number {
     if (!canvasRef.current) return 0
     const rect = canvasRef.current.getBoundingClientRect()
-    const rowH = lineHeight * zoom
+    const rowH = gh * zoom
     const clickRow = Math.floor((clientY - rect.top) / rowH)
     const clickX = clientX - rect.left
 
@@ -261,18 +286,17 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
         return offsets[row][offsets[row].length - 1] + 1
       }
     } else {
-      const data = font?.fontData.value
       const start = font?.startChar.value ?? 32
       const bpr = Math.ceil(gw / 8)
       const bpg = gh * bpr
+      const data = font?.fontData.value
       const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-      const eIdx = 'e'.charCodeAt(0) - start
-      const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
-      const gap = 1
       const line = wrappedLines[row]
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const advance = (data ? propCharAdvance(line[col], data, start, gc, eWidth, gap, gw, gh) : gw) * zoom
+        const cp = line[col].charCodeAt(0)
+        const gi = cp - start
+        const advance = (isFixedWidth(cp) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break
@@ -305,6 +329,10 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   function handleCanvasMouseDown(e: MouseEvent) {
     if (!textareaRef.current) return
     e.preventDefault()
+    if (e.button !== 0) {
+      textareaRef.current.focus()
+      return
+    }
     const ta = textareaRef.current
     const now = Date.now()
     const offset = hitTest(e.clientX, e.clientY)
@@ -360,19 +388,16 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
     if (textareaRef.current) {
       setText(textareaRef.current.value)
       resetBlink()
-      setSelTick(t => t + 1)
     }
   }
 
   function handleSelectionChange() {
-    setSelTick(t => t + 1)
     resetBlink()
   }
 
   useEffect(() => {
     function onSelectionChange() {
       if (document.activeElement === textareaRef.current) {
-        setSelTick(t => t + 1)
         resetBlink()
       }
     }
@@ -427,23 +452,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
             setBg(COLOR_SYSTEMS[idx].bg)
           }}
         />
-        <button
-          class={`p-1.5 rounded border ${proportional ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-white border-gray-300 hover:bg-blue-50'}`}
-          onClick={() => setProportional(!proportional)}
-          title="Proportional spacing"
-        >
-          <CenterHIcon size={14} />
-        </button>
-        <select
-          class="px-2 py-1 bg-white rounded border border-gray-300 text-sm"
-          value={lineHeight}
-          onChange={(e) => setLineHeight(parseInt((e.target as HTMLSelectElement).value))}
-          title="Line height"
-        >
-          {[4, 5, 6, 7, 8, 9, 10].map(h => (
-            <option key={h} value={h}>{h}px</option>
-          ))}
-        </select>
         <div class="relative ml-auto" ref={zoomRef}>
           <button
             class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"

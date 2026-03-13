@@ -11,6 +11,7 @@ interface BdfWriteParams {
   baseline: number
   meta: FontMeta | null
   glyphMeta: (GlyphMeta | null)[] | null
+  fontName?: string
 }
 
 // BDF properties that are defined as integers per the spec
@@ -27,7 +28,7 @@ const NUMERIC_PROPS = new Set([
 ])
 
 export function writeBdf(params: BdfWriteParams): string {
-  const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta } = params
+  const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta, fontName: paramFontName } = params
   const bpr = Math.ceil(w / 8)
   const bpg = h * bpr
   const lines: string[] = []
@@ -41,6 +42,7 @@ export function writeBdf(params: BdfWriteParams): string {
 
   // Properties
   const props = meta?.properties ? { ...meta.properties } : {} as Record<string, string>
+  if (paramFontName && !('FAMILY_NAME' in props)) props['FAMILY_NAME'] = paramFontName
   if (!('FONT_ASCENT' in props)) props['FONT_ASCENT'] = String(baseline)
   if (!('FONT_DESCENT' in props)) props['FONT_DESCENT'] = String(h - baseline)
   const propKeys = Object.keys(props)

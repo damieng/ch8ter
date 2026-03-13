@@ -18,7 +18,7 @@ interface Props {
   zIndex?: number
 }
 
-export function DragWindow({
+export function BasePane({
   title, children, statusBar, windowId, initialX, initialY,
   initialW, initialH, resizable, aspectRatio,
   onFocus, onClose, zIndex = 1

@@ -11,8 +11,31 @@ const CODEPAGES: { value: Charset; label: string; startChar: number; glyphCount:
   { value: 'c64', label: 'Commodore 64', startChar: 32, glyphCount: 96 },
   { value: 'cp437', label: 'DOS (CP437)', startChar: 0, glyphCount: 256 },
   { value: 'cp850', label: 'DOS (CP850)', startChar: 0, glyphCount: 256 },
-  { value: 'msx', label: 'MSX', startChar: 32, glyphCount: 96 },
+  { value: 'iso8859_1', label: 'ISO 8859-1 (Latin-1)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_2', label: 'ISO 8859-2 (Central European)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_3', label: 'ISO 8859-3 (South European)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_4', label: 'ISO 8859-4 (North European)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_5', label: 'ISO 8859-5 (Cyrillic)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_6', label: 'ISO 8859-6 (Arabic)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_7', label: 'ISO 8859-7 (Greek)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_8', label: 'ISO 8859-8 (Hebrew)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_9', label: 'ISO 8859-9 (Turkish)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_10', label: 'ISO 8859-10 (Nordic)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_13', label: 'ISO 8859-13 (Baltic)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_14', label: 'ISO 8859-14 (Celtic)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_15', label: 'ISO 8859-15 (Western European)', startChar: 32, glyphCount: 224 },
+  { value: 'iso8859_16', label: 'ISO 8859-16 (Romanian)', startChar: 32, glyphCount: 224 },
+  { value: 'msx', label: 'MSX International', startChar: 0, glyphCount: 256 },
   { value: 'sam', label: 'SAM Coupe', startChar: 32, glyphCount: 96 },
+  { value: 'win1250', label: 'Windows-1250 (Central European)', startChar: 32, glyphCount: 224 },
+  { value: 'win1251', label: 'Windows-1251 (Cyrillic)', startChar: 32, glyphCount: 224 },
+  { value: 'win1252', label: 'Windows-1252 / Latin-1 (Western)', startChar: 32, glyphCount: 224 },
+  { value: 'win1253', label: 'Windows-1253 (Greek)', startChar: 32, glyphCount: 224 },
+  { value: 'win1254', label: 'Windows-1254 (Turkish)', startChar: 32, glyphCount: 224 },
+  { value: 'win1255', label: 'Windows-1255 (Hebrew)', startChar: 32, glyphCount: 224 },
+  { value: 'win1256', label: 'Windows-1256 (Arabic)', startChar: 32, glyphCount: 224 },
+  { value: 'win1257', label: 'Windows-1257 (Baltic)', startChar: 32, glyphCount: 224 },
+  { value: 'win1258', label: 'Windows-1258 (Vietnamese)', startChar: 32, glyphCount: 224 },
   { value: 'zx', label: 'ZX Spectrum', startChar: 32, glyphCount: 96 },
 ]
 
@@ -42,7 +65,7 @@ export function NewFontDialog({ onClose }: Props) {
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4" style={{ width: 340 }}>
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4" style={{ width: 440 }}>
         <h2 class="font-bold text-lg">New Font</h2>
 
         <div class="flex flex-col gap-3">
@@ -78,7 +101,7 @@ export function NewFontDialog({ onClose }: Props) {
               class="border border-gray-300 rounded px-2 py-1 text-sm flex-1"
             >
               {CODEPAGES.map(cp => (
-                <option key={cp.value} value={cp.value}>{cp.label} ({cp.glyphCount} glyphs)</option>
+                <option key={cp.value} value={cp.value}>{cp.label}</option>
               ))}
             </select>
           </div>

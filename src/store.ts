@@ -1,9 +1,14 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
-import type { FontMeta, GlyphMeta } from './bdfParser'
+import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
+import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
+import { isFixedWidth } from './unicodeRanges'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
+import { standardCodepages } from './codepages'
 
 // --- Font Instance ---
+
+export type SpacingMode = 'monospace' | 'proportional'
 
 export interface FontInstance {
   id: string
@@ -12,6 +17,7 @@ export interface FontInstance {
   glyphHeight: Signal<number>
   startChar: Signal<number>
   fileName: Signal<string>
+  fontName: Signal<string>
   meta: Signal<FontMeta | null>
   encodings: Signal<number[] | null>
   glyphMeta: Signal<(GlyphMeta | null)[] | null>
@@ -27,6 +33,8 @@ export interface FontInstance {
   gridZoom: Signal<number>
   hideEmpty: Signal<boolean>
   dirty: Signal<boolean>
+  spacing: Signal<SpacingMode>
+  editorOpen: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
   undoHistory: UndoHistory
 }
@@ -39,9 +47,30 @@ export function bytesPerGlyph(font: FontInstance): number {
   return font.glyphHeight.value * bytesPerRow(font)
 }
 
+function nameFromFile(filename: string): string {
+  // Strip extension, then trailing numbers/brackets like "10", "(1)", "_14"
+  return filename
+    .replace(/\.\w+$/i, '')
+    .replace(/[\s_-]*(\(\d+\)|\d+)$/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim()
+}
+
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number, glyphMeta?: (GlyphMeta | null)[]): FontInstance {
+export function createFont(
+  data?: Uint8Array,
+  name?: string,
+  start?: number,
+  width?: number,
+  height?: number,
+  meta?: FontMeta,
+  encodings?: number[],
+  baselineOverride?: number,
+  glyphMeta?: (GlyphMeta | null)[],
+  spacingMode: SpacingMode = 'monospace',
+): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
@@ -55,6 +84,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     glyphHeight: signal(h),
     startChar: signal(start ?? 32),
     fileName: signal(name ?? 'untitled.ch8'),
+    fontName: signal(meta?.family || nameFromFile(name ?? 'untitled')),
     meta: signal<FontMeta | null>(meta ?? null),
     encodings: signal<number[] | null>(encodings ?? null),
     glyphMeta: signal<(GlyphMeta | null)[] | null>(glyphMeta ?? null),
@@ -69,6 +99,8 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     descender: signal(-1),
     gridZoom: signal(5),
     hideEmpty: signal(true),
+    spacing: signal(spacingMode),
+    editorOpen: signal(false),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     undoHistory: new UndoHistory(),
@@ -82,6 +114,7 @@ const LAYOUT_KEY = 'ch8ter-layout'
 
 interface StoredFont {
   fileName: string
+  fontName?: string
   startChar: number
   fontData: string // base64
   glyphWidth?: number
@@ -96,6 +129,8 @@ interface StoredFont {
   encodings?: number[] | null
   glyphMeta?: (GlyphMeta | null)[] | null
   populatedGlyphs?: number[] | null
+  hideEmpty?: boolean
+  spacing?: SpacingMode
 }
 
 // --- Window layout persistence ---
@@ -196,8 +231,21 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
+      const font = createFont(
+        data,
+        s.fileName,
+        s.startChar,
+        s.glyphWidth ?? 8,
+        s.glyphHeight ?? 8,
+        s.meta ?? undefined,
+        s.encodings ?? undefined,
+        s.baseline,
+        s.glyphMeta ?? undefined,
+        s.spacing ?? 'monospace',
+      )
+      if (s.fontName) font.fontName.value = s.fontName
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
+      if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       if (s.ascender != null) font.ascender.value = s.ascender
@@ -224,6 +272,7 @@ function loadFromStorage(): FontInstance[] | null {
 function saveToStorage() {
   const stored: StoredFont[] = fonts.value.map(f => ({
     fileName: f.fileName.value,
+    fontName: f.fontName.value || undefined,
     startChar: f.startChar.value,
     fontData: toBase64(f.fontData.value),
     glyphWidth: f.glyphWidth.value,
@@ -238,6 +287,8 @@ function saveToStorage() {
     encodings: f.encodings.value,
     glyphMeta: f.glyphMeta.value,
     populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
+    hideEmpty: f.hideEmpty.value,
+    spacing: f.spacing.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -254,6 +305,7 @@ effect(() => {
   for (const f of allFonts) {
     f.fontData.value
     f.fileName.value
+    f.fontName.value
     f.startChar.value
     f.glyphWidth.value
     f.glyphHeight.value
@@ -265,6 +317,8 @@ effect(() => {
     f.xHeight.value
     f.numericHeight.value
     f.descender.value
+    f.hideEmpty.value
+    f.spacing.value
   }
   saveToStorage()
 })
@@ -322,6 +376,12 @@ export function addFont(font: FontInstance) {
     fonts.value = [...current, font]
   }
   activeFontId.value = font.id
+  storedFocusedId.value = `grid-${font.id}`
+}
+
+export function openGlyphEditor(font: FontInstance) {
+  font.editorOpen.value = true
+  storedFocusedId.value = `editor-${font.id}`
 }
 
 export function removeFont(id: string) {
@@ -351,6 +411,7 @@ export function openPreview(fontId: string, systemIdx?: number) {
     updatePreviewSettings(id, { fontId, systemIdx })
   }
   lastOpenedPreviewId.value = id
+  storedFocusedId.value = id
 }
 
 export function closePreview(id: string) {
@@ -386,15 +447,23 @@ effect(() => {
 
 // --- Charset (global display preference) ---
 
-interface CharsetDef {
+interface CharsetDefRaw {
   label: string
+  extends?: string
   overrides: Record<number, string>
   colorSystem?: string // matches name in COLOR_SYSTEMS for preview default
   range?: [number, number] // codepoint range [lo, hi] inclusive — filters glyph grid
 }
 
-const CHARSETS_DEF = {
-  amiga: { label: 'Amiga (ISO-8859-1)', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
+interface CharsetDef {
+  label: string
+  overrides: Record<number, string>
+  colorSystem?: string
+  range?: [number, number]
+}
+
+const CHARSETS_RAW = {
+  amiga: { label: 'Amiga (ISO-8859-1)', extends: 'iso8859_1', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
     0x7F: '\u2302', // ⌂
   }},
   cpc: { label: 'Amstrad CPC', range: [0, 255] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
@@ -702,6 +771,29 @@ const CHARSETS_DEF = {
     0xFC: '\u21D2', 0xFD: '\u21D0', 0xFE: '\u21D4', 0xFF: '\u2261',
   }},
   ascii: { label: 'ASCII', range: [32, 126] as [number, number], overrides: {} },
+  atarist: { label: 'Atari ST', extends: 'cp437', range: [32, 255] as [number, number], overrides: {
+    // Differences from CP437 per unicode.org/Public/MAPPINGS/VENDORS/MISC/ATARIST.TXT
+    0x9E: '\u00DF', // ß (CP437 has ₧)
+    // 0xB0-0xBF: accented chars, ligatures, symbols (CP437 has box drawing)
+    0xB0: '\u00E3', 0xB1: '\u00F5', 0xB2: '\u00D8', 0xB3: '\u00F8',
+    0xB4: '\u0153', 0xB5: '\u0152', 0xB6: '\u00C0', 0xB7: '\u00C3',
+    0xB8: '\u00D5', 0xB9: '\u00A8', 0xBA: '\u00B4', 0xBB: '\u2020',
+    0xBC: '\u00B6', 0xBD: '\u00A9', 0xBE: '\u00AE', 0xBF: '\u2122',
+    // 0xC0-0xDF: ij/IJ, Hebrew, section, logical and, infinity (CP437 has box drawing)
+    0xC0: '\u0133', 0xC1: '\u0132', 0xC2: '\u05D0', 0xC3: '\u05D1',
+    0xC4: '\u05D2', 0xC5: '\u05D3', 0xC6: '\u05D4', 0xC7: '\u05D5',
+    0xC8: '\u05D6', 0xC9: '\u05D7', 0xCA: '\u05D8', 0xCB: '\u05D9',
+    0xCC: '\u05DB', 0xCD: '\u05DC', 0xCE: '\u05DE', 0xCF: '\u05E0',
+    0xD0: '\u05E1', 0xD1: '\u05E2', 0xD2: '\u05E4', 0xD3: '\u05E6',
+    0xD4: '\u05E7', 0xD5: '\u05E8', 0xD6: '\u05E9', 0xD7: '\u05EA',
+    0xD8: '\u05DF', 0xD9: '\u05DA', 0xDA: '\u05DD', 0xDB: '\u05E3',
+    0xDC: '\u05E5', 0xDD: '\u00A7', 0xDE: '\u2227', 0xDF: '\u221E',
+    // 0xE0-0xFF: mostly same as CP437 except these
+    0xEC: '\u222E', // ∮ (CP437 has ∞)
+    0xEE: '\u2208', // ∈ (CP437 has ε)
+    0xFE: '\u00B3', // ³ (CP437 has ■)
+    0xFF: '\u00AF', // ¯ (CP437 has NBSP)
+  }},
   atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
     // ATASCII: 0x7B-0x7F are control codes, not printable
     0x7B: '\u2666', // ♦ (spade-like in Atari set)
@@ -720,8 +812,40 @@ const CHARSETS_DEF = {
     0x7F: '\u03C0', // π (pi)
   }},
   imported: { label: 'Imported', overrides: {} },
-  msx: { label: 'MSX', range: [32, 127] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
-    0x7F: '\u25B6', // ► (triangle, MSX uses this position for a graphic)
+  ...standardCodepages,
+  msx: { label: 'MSX International', extends: 'cp437', range: [0, 255] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
+    // 0x00-0x1F: control codes (no printable glyphs in standard mode)
+    0x00: '\u0000', 0x01: '\u0001', 0x02: '\u0002', 0x03: '\u0003',
+    0x04: '\u0004', 0x05: '\u0005', 0x06: '\u0008', 0x07: '\u0009',
+    0x08: '\u000A', 0x09: '\u000B', 0x0A: '\u000C', 0x0B: '\u000D',
+    0x0C: '\u000E', 0x0D: '\u000F', 0x0E: '\u0010', 0x0F: '\u001B',
+    0x10: '\u0011', 0x11: '\u0012', 0x12: '\u0013', 0x13: '\u0014',
+    0x14: '\u0015', 0x15: '\u0016', 0x16: '\u0017', 0x17: '\u0018',
+    0x18: '\u0019', 0x19: '\u001A', 0x1A: '\u001B', 0x1B: '\u001C',
+    0x1C: '\u001D', 0x1D: '\u001E', 0x1E: '\u001F', 0x1F: '\u007F',
+    0x7F: '\u25B6', // ► (triangle)
+    // 0xB0-0xBF: accented characters and symbols (differs from CP437 box drawing)
+    0xB0: '\u00C3', 0xB1: '\u00E3', 0xB2: '\u0128', 0xB3: '\u0129',
+    0xB4: '\u00D5', 0xB5: '\u00F5', 0xB6: '\u0170', 0xB7: '\u0171',
+    0xB8: '\u0132', 0xB9: '\u0133', 0xBA: '\u00BE', 0xBB: '\u223D',
+    0xBC: '\u25CA', 0xBD: '\u2030', 0xBE: '\u00B6', 0xBF: '\u00A7',
+    // 0xC0-0xDA: graphic blocks (differs from CP437 box drawing)
+    0xC0: '\u2582', 0xC1: '\u259A', 0xC2: '\u2586', 0xC3: '\uD83E\uDEA2',
+    0xC4: '\u25AC', 0xC5: '\uD83E\uDEA5', 0xC6: '\u258E', 0xC7: '\u259E',
+    0xC8: '\u258A', 0xC9: '\uD83E\uDEA7', 0xCA: '\uD83E\uDEAA',
+    0xCB: '\uD83E\uDEB9', 0xCC: '\uD83E\uDEB8',
+    0xCD: '\uD83E\uDE6D', 0xCE: '\uD83E\uDE6F',
+    0xCF: '\uD83E\uDE6C', 0xD0: '\uD83E\uDE6E',
+    0xD1: '\uD83E\uDEBA', 0xD2: '\uD83E\uDEBB',
+    0xD3: '\u2598', 0xD4: '\u2597', 0xD5: '\u259D', 0xD6: '\u2596',
+    0xD7: '\uD83E\uDEB6',
+    0xD8: '\u0394', 0xD9: '\u2021', 0xDA: '\u03C9',
+    // 0xED: diameter sign instead of CP437 phi
+    0xED: '\u2300',
+    // 0xEE: element-of instead of CP437 epsilon
+    0xEE: '\u2208',
+    // 0xFF: cursor (not printable)
+    0xFF: '\u2588',
   }},
   sam: { label: 'SAM Coupe', range: [32, 127] as [number, number], colorSystem: 'SAM Coup\u00e9', overrides: {
     0x60: '\u00A3', // £ (pound, inherited from Spectrum)
@@ -734,8 +858,28 @@ const CHARSETS_DEF = {
   }},
 }
 
-export type Charset = keyof typeof CHARSETS_DEF
-export const CHARSETS: Record<Charset, CharsetDef> = CHARSETS_DEF
+export type Charset = keyof typeof CHARSETS_RAW
+
+// Resolve extends chains to flatten overrides
+function resolveCharsets(raw: Record<string, CharsetDefRaw>): Record<string, CharsetDef> {
+  const resolved: Record<string, CharsetDef> = {}
+  function resolve(key: string): CharsetDef {
+    if (resolved[key]) return resolved[key]
+    const entry = raw[key]
+    if (!entry) throw new Error(`Unknown charset: ${key}`)
+    let overrides = entry.overrides
+    if (entry.extends) {
+      const base = resolve(entry.extends)
+      overrides = { ...base.overrides, ...entry.overrides }
+    }
+    resolved[key] = { label: entry.label, overrides, colorSystem: entry.colorSystem, range: entry.range }
+    return resolved[key]
+  }
+  for (const key of Object.keys(raw)) resolve(key)
+  return resolved
+}
+
+export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RAW) as Record<Charset, CharsetDef>
 export const charset = signal<Charset>('zx')
 
 // Resolve a codepoint to its Unicode character under a given charset
@@ -948,6 +1092,32 @@ export function glyphToText(font: FontInstance, glyphIndex: number): string {
     rows.push(row)
   }
   return rows.join('\r\n')
+}
+
+// Return the advance width (in pixels) for a glyph.
+// In monospace fonts this is always the global glyph width.
+// In proportional fonts we prefer per-glyph DWIDTH, then BBX width, then fall back to glyphWidth.
+export function glyphAdvance(font: FontInstance, glyphIndex: number): number {
+  const gw = font.glyphWidth.value
+  const spacing = font.spacing.value
+  const gmArr = font.glyphMeta.value
+  const gm = gmArr && glyphIndex >= 0 && glyphIndex < gmArr.length ? gmArr[glyphIndex] : null
+
+  if (spacing === 'proportional') {
+    if (gm?.dwidth && gm.dwidth[0] > 0) return gm.dwidth[0]
+    if (gm?.bbx && gm.bbx[0] > 0) return gm.bbx[0]
+  }
+  return gw
+}
+
+export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance: number) {
+  const gmArr = font.glyphMeta.value
+  const len = glyphCount(font)
+  const meta: (GlyphMeta | null)[] = gmArr ? [...gmArr] : new Array(len).fill(null)
+  const existing = meta[glyphIndex]
+  meta[glyphIndex] = { ...existing, dwidth: [advance, 0] }
+  font.glyphMeta.value = meta
+  font.dirty.value = true
 }
 
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
@@ -1355,12 +1525,125 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
   addFont(newFont)
 }
 
+// Proportional variant — shift each non-fixed-width glyph left to the pixel edge,
+// set advance = tight pixel width + 1px gap. Fixed-width glyphs keep full cell advance.
+export function createProportionalVariant(font: FontInstance) {
+  const src = font.fontData.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
+  const count = glyphCount(font)
+  const start = font.startChar.value
+  const out = new Uint8Array(src.length)
+  const meta: (GlyphMeta | null)[] = []
+
+  for (let g = 0; g < count; g++) {
+    const offset = g * bpg
+    const bytes = src.slice(offset, offset + bpg)
+    const charCode = start + g
+
+    if (isFixedWidth(charCode)) {
+      out.set(bytes, offset)
+      meta.push({ dwidth: [w, 0] })
+      continue
+    }
+
+    // Find pixel bounds
+    let left = w, right = -1
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (getBit(bytes, bpr, x, y)) {
+          if (x < left) left = x
+          if (x > right) right = x
+        }
+
+    if (right < 0) {
+      // Empty glyph (space etc.) — use half cell width
+      out.set(bytes, offset)
+      meta.push({ dwidth: [Math.max(1, Math.round(w / 2)), 0] })
+      continue
+    }
+
+    // Shift pixels left to column 0
+    const shifted = new Uint8Array(bpg)
+    for (let y = 0; y < h; y++)
+      for (let x = left; x < w; x++)
+        if (getBit(bytes, bpr, x, y))
+          setBit(shifted, bpr, x - left, y)
+    out.set(shifted, offset)
+
+    // Advance = tight width + 1px gap
+    meta.push({ dwidth: [right - left + 2, 0] })
+  }
+
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-proportional$1')
+  const newFont = createFont(out, name, start, w, h, undefined, undefined, undefined, meta, 'proportional')
+  recalcMetrics(newFont)
+  addFont(newFont)
+}
+
+// Monospace variant — places each glyph's pixels into a fixed-width cell using the chosen anchor.
+export function createMonospaceVariant(
+  font: FontInstance,
+  newW: number,
+  anchorX: 'left' | 'center' | 'right',
+) {
+  const src = font.fontData.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = Math.ceil(w / 8)
+  const bpg = h * bpr
+  const newBpr = Math.ceil(newW / 8)
+  const newBpg = h * newBpr
+  const count = glyphCount(font)
+  const start = font.startChar.value
+  const out = new Uint8Array(count * newBpg)
+
+  for (let g = 0; g < count; g++) {
+    const srcOff = g * bpg
+    const bytes = src.slice(srcOff, srcOff + bpg)
+    const dstBytes = new Uint8Array(newBpg)
+
+    // Find tight pixel bounds
+    let left = w, right = -1
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (getBit(bytes, bpr, x, y)) {
+          if (x < left) left = x
+          if (x > right) right = x
+        }
+
+    if (right < 0) {
+      // Empty glyph — leave blank
+      out.set(dstBytes, g * newBpg)
+      continue
+    }
+
+    const pixW = right - left + 1
+    const dx = anchorX === 'left' ? 0
+      : anchorX === 'right' ? newW - pixW
+      : Math.floor((newW - pixW) / 2)
+
+    for (let y = 0; y < h; y++)
+      for (let x = left; x <= right; x++) {
+        const nx = x - left + dx
+        if (getBit(bytes, bpr, x, y) && nx >= 0 && nx < newW)
+          setBit(dstBytes, newBpr, nx, y)
+      }
+
+    out.set(dstBytes, g * newBpg)
+  }
+
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-monospace$1')
+  const newFont = createFont(out, name, start, newW, h, undefined, undefined, undefined, undefined, 'monospace')
+  recalcMetrics(newFont)
+  addFont(newFont)
+}
+
 // File I/O
 export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer)
-  const bpg = bytesPerGlyph(font)
-  const count = bpg > 0 ? Math.floor(bytes.length / bpg) : 0
-  const data = bytes.slice(0, count * bpg)
+  const data = parseCh8(buffer, bytesPerGlyph(font))
   font.fontData.value = data
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
@@ -1424,7 +1707,7 @@ export function resizeFont(
 }
 
 export function saveFont(font: FontInstance): Uint8Array {
-  const data = new Uint8Array(font.fontData.value)
+  const data = writeCh8(font.fontData.value)
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   return data

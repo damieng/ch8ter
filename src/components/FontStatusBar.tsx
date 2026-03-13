@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { type FontInstance, glyphCount, switchCharset, charset, CHARSETS, type Charset } from '../store'
-import { MetaDialog } from './MetaDialog'
+import { FontPropertiesDialog } from '../dialogs/FontPropertiesDialog'
 
 export function FontStatusBar({ font }: { font: FontInstance }) {
   const [metaOpen, setMetaOpen] = useState(false)
@@ -28,12 +28,12 @@ export function FontStatusBar({ font }: { font: FontInstance }) {
         value={charset.value}
         onChange={(e) => { switchCharset((e.target as HTMLSelectElement).value as Charset) }}
       >
-        {Object.entries(CHARSETS).map(([key, def]) => (
+        {Object.entries(CHARSETS).sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true })).map(([key, def]) => (
           <option key={key} value={key}>{def.label}</option>
         ))}
       </select>
       {metaOpen && createPortal(
-        <MetaDialog font={font} onClose={() => setMetaOpen(false)} />,
+        <FontPropertiesDialog font={font} onClose={() => setMetaOpen(false)} />,
         document.body,
       )}
     </>
