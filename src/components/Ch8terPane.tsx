@@ -29,8 +29,10 @@ const CHANGELOG: { version: string; changes: string[] }[] = [
   {
     version: "0.9.1",
     changes: [
-      "Atari ST GDOS .fnt font format load and save",
+      "Proportional font support for BDF, PSF, FZX, and GDOS .fnt",
+      "Atari ST GEM/GDOS .fnt font format load and save",
       "Larger fonts supported in preview window",
+      "Font name support",
     ],
   },
   {
@@ -219,6 +221,12 @@ export function Ch8terPane() {
         file.text().then((text) => {
           try {
             const result = parseBdf(text)
+            const hasPropSpacing = result.glyphMeta.some(
+              (gm) =>
+                gm?.dwidth &&
+                gm.dwidth[0] > 0 &&
+                gm.dwidth[0] !== result.glyphWidth,
+            )
             const font = createFont(
               result.fontData,
               file.name,
@@ -229,6 +237,7 @@ export function Ch8terPane() {
               result.encodings,
               result.baseline,
               result.glyphMeta,
+              hasPropSpacing ? "proportional" : "monospace",
             )
             // Track which glyph slots were actually in the source file
             const populated = new Set<number>()
@@ -299,6 +308,7 @@ export function Ch8terPane() {
               undefined,
               undefined,
               result.glyphMeta,
+              "proportional",
             )
             font.populatedGlyphs.value = result.populated
             recalcMetrics(font)
@@ -312,6 +322,12 @@ export function Ch8terPane() {
         file.arrayBuffer().then((buf) => {
           try {
             const result = parseGdosFont(buf)
+            const hasPropSpacing = result.glyphMeta.some(
+              (gm) =>
+                gm?.dwidth &&
+                gm.dwidth[0] > 0 &&
+                gm.dwidth[0] !== result.glyphWidth,
+            )
             const font = createFont(
               result.fontData,
               file.name,
@@ -322,6 +338,7 @@ export function Ch8terPane() {
               undefined,
               result.baseline,
               result.glyphMeta,
+              hasPropSpacing ? "proportional" : "monospace",
             )
             font.populatedGlyphs.value = result.populated
             font.ascender.value = result.ascender
