@@ -3,13 +3,12 @@ import type { RefObject } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
 import { ZoomIn } from 'lucide-preact'
-import { fonts, storedPreviews, updatePreviewSettings } from '../store'
+import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
-import { wrapText, wrapTextProportional, cursorPosition, selectedCells, glyphBounds, propCharAdvance } from '../textLayout'
+import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
 import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { CenterHIcon } from './CenterHIcon'
 
 function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, systems, systemIdx, onToggle, onFgPick, onBgPick, onSystemChange }: {
   anchorRef: RefObject<HTMLDivElement | null>
@@ -131,7 +130,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const [systemIdx, setSystemIdx] = useState(initSysIdx)
   const [fg, setFg] = useState(stored?.fg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].fg)
   const [bg, setBg] = useState(stored?.bg ?? COLOR_SYSTEMS[initSysIdx >= 0 ? initSysIdx : 0].bg)
-  const [proportional, setProportional] = useState(stored?.proportional ?? false)
   const [colorOpen, setColorOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -148,6 +146,7 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
 
   const allFonts = fonts.value
   const font = allFonts.find(f => f.id === selectedFontId) ?? allFonts[0]
+  const proportional = font?.spacing.value === 'proportional'
   const system = COLOR_SYSTEMS[systemIdx]
 
   const initialText = useMemo(() => {
@@ -171,9 +170,9 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
 
   useEffect(() => {
     updatePreviewSettings(previewId, {
-      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, proportional, lineHeight: gh,
+      selectedFontId, textKey, zoom, systemIdx, fg, bg, fontId: initialFontId, lineHeight: gh,
     })
-  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, proportional, gh])
+  }, [selectedFontId, textKey, zoom, systemIdx, fg, bg, gh])
 
   const [cols, setCols] = useState(32)
 
@@ -210,22 +209,20 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   const selEnd = textareaRef.current?.selectionEnd ?? 0
 
   const wrapResult = useMemo(() => {
-    if (!proportional) {
+    if (!proportional || !font) {
       return wrapText(text, cols)
     }
-    const data = font?.fontData.value
-    const start = font?.startChar.value ?? 32
+    const start = font.startChar.value
     const bpr = Math.ceil(gw / 8)
     const bpg = gh * bpr
+    const data = font.fontData.value
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-    const eIdx = 'e'.charCodeAt(0) - start
-    const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
-    const gap = 1
     const maxPixelWidth = cols * gw
-    return wrapTextProportional(text, maxPixelWidth, (ch) =>
-      data ? propCharAdvance(ch, data, start, gc, eWidth, gap, gw, gh) : gw
-    )
-  }, [text, cols, proportional, font?.fontData.value, font?.startChar.value, gw, gh])
+    return wrapTextProportional(text, maxPixelWidth, (ch) => {
+      const gi = ch.charCodeAt(0) - start
+      return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
+    })
+  }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh])
 
   const { lines: wrappedLines, offsets, attrs } = wrapResult
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
@@ -286,18 +283,16 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
         return offsets[row][offsets[row].length - 1] + 1
       }
     } else {
-      const data = font?.fontData.value
       const start = font?.startChar.value ?? 32
       const bpr = Math.ceil(gw / 8)
       const bpg = gh * bpr
+      const data = font?.fontData.value
       const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-      const eIdx = 'e'.charCodeAt(0) - start
-      const eWidth = (data && eIdx >= 0 && eIdx < gc) ? (glyphBounds(data, eIdx, gw, gh).width || 4) : 4
-      const gap = 1
       const line = wrappedLines[row]
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const advance = (data ? propCharAdvance(line[col], data, start, gc, eWidth, gap, gw, gh) : gw) * zoom
+        const gi = line[col].charCodeAt(0) - start
+        const advance = (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break
@@ -330,6 +325,10 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
   function handleCanvasMouseDown(e: MouseEvent) {
     if (!textareaRef.current) return
     e.preventDefault()
+    if (e.button !== 0) {
+      textareaRef.current.focus()
+      return
+    }
     const ta = textareaRef.current
     const now = Date.now()
     const offset = hitTest(e.clientX, e.clientY)
@@ -449,13 +448,6 @@ export function PreviewWindow({ previewId, initialFontId }: Props) {
             setBg(COLOR_SYSTEMS[idx].bg)
           }}
         />
-        <button
-          class={`p-1.5 rounded border ${proportional ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-white border-gray-300 hover:bg-blue-50'}`}
-          onClick={() => setProportional(!proportional)}
-          title="Proportional spacing"
-        >
-          <CenterHIcon size={14} />
-        </button>
         <div class="relative ml-auto" ref={zoomRef}>
           <button
             class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"

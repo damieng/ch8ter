@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
-import { type FontInstance, getPixel, setPixel } from '../store'
+import { type FontInstance, getPixel, setPixel, glyphAdvance } from '../store'
 import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
 import { getCharMetrics, Metric } from '../charMetrics'
 
@@ -102,6 +102,17 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   if (font.descender.value >= 0 && (charFlags & Metric.Descender))
     guidelines.push([baseline + font.descender.value, '#3b82f6'])
 
+  // In proportional spacing mode, show a vertical guide for this glyph's advance width.
+  const spacingMode = font.spacing.value
+  const advance = spacingMode === 'proportional' ? glyphAdvance(font, idx) : null
+
+  function guideX(col: number): number {
+    if (col == null) return -1
+    if (col <= 0) return 0
+    if (col >= w) return gridW - gap
+    return gap + col * (cellSize + gap) - gap
+  }
+
   return (
     <div ref={containerRef} class="w-full h-full flex items-center justify-center">
       <div
@@ -130,11 +141,26 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
                 top: `${y}px`,
                 height: `${gap}px`,
                 backgroundColor: color,
+                boxShadow: `0 0 1px 1px ${color}`,
                 pointerEvents: 'none',
               }}
             />
           )
         })}
+        {advance != null && advance > 0 && advance <= w && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: `${guideX(advance)}px`,
+              width: `${gap}px`,
+              backgroundColor: '#22c55e',
+              boxShadow: '0 0 1px 1px #22c55e',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
       </div>
     </div>
   )

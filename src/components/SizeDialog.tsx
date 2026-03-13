@@ -112,6 +112,10 @@ export function SizeDialog({ font, onClose }: Props) {
                 </button>
               ))}
             </div>
+            <span class="ml-2 text-xs text-gray-500">
+              Spacing:&nbsp;
+              {font.spacing.value === 'proportional' ? 'Proportional (read-only)' : 'Monospace'}
+            </span>
           </div>
 
           <hr class="border-gray-200" />

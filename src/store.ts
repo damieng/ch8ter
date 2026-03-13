@@ -6,6 +6,8 @@ import { standardCodepages } from './codepages'
 
 // --- Font Instance ---
 
+export type SpacingMode = 'monospace' | 'proportional'
+
 export interface FontInstance {
   id: string
   fontData: Signal<Uint8Array>
@@ -29,6 +31,7 @@ export interface FontInstance {
   gridZoom: Signal<number>
   hideEmpty: Signal<boolean>
   dirty: Signal<boolean>
+  spacing: Signal<SpacingMode>
   savedSnapshot: Signal<Uint8Array>
   undoHistory: UndoHistory
 }
@@ -53,7 +56,18 @@ function nameFromFile(filename: string): string {
 
 let nextFontId = 1
 
-export function createFont(data?: Uint8Array, name?: string, start?: number, width?: number, height?: number, meta?: FontMeta, encodings?: number[], baselineOverride?: number, glyphMeta?: (GlyphMeta | null)[]): FontInstance {
+export function createFont(
+  data?: Uint8Array,
+  name?: string,
+  start?: number,
+  width?: number,
+  height?: number,
+  meta?: FontMeta,
+  encodings?: number[],
+  baselineOverride?: number,
+  glyphMeta?: (GlyphMeta | null)[],
+  spacingMode: SpacingMode = 'monospace',
+): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
@@ -82,6 +96,7 @@ export function createFont(data?: Uint8Array, name?: string, start?: number, wid
     descender: signal(-1),
     gridZoom: signal(5),
     hideEmpty: signal(true),
+    spacing: signal(spacingMode),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     undoHistory: new UndoHistory(),
@@ -111,6 +126,7 @@ interface StoredFont {
   glyphMeta?: (GlyphMeta | null)[] | null
   populatedGlyphs?: number[] | null
   hideEmpty?: boolean
+  spacing?: SpacingMode
 }
 
 // --- Window layout persistence ---
@@ -211,7 +227,18 @@ function loadFromStorage(): FontInstance[] | null {
     if (!Array.isArray(stored) || stored.length === 0) return null
     return stored.map(s => {
       const data = fromBase64(s.fontData)
-      const font = createFont(data, s.fileName, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, s.meta ?? undefined, s.encodings ?? undefined, s.baseline, s.glyphMeta ?? undefined)
+      const font = createFont(
+        data,
+        s.fileName,
+        s.startChar,
+        s.glyphWidth ?? 8,
+        s.glyphHeight ?? 8,
+        s.meta ?? undefined,
+        s.encodings ?? undefined,
+        s.baseline,
+        s.glyphMeta ?? undefined,
+        s.spacing ?? 'monospace',
+      )
       if (s.fontName) font.fontName.value = s.fontName
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
       if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
@@ -257,6 +284,7 @@ function saveToStorage() {
     glyphMeta: f.glyphMeta.value,
     populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
     hideEmpty: f.hideEmpty.value,
+    spacing: f.spacing.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -286,6 +314,7 @@ effect(() => {
     f.numericHeight.value
     f.descender.value
     f.hideEmpty.value
+    f.spacing.value
   }
   saveToStorage()
 })
@@ -1052,6 +1081,22 @@ export function glyphToText(font: FontInstance, glyphIndex: number): string {
     rows.push(row)
   }
   return rows.join('\r\n')
+}
+
+// Return the advance width (in pixels) for a glyph.
+// In monospace fonts this is always the global glyph width.
+// In proportional fonts we prefer per-glyph DWIDTH, then BBX width, then fall back to glyphWidth.
+export function glyphAdvance(font: FontInstance, glyphIndex: number): number {
+  const gw = font.glyphWidth.value
+  const spacing = font.spacing.value
+  const gmArr = font.glyphMeta.value
+  const gm = gmArr && glyphIndex >= 0 && glyphIndex < gmArr.length ? gmArr[glyphIndex] : null
+
+  if (spacing === 'proportional') {
+    if (gm?.dwidth && gm.dwidth[0] > 0) return gm.dwidth[0]
+    if (gm?.bbx && gm.bbx[0] > 0) return gm.bbx[0]
+  }
+  return gw
 }
 
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
