@@ -2,6 +2,7 @@
 
 import type { FontInstance } from './store'
 import { glyphAdvance } from './store'
+import { isFixedWidth } from './unicodeRanges'
 
 export interface RenderOptions {
   canvas: HTMLCanvasElement
@@ -97,7 +98,9 @@ export function renderText({
     }
   } else {
     function charAdv(gi: number) {
-      return gi >= 0 && gi < gc ? glyphAdvance(font, gi) * scale : cellW
+      if (gi < 0 || gi >= gc) return cellW
+      if (isFixedWidth(startChar + gi)) return cellW
+      return glyphAdvance(font, gi) * scale
     }
 
     let maxLineWidth = 0

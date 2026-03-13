@@ -4,6 +4,7 @@ import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
 import { ZoomIn } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
+import { isFixedWidth } from '../unicodeRanges'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
@@ -219,7 +220,9 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
     const maxPixelWidth = cols * gw
     return wrapTextProportional(text, maxPixelWidth, (ch) => {
-      const gi = ch.charCodeAt(0) - start
+      const cp = ch.charCodeAt(0)
+      const gi = cp - start
+      if (isFixedWidth(cp)) return gw
       return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
     })
   }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh])
@@ -291,8 +294,9 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       const line = wrappedLines[row]
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const gi = line[col].charCodeAt(0) - start
-        const advance = (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw) * zoom
+        const cp = line[col].charCodeAt(0)
+        const gi = cp - start
+        const advance = (isFixedWidth(cp) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break

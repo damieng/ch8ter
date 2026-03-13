@@ -9,7 +9,7 @@ import {
   type FontInstance,
   flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
   shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
-  createBoldVariant, createOutlineVariant
+  createBoldVariant, createOutlineVariant, createProportionalVariant
 } from '../store'
 import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from '../dialogs/ObliqueDialog'
@@ -80,6 +80,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Create Bold', () => createBoldVariant(font))}
           {menuItem('Create Outline', () => createOutlineVariant(font))}
           {menuItem('Create Oblique...', () => setObliqueOpen(true))}
+          {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font))}
         </div>
       )}
       {obliqueOpen && createPortal(

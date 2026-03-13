@@ -15,7 +15,7 @@ import { sampleTexts } from './sampleTexts'
 
 export function App() {
   const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
-  const [focusedId, setFocusedId] = useState<string>(storedFocusedId.value)
+  const focusedId = storedFocusedId.value
 
   const allFonts = fonts.value
   const TOP = 100
@@ -25,7 +25,6 @@ export function App() {
   }
 
   function setFocus(id: string) {
-    setFocusedId(id)
     storedFocusedId.value = id
   }
 
@@ -61,24 +60,27 @@ export function App() {
       {/* Per-font: Glyph Editor + Font windows */}
       {allFonts.map((font, i) => (
         <Fragment key={font.id}>
-          <BasePane
-            title={<EditorTitle font={font} />}
-            windowId={`editor-${font.id}`}
-            initialX={16 + i * 30}
-            initialY={120 + i * 30}
-            initialW={380}
-            initialH={440}
-            resizable
-            zIndex={getZIndex(`editor-${font.id}`)}
-            onFocus={() => focusFont(`editor-${font.id}`, font.id)}
-          >
-            <div class="flex flex-col gap-2 p-2 h-full">
-              <div class="flex-1 min-h-0">
-                <GlyphEditor font={font} />
+          {font.editorOpen.value && (
+            <BasePane
+              title={<EditorTitle font={font} />}
+              windowId={`editor-${font.id}`}
+              initialX={16 + i * 30}
+              initialY={120 + i * 30}
+              initialW={380}
+              initialH={440}
+              resizable
+              zIndex={getZIndex(`editor-${font.id}`)}
+              onFocus={() => focusFont(`editor-${font.id}`, font.id)}
+              onClose={() => { font.editorOpen.value = false }}
+            >
+              <div class="flex flex-col gap-2 p-2 h-full">
+                <div class="flex-1 min-h-0">
+                  <GlyphEditor font={font} />
+                </div>
+                <Toolbar font={font} />
               </div>
-              <Toolbar font={font} />
-            </div>
-          </BasePane>
+            </BasePane>
+          )}
 
           <BasePane
             title={<FontPaneTitle font={font} />}

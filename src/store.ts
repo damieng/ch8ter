@@ -2,6 +2,7 @@ import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
+import { isFixedWidth } from './unicodeRanges'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
 import { standardCodepages } from './codepages'
 
@@ -33,6 +34,7 @@ export interface FontInstance {
   hideEmpty: Signal<boolean>
   dirty: Signal<boolean>
   spacing: Signal<SpacingMode>
+  editorOpen: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
   undoHistory: UndoHistory
 }
@@ -98,6 +100,7 @@ export function createFont(
     gridZoom: signal(5),
     hideEmpty: signal(true),
     spacing: signal(spacingMode),
+    editorOpen: signal(false),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     undoHistory: new UndoHistory(),
@@ -373,6 +376,12 @@ export function addFont(font: FontInstance) {
     fonts.value = [...current, font]
   }
   activeFontId.value = font.id
+  storedFocusedId.value = `grid-${font.id}`
+}
+
+export function openGlyphEditor(font: FontInstance) {
+  font.editorOpen.value = true
+  storedFocusedId.value = `editor-${font.id}`
 }
 
 export function removeFont(id: string) {
@@ -402,6 +411,7 @@ export function openPreview(fontId: string, systemIdx?: number) {
     updatePreviewSettings(id, { fontId, systemIdx })
   }
   lastOpenedPreviewId.value = id
+  storedFocusedId.value = id
 }
 
 export function closePreview(id: string) {
@@ -1501,6 +1511,64 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
   const newFont = createFont(oblique, name, font.startChar.value, w, h)
+  recalcMetrics(newFont)
+  addFont(newFont)
+}
+
+// Proportional variant — shift each non-fixed-width glyph left to the pixel edge,
+// set advance = tight pixel width + 1px gap. Fixed-width glyphs keep full cell advance.
+export function createProportionalVariant(font: FontInstance) {
+  const src = font.fontData.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = bytesPerRow(font)
+  const bpg = bytesPerGlyph(font)
+  const count = glyphCount(font)
+  const start = font.startChar.value
+  const out = new Uint8Array(src.length)
+  const meta: (GlyphMeta | null)[] = []
+
+  for (let g = 0; g < count; g++) {
+    const offset = g * bpg
+    const bytes = src.slice(offset, offset + bpg)
+    const charCode = start + g
+
+    if (isFixedWidth(charCode)) {
+      out.set(bytes, offset)
+      meta.push({ dwidth: [w, 0] })
+      continue
+    }
+
+    // Find pixel bounds
+    let left = w, right = -1
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (getBit(bytes, bpr, x, y)) {
+          if (x < left) left = x
+          if (x > right) right = x
+        }
+
+    if (right < 0) {
+      // Empty glyph (space etc.) — use half cell width
+      out.set(bytes, offset)
+      meta.push({ dwidth: [Math.max(1, Math.round(w / 2)), 0] })
+      continue
+    }
+
+    // Shift pixels left to column 0
+    const shifted = new Uint8Array(bpg)
+    for (let y = 0; y < h; y++)
+      for (let x = left; x < w; x++)
+        if (getBit(bytes, bpr, x, y))
+          setBit(shifted, bpr, x - left, y)
+    out.set(shifted, offset)
+
+    // Advance = tight width + 1px gap
+    meta.push({ dwidth: [right - left + 2, 0] })
+  }
+
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-proportional$1')
+  const newFont = createFont(out, name, start, w, h, undefined, undefined, undefined, meta, 'proportional')
   recalcMetrics(newFont)
   addFont(newFont)
 }
