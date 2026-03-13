@@ -14,7 +14,7 @@ import {
   saveFont, glyphCount
 } from '../store'
 import { execTransformGlyph } from '../undoHistory'
-import { GlyphMetaDialog } from './GlyphMetaDialog'
+import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
 import { writeBdf } from '../fileFormats/bdfWriter'
 import { writePsf } from '../fileFormats/psfWriter'
 import { exportTtf } from '../fileFormats/ttfExport'
@@ -26,7 +26,7 @@ import { exportCpm } from '../fileFormats/cpmExport'
 import { writeFzx } from '../fileFormats/fzxWriter'
 import { writeGdosFont } from '../fileFormats/gdosFontWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { SourceExportDialog } from './SourceExportDialog'
+import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 
 const ICON = 18
 
@@ -297,7 +297,7 @@ export function Toolbar({ font }: { font: FontInstance }) {
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes, 'Center H')} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
       <IconBtn onClick={() => setGlyphMetaOpen(true)} title="Glyph properties"><Info size={ICON} /></IconBtn>
       {glyphMetaOpen && createPortal(
-        <GlyphMetaDialog font={font} glyphIdx={font.lastClickedGlyph.value} onClose={() => setGlyphMetaOpen(false)} />,
+        <GlyphPropertiesDialog font={font} glyphIdx={font.lastClickedGlyph.value} onClose={() => setGlyphMetaOpen(false)} />,
         document.body,
       )}
     </div>

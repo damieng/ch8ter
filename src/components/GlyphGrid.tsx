@@ -8,7 +8,7 @@ import { GlyphTile } from './GlyphTile'
 import { SaveBar, ExportBar } from './Toolbar'
 import { ToolsDropdown } from './ToolsDropdown'
 import { SelectDropdown } from './SelectDropdown'
-import { SizeDialog } from './SizeDialog'
+import { MetricsDialog } from '../dialogs/MetricsDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 function ZoomDropdown({ font }: { font: FontInstance }) {
@@ -55,7 +55,7 @@ function SizeButton({ font }: { font: FontInstance }) {
         {font.glyphWidth.value}×{font.glyphHeight.value}
       </button>
       {open && createPortal(
-        <SizeDialog font={font} onClose={() => setOpen(false)} />,
+        <MetricsDialog font={font} onClose={() => setOpen(false)} />,
         document.body,
       )}
     </>

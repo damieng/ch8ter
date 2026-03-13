@@ -12,7 +12,7 @@ import {
   createBoldVariant, createOutlineVariant
 } from '../store'
 import { execTransformSelection, execCopyRange } from '../undoHistory'
-import { ObliqueDialog } from './ObliqueDialog'
+import { ObliqueDialog } from '../dialogs/ObliqueDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16

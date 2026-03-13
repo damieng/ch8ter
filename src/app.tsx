@@ -11,7 +11,7 @@ import { Ch8terPane, Ch8terTitle } from './components/Ch8terPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews } from './store'
 import { PreviewWindow } from './components/PreviewWindow'
-import { ConfirmDialog } from './components/ConfirmDialog'
+import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
 export function App() {

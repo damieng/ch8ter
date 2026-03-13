@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { type FontInstance, glyphCount, switchCharset, charset, CHARSETS, type Charset } from '../store'
-import { MetaDialog } from './MetaDialog'
+import { FontPropertiesDialog } from '../dialogs/FontPropertiesDialog'
 
 export function FontStatusBar({ font }: { font: FontInstance }) {
   const [metaOpen, setMetaOpen] = useState(false)
@@ -33,7 +33,7 @@ export function FontStatusBar({ font }: { font: FontInstance }) {
         ))}
       </select>
       {metaOpen && createPortal(
-        <MetaDialog font={font} onClose={() => setMetaOpen(false)} />,
+        <FontPropertiesDialog font={font} onClose={() => setMetaOpen(false)} />,
         document.body,
       )}
     </>

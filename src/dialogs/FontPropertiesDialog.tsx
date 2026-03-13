@@ -7,7 +7,7 @@ interface Props {
   onClose: () => void
 }
 
-export function MetaDialog({ font, onClose }: Props) {
+export function FontPropertiesDialog({ font, onClose }: Props) {
   const meta = font.meta.value
   const [fontName, setFontName] = useState(font.fontName.value)
   const [properties, setProperties] = useState<Record<string, string>>(() =>

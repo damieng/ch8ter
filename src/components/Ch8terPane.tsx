@@ -19,8 +19,8 @@ import { parseGdosFont } from "../fileFormats/gdosFontParser"
 import { parseCpm } from "../fileFormats/cpmParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "./IconBtn"
-import { NewFontDialog } from "./NewFontDialog"
-import { PngImportDialog } from "./PngImportDialog"
+import { NewFontDialog } from "../dialogs/NewFontDialog"
+import { PngImportDialog } from "../dialogs/PngImportDialog"
 
 const ICON = 18
 
