@@ -13,6 +13,7 @@ import {
 } from '../store'
 import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from '../dialogs/ObliqueDialog'
+import { MonospaceDialog } from '../dialogs/MonospaceDialog'
 import { useClickOutside } from '../hooks/useClickOutside'
 
 const ICON = 16
@@ -20,6 +21,7 @@ const ICON = 16
 export function ToolsDropdown({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const [obliqueOpen, setObliqueOpen] = useState(false)
+  const [monospaceOpen, setMonospaceOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useClickOutside(ref, () => setOpen(false))
@@ -81,11 +83,15 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Create Outline', () => createOutlineVariant(font))}
           {menuItem('Create Oblique...', () => setObliqueOpen(true))}
           {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font))}
+          {font.spacing.value === 'proportional' && menuItem('Create Monospace...', () => setMonospaceOpen(true))}
         </div>
       )}
       {obliqueOpen && createPortal(
         <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />,
         document.body,
+      )}
+      {monospaceOpen && (
+        <MonospaceDialog font={font} onClose={() => setMonospaceOpen(false)} />
       )}
     </div>
   )

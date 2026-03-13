@@ -1110,6 +1110,16 @@ export function glyphAdvance(font: FontInstance, glyphIndex: number): number {
   return gw
 }
 
+export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance: number) {
+  const gmArr = font.glyphMeta.value
+  const len = glyphCount(font)
+  const meta: (GlyphMeta | null)[] = gmArr ? [...gmArr] : new Array(len).fill(null)
+  const existing = meta[glyphIndex]
+  meta[glyphIndex] = { ...existing, dwidth: [advance, 0] }
+  font.glyphMeta.value = meta
+  font.dirty.value = true
+}
+
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
   const bpr = bytesPerRow(font)
   const bpg = bytesPerGlyph(font)
@@ -1569,6 +1579,64 @@ export function createProportionalVariant(font: FontInstance) {
 
   const name = font.fileName.value.replace(/(\.\w+)$/, '-proportional$1')
   const newFont = createFont(out, name, start, w, h, undefined, undefined, undefined, meta, 'proportional')
+  recalcMetrics(newFont)
+  addFont(newFont)
+}
+
+// Monospace variant — places each glyph's pixels into a fixed-width cell using the chosen anchor.
+export function createMonospaceVariant(
+  font: FontInstance,
+  newW: number,
+  anchorX: 'left' | 'center' | 'right',
+) {
+  const src = font.fontData.value
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = Math.ceil(w / 8)
+  const bpg = h * bpr
+  const newBpr = Math.ceil(newW / 8)
+  const newBpg = h * newBpr
+  const count = glyphCount(font)
+  const start = font.startChar.value
+  const out = new Uint8Array(count * newBpg)
+
+  for (let g = 0; g < count; g++) {
+    const srcOff = g * bpg
+    const bytes = src.slice(srcOff, srcOff + bpg)
+    const dstBytes = new Uint8Array(newBpg)
+
+    // Find tight pixel bounds
+    let left = w, right = -1
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (getBit(bytes, bpr, x, y)) {
+          if (x < left) left = x
+          if (x > right) right = x
+        }
+
+    if (right < 0) {
+      // Empty glyph — leave blank
+      out.set(dstBytes, g * newBpg)
+      continue
+    }
+
+    const pixW = right - left + 1
+    const dx = anchorX === 'left' ? 0
+      : anchorX === 'right' ? newW - pixW
+      : Math.floor((newW - pixW) / 2)
+
+    for (let y = 0; y < h; y++)
+      for (let x = left; x <= right; x++) {
+        const nx = x - left + dx
+        if (getBit(bytes, bpr, x, y) && nx >= 0 && nx < newW)
+          setBit(dstBytes, newBpr, nx, y)
+      }
+
+    out.set(dstBytes, g * newBpg)
+  }
+
+  const name = font.fileName.value.replace(/(\.\w+)$/, '-monospace$1')
+  const newFont = createFont(out, name, start, newW, h, undefined, undefined, undefined, undefined, 'monospace')
   recalcMetrics(newFont)
   addFont(newFont)
 }
