@@ -10,12 +10,13 @@ import {
   calcMissingMetrics,
   type Charset,
 } from "../store"
-import { parseBdf } from "../bdfParser"
-import { parsePsf, type PsfParseResult } from "../psfParser"
-import { parseYaff } from "../yaffParser"
-import { parseDraw } from "../drawParser"
-import { parseFzx } from "../fzxParser"
-import { parseGdosFont } from "../gdosFontParser"
+import { parseBdf } from "../fileFormats/bdfParser"
+import { parsePsf, type PsfParseResult } from "../fileFormats/psfParser"
+import { parseYaff } from "../fileFormats/yaffParser"
+import { parseDraw } from "../fileFormats/drawParser"
+import { parseFzx } from "../fileFormats/fzxParser"
+import { parseGdosFont } from "../fileFormats/gdosFontParser"
+import { parseCpm } from "../fileFormats/cpmParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "./IconBtn"
 import { NewFontDialog } from "./NewFontDialog"
@@ -65,26 +66,6 @@ const CHANGELOG: { version: string; changes: string[] }[] = [
   },
 ]
 
-// Extract font from a PSF2AMS CP/M .com file
-// Header is 512 bytes; glyph height at offset 0x2F; font data starts at offset 512; always 256 glyphs
-function extractCpmFont(buf: ArrayBuffer): {
-  fontData: Uint8Array
-  glyphHeight: number
-} {
-  const bytes = new Uint8Array(buf)
-  if (bytes.length < 512)
-    throw new Error("File too small to be a CP/M font .com")
-  const glyphHeight = bytes[0x2f]
-  if (glyphHeight === 0 || glyphHeight > 64)
-    throw new Error(`Unexpected glyph height at 0x2F: ${glyphHeight}`)
-  const bpg = glyphHeight // 8px wide = 1 byte per row
-  const expected = 512 + 256 * bpg
-  if (bytes.length < expected)
-    throw new Error(
-      `File too small for ${glyphHeight}px font (expected ${expected} bytes)`,
-    )
-  return { fontData: bytes.slice(512, 512 + 256 * bpg), glyphHeight }
-}
 
 async function decompress(
   buf: ArrayBuffer,
@@ -353,7 +334,7 @@ export function Ch8terPane() {
       } else if (lower.endsWith(".com")) {
         file.arrayBuffer().then((buf) => {
           try {
-            const { fontData, glyphHeight } = extractCpmFont(buf)
+            const { fontData, glyphHeight } = parseCpm(buf)
             const font = createFont(fontData, file.name, 0, 8, glyphHeight)
             recalcMetrics(font)
             addFont(font)

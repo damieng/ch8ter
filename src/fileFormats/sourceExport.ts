@@ -1,5 +1,5 @@
-import type { FontInstance } from './store'
-import { bytesPerGlyph, glyphCount } from './store'
+import type { FontInstance } from '../store'
+import { bytesPerGlyph, glyphCount } from '../store'
 
 export type SourceFormat = 'c' | 'csharp' | 'rust' | 'ts' | 'z80' | '6502' | '68000' | 'x86'
 

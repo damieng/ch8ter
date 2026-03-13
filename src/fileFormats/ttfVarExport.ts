@@ -1,5 +1,5 @@
-import type { FontInstance } from './store'
-import { glyphCount, bytesPerRow, bytesPerGlyph } from './store'
+import type { FontInstance } from '../store'
+import { glyphCount, bytesPerRow, bytesPerGlyph } from '../store'
 
 // --- Binary writer ---
 

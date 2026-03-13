@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
-import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSettings } from '../pngImport'
+import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSettings } from '../fileFormats/pngImport'
 import { createFont, addFont, recalcMetrics, charset } from '../store'
 import { ZoomIn } from 'lucide-preact'
 

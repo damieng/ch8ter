@@ -1,6 +1,7 @@
 import { signal, type Signal, effect } from '@preact/signals'
 import { UndoHistory } from './undoHistory'
-import type { FontMeta, GlyphMeta } from './bdfParser'
+import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
+import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
 import { standardCodepages } from './codepages'
 
@@ -1506,10 +1507,7 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
 
 // File I/O
 export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer)
-  const bpg = bytesPerGlyph(font)
-  const count = bpg > 0 ? Math.floor(bytes.length / bpg) : 0
-  const data = bytes.slice(0, count * bpg)
+  const data = parseCh8(buffer, bytesPerGlyph(font))
   font.fontData.value = data
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
@@ -1573,7 +1571,7 @@ export function resizeFont(
 }
 
 export function saveFont(font: FontInstance): Uint8Array {
-  const data = new Uint8Array(font.fontData.value)
+  const data = writeCh8(font.fontData.value)
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   return data

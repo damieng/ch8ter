@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { type FontInstance, glyphCount } from '../store'
-import type { GlyphMeta } from '../bdfParser'
+import type { GlyphMeta } from '../fileFormats/bdfParser'
 
 interface Props {
   font: FontInstance
