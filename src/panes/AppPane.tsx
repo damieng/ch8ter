@@ -84,13 +84,28 @@ function layoutPsfGlyphs(psf: PsfParseResult): {
 }
 
 const showChangelog = signal(false)
+const showHotkeys = signal(false)
+
+const HOTKEYS: { key: string; desc: string }[] = [
+  { key: 'Ctrl+Z', desc: 'Undo' },
+  { key: 'Ctrl+Y', desc: 'Redo' },
+  { key: 'Ctrl+A', desc: 'Select all glyphs' },
+  { key: 'Ctrl+C', desc: 'Copy glyph' },
+  { key: 'Ctrl+X', desc: 'Cut glyph' },
+  { key: 'Ctrl+V', desc: 'Paste glyph' },
+  { key: 'Delete', desc: 'Clear glyph' },
+  { key: '↑ ↓ ← →', desc: 'Shift glyph pixels' },
+  { key: 'Ctrl+↑ ↓ ← →', desc: 'Navigate glyph grid' },
+  { key: 'A-Z, 0-9', desc: 'Jump to that glyph' },
+]
 
 export function AppTitle() {
   return (
-    <span class="flex items-center w-full">
+    <span class="flex items-center w-full gap-1">
       <span class="font-black tracking-tight">Ch8ter</span>
+      <span class="flex-1" />
       <button
-        class="ml-auto font-normal text-xs text-gray-400 hover:text-blue-500"
+        class="font-normal text-xs text-gray-400 hover:text-blue-500"
         onClick={(e) => {
           e.stopPropagation()
           showChangelog.value = !showChangelog.value
@@ -98,6 +113,17 @@ export function AppTitle() {
         title="Show changelog"
       >
         v{APP_VERSION}
+      </button>
+      <span class="flex-1" />
+      <button
+        class="font-bold text-xs text-gray-400 hover:text-blue-500 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center"
+        onClick={(e) => {
+          e.stopPropagation()
+          showHotkeys.value = !showHotkeys.value
+        }}
+        title="Keyboard shortcuts"
+      >
+        ?
       </button>
     </span>
   )
@@ -464,6 +490,31 @@ export function AppPane() {
               </ul>
             </div>
           ))}
+        </div>
+      )}
+      {showHotkeys.value && (
+        <div class="px-3 pb-3 border-t border-gray-200 mt-1 pt-2">
+          <div class="text-xs font-bold text-gray-600 mb-1">Keyboard Shortcuts</div>
+          <table class="text-xs w-full">
+            {HOTKEYS.map((h, i) => (
+              <tr key={i}>
+                <td class="pr-3 py-0.5 whitespace-nowrap">
+                  {h.key.split(', ').map((combo, ci) => (
+                    <span key={ci}>
+                      {ci > 0 && <span class="text-gray-400 mx-1">/</span>}
+                      {combo.split('+').map((k, j) => (
+                        <span key={j}>
+                          {j > 0 && <span class="text-gray-400 mx-0.5">+</span>}
+                          <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px] shadow-sm">{k.trim()}</kbd>
+                        </span>
+                      ))}
+                    </span>
+                  ))}
+                </td>
+                <td class="py-0.5 text-gray-600">{h.desc}</td>
+              </tr>
+            ))}
+          </table>
         </div>
       )}
     </div>

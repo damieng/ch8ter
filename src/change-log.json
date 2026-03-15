@@ -8,7 +8,8 @@
       "PNG export support with various options",
       "PNG import refinement with codepage mapping",
       "Windows FNT font load and save",
-      "BASIC language export support"
+      "BASIC language export support",
+      "Keyboard shortcut help"
     ]
   },
   {
