@@ -1,5 +1,11 @@
 [
   {
+    "version": "0.9.4",
+    "changes": [
+      "Recalculate All button in Glyph Metrics"
+    ]
+  },
+  {
     "version": "0.9.3 - 2026-03-15",
     "changes": [
       "CLI converter with named output formats",

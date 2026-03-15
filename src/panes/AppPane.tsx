@@ -431,7 +431,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
+      ".ch8,.com,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return

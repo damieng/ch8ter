@@ -72,7 +72,14 @@ export function MetricsDialog({ font, onClose }: Props) {
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[340px]">
-        <h2 class="font-bold text-lg">Glyph Metrics</h2>
+        <div class="flex items-center">
+          <h2 class="font-bold text-lg">Glyph Metrics</h2>
+          <button
+            class="ml-auto text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
+            onClick={onClose}
+            title="Close"
+          >×</button>
+        </div>
 
         <div class="flex flex-col gap-3">
           <div class="flex items-center gap-2">
@@ -132,20 +139,34 @@ export function MetricsDialog({ font, onClose }: Props) {
           <p class="text-xs text-gray-400">Set to -1 to hide a guideline.</p>
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex items-center gap-2">
           <button
-            class="px-4 py-1.5 rounded border border-gray-300 hover:bg-gray-50"
-            onClick={onClose}
+            class="px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-50 text-sm"
+            onClick={() => {
+              setBaseline(calcAbs(calcBaseline))
+              const bl = calcAbs(calcBaseline)
+              setBaseline(bl)
+              const rel = (fn: typeof calcAscender) =>
+                fn(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value, bl)
+              setAscender(rel(calcAscender))
+              setCapHeight(rel(calcCapHeight))
+              setXHeight(rel(calcXHeight))
+              setNumericHeight(rel(calcNumericHeight))
+              setDescender(rel(calcDescender))
+            }}
+            title="Auto-detect all metrics from glyph data"
           >
-            Cancel
+            Recalculate All
           </button>
-          <button
-            class="px-4 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-            onClick={handleApply}
-            disabled={!changed}
-          >
-            Apply
-          </button>
+          <div class="ml-auto">
+            <button
+              class="px-4 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              onClick={handleApply}
+              disabled={!changed}
+            >
+              Apply
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -240,7 +240,6 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
 
   switch (e) {
     case 'ch8':
-    case 'bin':
       return new Uint8Array(data.fontData)
 
     case 'bdf':
