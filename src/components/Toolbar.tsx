@@ -27,6 +27,8 @@ import { writeFzx } from '../fileFormats/fzxWriter'
 import { writeGdosFont } from '../fileFormats/gdosFontWriter'
 import { writePcf } from '../fileFormats/pcfWriter'
 import { writePdbFont } from '../fileFormats/pdbFontWriter'
+import { writeAmigaFont } from '../fileFormats/amigaFontWriter'
+import { writeAtari8Bit } from '../fileFormats/atari8BitWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 
@@ -196,6 +198,32 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveAtari8Bit() {
+    const data = saveFont(font)
+    const a8 = writeAtari8Bit(data, font.startChar.value)
+    download(new Blob([a8.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
+    setOpen(false)
+  }
+
+  function saveAmiga() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const amiga = writeAmigaFont({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      baseline: font.baseline.value,
+      meta: font.meta.value,
+      glyphMeta: font.glyphMeta.value,
+      fontName: font.fontName.value,
+    })
+    const height = font.glyphHeight.value
+    download(new Blob([amiga.buffer as ArrayBuffer]), baseName(font.fileName.value) + '-' + height)
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -244,6 +272,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePdb}>
             Save as Palm .pdb
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveAtari8Bit}>
+            Save as Atari 8-bit .fnt
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveAmiga}>
+            Save as Amiga font
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com

@@ -19,6 +19,7 @@ import { openFnt } from "../fileFormats/fntOpener"
 import { parseCpm } from "../fileFormats/cpmParser"
 import { parsePcf } from "../fileFormats/pcfParser"
 import { parsePdbFont } from "../fileFormats/pdbFontParser"
+import { parseAmigaFont, isAmigaHunk } from "../fileFormats/amigaFontParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -234,22 +235,22 @@ export function AppPane() {
     } else if (lower.endsWith(".fnt")) {
       try {
         const result = openFnt(buf)
-        const hasPropSpacing = result.glyphMeta.some(
+        const hasPropSpacing = result.glyphMeta?.some(
           (gm) =>
             gm?.dwidth &&
             gm.dwidth[0] > 0 &&
             gm.dwidth[0] !== result.glyphWidth,
-        )
+        ) ?? false
         const font = createFont(
           result.fontData,
           name,
           result.startChar,
           result.glyphWidth,
           result.glyphHeight,
-          result.meta,
+          result.meta ?? undefined,
           undefined,
           result.baseline,
-          result.glyphMeta,
+          result.glyphMeta ?? undefined,
           hasPropSpacing ? "proportional" : "monospace",
         )
         font.populatedGlyphs.value = result.populated
@@ -259,9 +260,10 @@ export function AppPane() {
         }
         calcMissingMetrics(font)
         addFont(font)
-        charset.value = result.source === "gdos" ? "atarist" : "imported"
+        charset.value = result.source === "atari8bit" ? "atari"
+          : result.source === "gdos" ? "atarist" : "imported"
       } catch (e) {
-        alert(`Failed to parse GDOS .fnt: ${(e as Error).message}`)
+        alert(`Failed to parse .fnt: ${(e as Error).message}`)
       }
     } else if (lower.endsWith(".pcf")) {
       try {
@@ -349,6 +351,34 @@ export function AppPane() {
       const font = createFont(undefined, name, 0)
       loadFont(font, buf)
       addFont(font)
+    } else if (isAmigaHunk(buf)) {
+      try {
+        const result = parseAmigaFont(buf)
+        const hasPropSpacing = result.glyphMeta.some(
+          (gm) =>
+            gm?.dwidth &&
+            gm.dwidth[0] > 0 &&
+            gm.dwidth[0] !== result.glyphWidth,
+        )
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          result.meta,
+          undefined,
+          result.baseline,
+          result.glyphMeta,
+          hasPropSpacing ? "proportional" : "monospace",
+        )
+        font.populatedGlyphs.value = result.populated
+        calcMissingMetrics(font)
+        addFont(font)
+        charset.value = "amiga"
+      } catch (e) {
+        alert(`Failed to parse Amiga font: ${(e as Error).message}`)
+      }
     } else {
       const font = createFont()
       loadFont(font, buf)

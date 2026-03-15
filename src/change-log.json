@@ -2,7 +2,10 @@
   {
     "version": "0.9.3",
     "changes": [
-      "Windows FNT font support"
+      "CLI converter with named output formats",
+      "Atari 8-bit FNT font load and save",
+      "Amiga bitmap font load and save",
+      "Windows FNT font load and save"
     ]
   },
   {
@@ -17,8 +20,8 @@
   {
     "version": "0.9.1",
     "changes": [
-      "Proportional font support for BDF, PSF, FZX, and GDOS .fnt",
-      "Atari ST GEM/GDOS .fnt font format load and save",
+      "Proportional font support for BDF, PSF, FZX, and GDOS FNT formats",
+      "Atari ST GEM/GDOS FNT font format load and save",
       "Larger fonts supported in preview window",
       "Font name support"
     ]
@@ -29,7 +32,7 @@
       "New Font dialog with size and codepage selection",
       "FZX font format load and save",
       "DOS CP437 and CP850 codepage support",
-      "Unicode-aware glyph remapping when switching codepages",
+      "Unicode-aware glyph remapping when switching codepage",
       "Out-of-codepage glyphs shown with muted labels"
     ]
   },
@@ -44,7 +47,7 @@
   {
     "version": "0.7.0",
     "changes": [
-      "BDF, PSF, YAFF, .draw format support",
+      "BDF, PSF, YAFF, DRAW format support",
       "TTF/WOFF export with variable font support",
       "PNG import for sprite sheets",
       "Font metrics: baseline, ascender, cap height, x-height, descender",

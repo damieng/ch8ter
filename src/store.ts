@@ -794,12 +794,48 @@ const CHARSETS_RAW = {
     0xFE: '\u00B3', // ³ (CP437 has ■)
     0xFF: '\u00AF', // ¯ (CP437 has NBSP)
   }},
-  atari: { label: 'Atari 8-bit', range: [32, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
-    // ATASCII: 0x7B-0x7F are control codes, not printable
-    0x7B: '\u2666', // ♦ (spade-like in Atari set)
-    0x7D: '\u2503', // clear screen (box drawing as placeholder)
-    0x7E: '\u25C0', // delete char
-    0x7F: '\u25B6', // tab
+  atari: { label: 'Atari 8-bit', range: [0, 127] as [number, number], colorSystem: 'Atari 8-bit', overrides: {
+    // ATASCII 0x00-0x1F: graphics characters
+    0x00: '\u2665', // ♥
+    0x01: '\u251C', // ├
+    0x02: '\u2595', // ▕
+    0x03: '\u2518', // ┘
+    0x04: '\u2524', // ┤
+    0x05: '\u2510', // ┐
+    0x06: '\u2571', // ╱
+    0x07: '\u2572', // ╲
+    0x08: '\u25E2', // ◢
+    0x09: '\u2597', // ▗
+    0x0A: '\u25E3', // ◣
+    0x0B: '\u259D', // ▝
+    0x0C: '\u2598', // ▘
+    0x0D: '\u2594', // ▔
+    0x0E: '\u2582', // ▂
+    0x0F: '\u2596', // ▖
+    0x10: '\u2663', // ♣
+    0x11: '\u250C', // ┌
+    0x12: '\u2500', // ─
+    0x13: '\u253C', // ┼
+    0x14: '\u2022', // •
+    0x15: '\u2584', // ▄
+    0x16: '\u258E', // ▎
+    0x17: '\u252C', // ┬
+    0x18: '\u2534', // ┴
+    0x19: '\u258C', // ▌
+    0x1A: '\u2514', // └
+    0x1B: '\u241B', // ␛ (escape)
+    0x1C: '\u2191', // ↑
+    0x1D: '\u2193', // ↓
+    0x1E: '\u2190', // ←
+    0x1F: '\u2192', // →
+    // ATASCII 0x60: ♦ (replaces backtick)
+    0x60: '\u2666', // ♦
+    // ATASCII 0x7B-0x7F: special characters
+    0x7B: '\u2660', // ♠
+    // 0x7C = | (standard)
+    0x7D: '\u25D8', // ◘ (clear screen glyph)
+    0x7E: '\u25C0', // ◀
+    0x7F: '\u25B6', // ▶
   }},
   bbc: { label: 'BBC Micro', range: [32, 127] as [number, number], colorSystem: 'Acorn BBC Micro', overrides: {
     0x60: '\u00A3', // £ (pound instead of backtick)

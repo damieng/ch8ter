@@ -7,11 +7,12 @@ import { parsePsf, type PsfParseResult } from './fileFormats/psfParser'
 import { parseYaff } from './fileFormats/yaffParser'
 import { parseDraw } from './fileFormats/drawParser'
 import { parseFzx } from './fileFormats/fzxParser'
-import { parseGdosFont } from './fileFormats/gdosFontParser'
+import { openFnt } from './fileFormats/fntOpener'
 import { parseCpm } from './fileFormats/cpmParser'
 import { parsePcf } from './fileFormats/pcfParser'
 import { parsePdbFont } from './fileFormats/pdbFontParser'
 import { parseCh8 } from './fileFormats/ch8Format'
+import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { writeBdf } from './fileFormats/bdfWriter'
 import { writePsf } from './fileFormats/psfWriter'
 import { writeYaff } from './fileFormats/yaffWriter'
@@ -20,6 +21,8 @@ import { writeFzx } from './fileFormats/fzxWriter'
 import { writeGdosFont } from './fileFormats/gdosFontWriter'
 import { exportCpm } from './fileFormats/cpmExport'
 import { writePcf } from './fileFormats/pcfWriter'
+import { writeAmigaFont } from './fileFormats/amigaFontWriter'
+import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
 import { writePdbFont } from './fileFormats/pdbFontWriter'
 
 export interface FontConversionData {
@@ -160,14 +163,14 @@ export function loadFontFile(
   }
 
   if (lower.endsWith('.fnt')) {
-    const result = parseGdosFont(buf)
+    const result = openFnt(buf)
     const bpr = Math.ceil(result.glyphWidth / 8)
     const count = result.fontData.length / (result.glyphHeight * bpr)
     return {
       fontData: result.fontData, glyphWidth: result.glyphWidth, glyphHeight: result.glyphHeight,
       startChar: result.startChar, glyphCount: count, baseline: result.baseline,
-      meta: result.meta, encodings: null, glyphMeta: result.glyphMeta,
-      populated: result.populated, fontName: result.meta.family || name,
+      meta: result.meta ?? null, encodings: null, glyphMeta: result.glyphMeta,
+      populated: result.populated, fontName: (result.meta as { family?: string } | null)?.family || name,
     }
   }
 
@@ -203,6 +206,19 @@ export function loadFontFile(
       startChar: 0, glyphCount: 256, baseline: glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: null, fontName: name,
+    }
+  }
+
+  // Detect Amiga hunk files (no standard extension — numeric filenames like "10", "15")
+  if (isAmigaHunk(buf)) {
+    const result = parseAmigaFont(buf)
+    const bpr = Math.ceil(result.glyphWidth / 8)
+    const count = result.fontData.length / (result.glyphHeight * bpr)
+    return {
+      fontData: result.fontData, glyphWidth: result.glyphWidth, glyphHeight: result.glyphHeight,
+      startChar: result.startChar, glyphCount: count, baseline: result.baseline,
+      meta: result.meta, encodings: null, glyphMeta: result.glyphMeta,
+      populated: result.populated, fontName: result.meta?.family || name,
     }
   }
 
@@ -282,6 +298,16 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
         startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
         meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
       })
+
+    case 'amiga':
+      return writeAmigaFont({
+        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
+        startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
+        meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
+      })
+
+    case 'atari8':
+      return writeAtari8Bit(data.fontData, data.startChar)
 
     case 'com':
       return exportCpm(data.glyphHeight, data.fontData)

@@ -34,6 +34,8 @@
     "src/fileFormats/drawWriter.ts",
     "src/fileFormats/fzxParser.ts",
     "src/fileFormats/fzxWriter.ts",
+    "src/fileFormats/fntOpener.ts",
+    "src/fileFormats/windowsFntParser.ts",
     "src/fileFormats/gdosFontParser.ts",
     "src/fileFormats/gdosFontWriter.ts",
     "src/fileFormats/pcfParser.ts",
@@ -43,6 +45,9 @@
     "src/fileFormats/psfParser.ts",
     "src/fileFormats/psfWriter.ts",
     "src/fileFormats/yaffParser.ts",
-    "src/fileFormats/yaffWriter.ts"
+    "src/fileFormats/yaffWriter.ts",
+    "src/fileFormats/amigaFontParser.ts",
+    "src/fileFormats/amigaFontWriter.ts",
+    "src/fileFormats/atari8BitWriter.ts"
   ]
 }
