@@ -45,7 +45,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt|pcf|pdb)$/i, '')
+  return filename.replace(/\.(ch8|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt|pcf|pdb)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -57,12 +57,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
   function saveCh8() {
     const data = saveFont(font)
     download(new Blob([data.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.ch8')
-    setOpen(false)
-  }
-
-  function saveUdg() {
-    const data = saveFont(font)
-    download(new Blob([data.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.udg')
     setOpen(false)
   }
 
@@ -246,9 +240,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
         <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
           {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
             Save as .ch8
-          </button>}
-          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveUdg}>
-            Save as .udg
           </button>}
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBdf}>
             Save as .bdf

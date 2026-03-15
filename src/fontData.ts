@@ -222,11 +222,11 @@ export function loadFontFile(
     }
   }
 
-  // Raw formats: .ch8, .udg, .bin
+  // Raw formats: .ch8, .bin
   const bpg = h // 8px wide = 1 byte per row × h rows
   const fontData = parseCh8(buf, bpg)
   const count = fontData.length / bpg
-  const start = options?.startChar ?? (lower.endsWith('.udg') ? 0 : 32)
+  const start = options?.startChar ?? 32
   return {
     fontData, glyphWidth: w, glyphHeight: h,
     startChar: start, glyphCount: count, baseline: h - 2,
@@ -240,7 +240,6 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
 
   switch (e) {
     case 'ch8':
-    case 'udg':
     case 'bin':
       return new Uint8Array(data.fontData)
 

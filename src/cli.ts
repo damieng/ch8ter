@@ -10,7 +10,6 @@ import { loadFontFile, saveFontFile, type FontConversionData } from './fontData'
 // Map format names to file extensions and internal save keys
 const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   ch8:      { ext: '.ch8',  key: 'ch8' },
-  udg:      { ext: '.udg',  key: 'udg' },
   bdf:      { ext: '.bdf',  key: 'bdf' },
   psf:      { ext: '.psf',  key: 'psf' },
   yaff:     { ext: '.yaff', key: 'yaff' },

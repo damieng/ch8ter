@@ -86,6 +86,21 @@ function layoutPsfGlyphs(psf: PsfParseResult): {
 const showChangelog = signal(false)
 const showHotkeys = signal(false)
 
+const FORMATS: { exts: string; name: string }[] = [
+  { exts: '.bdf .pcf',     name: 'X11' },
+  { exts: '.psf',          name: 'Linux console' },
+  { exts: '.yaff',         name: 'YAFF' },
+  { exts: '.draw',         name: 'Acorn Draw' },
+  { exts: '.ch8 .fzx',     name: 'ZX Spectrum' },
+  { exts: '.fnt',          name: 'Atari ST GDOS' },
+  { exts: '.fnt',          name: 'Windows FNT' },
+  { exts: '.fnt',          name: 'Atari 8-bit' },
+  { exts: '.pdb',          name: 'PalmOS' },
+  { exts: '',              name: 'Amiga' },
+  { exts: '.com',          name: 'CP/M Plus' },
+  { exts: '.png',          name: 'PNG tile sheet' },
+]
+
 const HOTKEYS: { key: string; desc: string }[] = [
   { key: 'Ctrl+Z', desc: 'Undo' },
   { key: 'Ctrl+Y', desc: 'Redo' },
@@ -373,10 +388,6 @@ export function AppPane() {
       } catch (e) {
         alert(`Failed to extract font from .com: ${(e as Error).message}`)
       }
-    } else if (lower.endsWith(".udg")) {
-      const font = createFont(undefined, name, 0)
-      loadFont(font, buf)
-      addFont(font)
     } else if (isAmigaHunk(buf)) {
       try {
         const result = parseAmigaFont(buf)
@@ -420,7 +431,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
+      ".ch8,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -512,6 +523,15 @@ export function AppPane() {
                   ))}
                 </td>
                 <td class="py-0.5 text-gray-600">{h.desc}</td>
+              </tr>
+            ))}
+          </table>
+          <div class="text-xs font-bold text-gray-600 mt-3 mb-1">Load &amp; Save Formats</div>
+          <table class="text-xs w-full">
+            {FORMATS.map((f, i) => (
+              <tr key={i}>
+                <td class="py-0.5 text-gray-600">{f.name}</td>
+                <td class="py-0.5 text-gray-500 font-mono text-right">{f.exts || '(none)'}</td>
               </tr>
             ))}
           </table>

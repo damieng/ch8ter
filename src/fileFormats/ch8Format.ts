@@ -1,4 +1,4 @@
-// .ch8 and .udg format: raw sequential glyph pixel data, 1 byte per 8 pixels per row.
+// .ch8 format: raw sequential glyph pixel data, 1 byte per 8 pixels per row.
 // No header, no metadata — just bytes.
 
 export function parseCh8(buffer: ArrayBuffer, bytesPerGlyph: number): Uint8Array {
