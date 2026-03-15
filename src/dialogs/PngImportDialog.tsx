@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSettings } from '../fileFormats/pngImport'
 import { createFont, addFont, recalcMetrics, charset } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
+import { SizeField } from '../components/SizeField'
 
 interface Props {
   file: File
@@ -170,25 +171,23 @@ export function PngImportDialog({ file, onClose }: Props) {
     >
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
         <div class="flex items-center gap-2">
-          <h2 class="font-bold">Import PNG Bitmap Font</h2>
+          <h2 class="font-bold">Import PNG</h2>
           <span class="text-xs text-gray-500">{file.name}{img ? ` (${img.naturalWidth}\u00d7${img.naturalHeight})` : ''}</span>
+          <div class="ml-auto">
+            <button
+              class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
+              onClick={onClose}
+              title="Close"
+            >×</button>
+          </div>
         </div>
 
         {/* Settings bar */}
         <div class="flex items-center gap-3 flex-wrap text-xs">
           <NumField label="Scale" value={settings.scale} onChange={v => update({ scale: v })} min={1} max={16} />
-          <span class="text-gray-300">|</span>
-          <span class="text-gray-500">Glyph</span>
-          <NumField label="W" value={settings.glyphWidth} onChange={v => update({ glyphWidth: v })} min={1} max={64} />
-          <NumField label="H" value={settings.glyphHeight} onChange={v => update({ glyphHeight: v })} min={1} max={64} />
-          <span class="text-gray-300">|</span>
-          <span class="text-gray-500">Gap</span>
-          <NumField label="X" value={settings.gapX} onChange={v => update({ gapX: v })} />
-          <NumField label="Y" value={settings.gapY} onChange={v => update({ gapY: v })} />
-          <span class="text-gray-300">|</span>
-          <span class="text-gray-500">Border</span>
-          <NumField label="X" value={settings.borderX} onChange={v => update({ borderX: v })} />
-          <NumField label="Y" value={settings.borderY} onChange={v => update({ borderY: v })} />
+          <SizeField label="Glyph" w={settings.glyphWidth} h={settings.glyphHeight} onW={v => update({ glyphWidth: v })} onH={v => update({ glyphHeight: v })} min={1} max={64} />
+          <SizeField label="Gap" w={settings.gapX} h={settings.gapY} onW={v => update({ gapX: v })} onH={v => update({ gapY: v })} />
+          <SizeField label="Border" w={settings.borderX} h={settings.borderY} onW={v => update({ borderX: v })} onH={v => update({ borderY: v })} />
           <div class="ml-auto">
             <ZoomControl value={zoom} onChange={setZoom} />
           </div>
@@ -216,7 +215,6 @@ export function PngImportDialog({ file, onClose }: Props) {
           <span class="text-xs text-gray-500">{grid.cols}&times;{grid.rows}</span>
           {detected && <span class="text-xs text-green-700">Auto-detected</span>}
           <div class="ml-auto" />
-          <button class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 text-sm" onClick={onClose}>Cancel</button>
           <button
             class="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 text-sm"
             onClick={handleImport}

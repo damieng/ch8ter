@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { Download } from 'lucide-preact'
 import { type FontInstance, bytesPerRow, glyphCount } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
+import { SizeField } from '../components/SizeField'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 interface Props {
   font: FontInstance
@@ -33,21 +35,100 @@ function NumField({ label, value, onChange, min = 0, max = 999 }: {
   )
 }
 
-function ColorField({ label, value, onChange }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
+function checkerPattern(size: number): string {
+  const c = document.createElement('canvas')
+  c.width = size * 2; c.height = size * 2
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size * 2, size * 2)
+  ctx.fillStyle = '#ccc'; ctx.fillRect(0, 0, size, size); ctx.fillRect(size, size, size, size)
+  return `url(${c.toDataURL()})`
+}
+
+function FgBgControl({ fg, bg, bgTransparent, divisionColor, borderColor, onFg, onBg, onTransparent, onDivision, onBorder }: {
+  fg: string; bg: string; bgTransparent: boolean; divisionColor: string; borderColor: string
+  onFg: (v: string) => void; onBg: (v: string) => void; onTransparent: (v: boolean) => void
+  onDivision: (v: string) => void; onBorder: (v: string) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useClickOutside(ref, () => setOpen(false))
+
   return (
-    <label class="flex items-center gap-1 text-xs">
-      <span class="text-gray-500">{label}</span>
-      <input
-        type="color"
-        class="w-6 h-5 border border-gray-300 rounded cursor-pointer p-0"
-        value={value}
-        onInput={(e) => onChange((e.target as HTMLInputElement).value)}
-      />
-    </label>
+    <div class="relative" ref={ref}>
+      <button
+        class="flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 text-xs font-medium"
+        onClick={() => setOpen(!open)}
+        title="Foreground / Background colors"
+      >
+        <div class="relative" style={{ width: 20, height: 16 }}>
+          {/* BG swatch (behind, offset right+down) */}
+          <div
+            class="absolute border border-gray-400 rounded-sm"
+            style={{
+              width: 14, height: 12, right: 0, bottom: 0,
+              background: bgTransparent ? checkerPattern(3) : bg,
+            }}
+          />
+          {/* FG swatch (front, offset left+up) */}
+          <div
+            class="absolute border border-gray-400 rounded-sm"
+            style={{ width: 14, height: 12, left: 0, top: 0, background: fg }}
+          />
+        </div>
+        Colors
+      </button>
+      {open && (
+        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 p-3 flex flex-col gap-2 min-w-[180px]">
+          <label class="flex items-center gap-2 text-xs">
+            <input
+              type="color"
+              class="w-7 h-6 border border-gray-300 rounded cursor-pointer p-0"
+              value={fg}
+              onInput={(e) => onFg((e.target as HTMLInputElement).value)}
+            />
+            <span class="text-gray-600">Foreground</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs">
+            <input
+              type="color"
+              class="w-7 h-6 border border-gray-300 rounded cursor-pointer p-0"
+              value={bg}
+              disabled={bgTransparent}
+              onInput={(e) => onBg((e.target as HTMLInputElement).value)}
+              style={{ opacity: bgTransparent ? 0.3 : 1 }}
+            />
+            <span class="text-gray-600">Background</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={bgTransparent}
+              onChange={(e) => onTransparent((e.target as HTMLInputElement).checked)}
+            />
+            <span class="text-gray-600">Transparent background</span>
+          </label>
+          <div class="border-t border-gray-200 my-1" />
+          <label class="flex items-center gap-2 text-xs">
+            <input
+              type="color"
+              class="w-7 h-6 border border-gray-300 rounded cursor-pointer p-0"
+              value={divisionColor}
+              onInput={(e) => onDivision((e.target as HTMLInputElement).value)}
+            />
+            <span class="text-gray-600">Gap / divisions</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs">
+            <input
+              type="color"
+              class="w-7 h-6 border border-gray-300 rounded cursor-pointer p-0"
+              value={borderColor}
+              onInput={(e) => onBorder((e.target as HTMLInputElement).value)}
+            />
+            <span class="text-gray-600">Border</span>
+          </label>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -262,41 +343,33 @@ export function PngExportDialog({ font, onClose }: Props) {
     >
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
         <div class="flex items-center gap-2">
-          <h2 class="font-bold">Export PNG Sprite Sheet</h2>
+          <h2 class="font-bold">Export PNG</h2>
           <span class="text-xs text-gray-500">{font.fileName.value}</span>
           <div class="ml-auto">
-            <ZoomControl value={zoom} onChange={setZoom} />
+            <button
+              class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
+              onClick={onClose}
+              title="Close"
+            >×</button>
           </div>
         </div>
 
-        {/* Row 1: Scale, colors, cols */}
+        {/* Settings */}
         <div class="flex items-center gap-3 flex-wrap text-xs">
           <NumField label="Scale" value={settings.scale} onChange={v => update({ scale: v })} min={1} max={16} />
-          <ColorField label="FG" value={settings.fg} onChange={v => update({ fg: v })} />
-          <ColorField label="BG" value={settings.bg} onChange={v => update({ bg: v })} />
-          <label class="flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              checked={settings.bgTransparent}
-              onChange={(e) => update({ bgTransparent: (e.target as HTMLInputElement).checked })}
-            />
-            <span class="text-gray-500">Transparent</span>
-          </label>
-          <span class="text-gray-300">|</span>
+          <FgBgControl
+            fg={settings.fg} bg={settings.bg} bgTransparent={settings.bgTransparent}
+            divisionColor={settings.divisionColor} borderColor={settings.borderColor}
+            onFg={v => update({ fg: v })} onBg={v => update({ bg: v })}
+            onTransparent={v => update({ bgTransparent: v })}
+            onDivision={v => update({ divisionColor: v })} onBorder={v => update({ borderColor: v })}
+          />
           <NumField label="Cols" value={settings.cols} onChange={v => update({ cols: v })} min={1} max={count} />
-        </div>
-
-        {/* Row 2: Gap and border */}
-        <div class="flex items-center gap-3 flex-wrap text-xs">
-          <span class="text-gray-500">Gap</span>
-          <NumField label="X" value={settings.gapX} onChange={v => update({ gapX: v })} />
-          <NumField label="Y" value={settings.gapY} onChange={v => update({ gapY: v })} />
-          <ColorField label="" value={settings.divisionColor} onChange={v => update({ divisionColor: v })} />
-          <span class="text-gray-300">|</span>
-          <span class="text-gray-500">Border</span>
-          <NumField label="X" value={settings.borderX} onChange={v => update({ borderX: v })} />
-          <NumField label="Y" value={settings.borderY} onChange={v => update({ borderY: v })} />
-          <ColorField label="" value={settings.borderColor} onChange={v => update({ borderColor: v })} />
+          <SizeField label="Gap" w={settings.gapX} h={settings.gapY} onW={v => update({ gapX: v })} onH={v => update({ gapY: v })} />
+          <SizeField label="Border" w={settings.borderX} h={settings.borderY} onW={v => update({ borderX: v })} onH={v => update({ borderY: v })} />
+          <div class="ml-auto">
+            <ZoomControl value={zoom} onChange={setZoom} />
+          </div>
         </div>
 
         {/* Preview */}
@@ -315,7 +388,6 @@ export function PngExportDialog({ font, onClose }: Props) {
         <div class="flex items-center gap-2">
           <span class="text-xs text-gray-500">{effectiveCols}&times;{effectiveRows} grid, {imgW}&times;{imgH}px output, {count} glyphs</span>
           <div class="ml-auto" />
-          <button class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 text-sm" onClick={onClose}>Cancel</button>
           <button
             class="flex items-center gap-1.5 px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 text-sm"
             onClick={handleDownload}
