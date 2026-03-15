@@ -214,9 +214,12 @@ export function writePcf(params: PcfWriteParams): Uint8Array {
   for (const off of bitmapOffsets) {
     bitmapsView.setInt32(bp, off, false); bp += 4
   }
-  // Bitmap sizes for each padding mode
+  // Bitmap sizes for each padding mode (byte, word16, word32, word64)
+  const padSizes = [1, 2, 4, 8]
   for (let p = 0; p < 4; p++) {
-    bitmapsView.setInt32(bp, bitmapTotalSize, false); bp += 4
+    const padAlign = padSizes[p]
+    const paddedRowBytes = (bpr + padAlign - 1) & ~(padAlign - 1)
+    bitmapsView.setInt32(bp, paddedRowBytes * h * numGlyphs, false); bp += 4
   }
   for (const chunk of bitmapChunks) {
     bitmapsTable.set(chunk, bp)

@@ -1,7 +1,8 @@
 // Parse Windows .fnt raster bitmap font files (v1, v2, v3).
 //
-// The Windows FNT format stores bitmap glyphs in column-major order with
-// LSBit-first bit ordering. All multi-byte values are little-endian.
+// v1/v2 store bitmaps column-major (each column is ceil(h/8) bytes, left to right).
+// v3 stores bitmaps row-major (each row is ceil(w/8) bytes, top to bottom).
+// All multi-byte values are little-endian.
 //
 // v1 header: 117 bytes, 4-byte char table entries
 // v2 header: 118 bytes, 4-byte char table entries (offsets are UInt16)
@@ -134,16 +135,31 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     const base = i * outBpg
     let hasPixels = false
 
-    // Windows FNT stores bitmaps row-major, MSBit-first
-    const srcBpr = Math.ceil(w / 8)
-
-    for (let y = 0; y < cellH; y++) {
+    if (dfVersion === 0x0300) {
+      // v3: row-major, MSBit-first
+      const srcBpr = Math.ceil(w / 8)
+      for (let y = 0; y < cellH; y++) {
+        for (let x = 0; x < w; x++) {
+          const srcOff = bitmapOff + y * srcBpr + (x >> 3)
+          if (srcOff >= bytes.length) continue
+          if (bytes[srcOff] & (0x80 >> (x & 7))) {
+            hasPixels = true
+            fontData[base + y * outBpr + (x >> 3)] |= (0x80 >> (x & 7))
+          }
+        }
+      }
+    } else {
+      // v1/v2: column-major, MSBit-first
+      // Each column is ceil(height/8) bytes, columns stored left to right
+      const bytesPerCol = Math.ceil(cellH / 8)
       for (let x = 0; x < w; x++) {
-        const srcOff = bitmapOff + y * srcBpr + (x >> 3)
-        if (srcOff >= bytes.length) continue
-        if (bytes[srcOff] & (0x80 >> (x & 7))) {
-          hasPixels = true
-          fontData[base + y * outBpr + (x >> 3)] |= (0x80 >> (x & 7))
+        for (let y = 0; y < cellH; y++) {
+          const srcOff = bitmapOff + x * bytesPerCol + (y >> 3)
+          if (srcOff >= bytes.length) continue
+          if (bytes[srcOff] & (0x80 >> (y & 7))) {
+            hasPixels = true
+            fontData[base + y * outBpr + (x >> 3)] |= (0x80 >> (x & 7))
+          }
         }
       }
     }

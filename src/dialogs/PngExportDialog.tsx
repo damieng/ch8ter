@@ -3,9 +3,7 @@ import { Download } from 'lucide-preact'
 import { type FontInstance, bytesPerRow, glyphCount } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
 import { SizeField } from '../components/SizeField'
-import { CharsetSelect } from '../components/CharsetSelect'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { charset, type Charset } from '../store'
 
 interface Props {
   font: FontInstance
@@ -258,7 +256,6 @@ export function PngExportDialog({ font, onClose }: Props) {
   const previewRef = useRef<HTMLCanvasElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(2)
-  const [codepage, setCodepage] = useState<Charset>(charset.value)
   const [settings, setSettings] = useState<ExportSettings>(() => loadSettings(32))
 
   const update = useCallback((patch: Partial<ExportSettings>) => {
@@ -367,7 +364,6 @@ export function PngExportDialog({ font, onClose }: Props) {
             onTransparent={v => update({ bgTransparent: v })}
             onDivision={v => update({ divisionColor: v })} onBorder={v => update({ borderColor: v })}
           />
-          <CharsetSelect value={codepage} onChange={setCodepage} />
           <NumField label="Cols" value={settings.cols} onChange={v => update({ cols: v })} min={1} max={count} />
           <SizeField label="Gap" w={settings.gapX} h={settings.gapY} onW={v => update({ gapX: v })} onH={v => update({ gapY: v })} />
           <SizeField label="Border" w={settings.borderX} h={settings.borderY} onW={v => update({ borderX: v })} onH={v => update({ borderY: v })} />

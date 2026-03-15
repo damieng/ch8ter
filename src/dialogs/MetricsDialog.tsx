@@ -57,7 +57,7 @@ export function MetricsDialog({ font, onClose }: Props) {
       <div class="flex items-center gap-2">
         <span class="text-sm w-24 shrink-0">{label}</span>
         <input type="number" min={min} max={height} value={value}
-          onInput={(e) => setValue(parseInt((e.target as HTMLInputElement).value) ?? min)}
+          onInput={(e) => { const v = parseInt((e.target as HTMLInputElement).value); setValue(isNaN(v) ? min : v) }}
           class={metricInput} />
         <button class={calcBtn} onClick={calc} title={`Auto-detect ${label.toLowerCase()}`}>
           <Ruler size={14} />

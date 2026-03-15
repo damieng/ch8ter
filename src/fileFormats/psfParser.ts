@@ -13,7 +13,7 @@ const PSF2_MAGIC = 0x864AB572
 
 const PSF1_MODE_HAS_TAB = 0x01
 const PSF1_MODE_HAS_SEQ = 0x02
-const PSF1_MODE_512 = 0x01
+const PSF1_MODE_512 = 0x04
 
 export function parsePsf(buffer: ArrayBuffer): PsfParseResult {
   const view = new DataView(buffer)

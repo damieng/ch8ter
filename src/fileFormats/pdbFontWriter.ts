@@ -149,7 +149,7 @@ export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
   frv.setInt16(6, maxW, false) // maxWidth
   frv.setInt16(8, 0, false) // kernMax
   frv.setInt16(10, 0, false) // nDescent
-  frv.setInt16(12, maxW, false) // fRectWidth
+  frv.setInt16(12, totalBitmapWidth, false) // fRectWidth
   frv.setInt16(14, glyphHeight, false) // fRectHeight
   frv.setUint16(16, owTLoc, false)
   frv.setInt16(18, ascent, false)

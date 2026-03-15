@@ -1136,14 +1136,15 @@ export function charLabel(charCode: number, _font?: FontInstance): string {
 
 // Reverse lookup: given a typed character, find its char code in the font.
 export function charCodeFromKey(ch: string): number | null {
-  if (ch.length !== 1) return null
+  const codepoints = [...ch]
+  if (codepoints.length !== 1) return null
   const overrides = CHARSETS[charset.value]?.overrides
   if (overrides) {
     for (const [code, label] of Object.entries(overrides)) {
       if (label === ch) return parseInt(code)
     }
   }
-  const code = ch.charCodeAt(0)
+  const code = codepoints[0].codePointAt(0)!
   if (code >= 32 && code <= 126) return code
   return null
 }

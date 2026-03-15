@@ -87,7 +87,10 @@ export function writeBdf(params: BdfWriteParams): string {
     if (gm?.swidth) {
       lines.push(`SWIDTH ${gm.swidth[0]} ${gm.swidth[1]}`)
     } else {
-      lines.push(`SWIDTH ${w * 72} 0`)
+      const pointSize = meta?.pointSize || h
+      const xDpi = meta?.xDpi || 75
+      const swidth = Math.round((w * 72000) / (pointSize * xDpi))
+      lines.push(`SWIDTH ${swidth} 0`)
     }
     if (gm?.dwidth) {
       lines.push(`DWIDTH ${gm.dwidth[0]} ${gm.dwidth[1]}`)

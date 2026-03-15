@@ -11,6 +11,7 @@ interface FzxWriteParams {
   startChar: number
   glyphCount: number
   glyphMeta: (GlyphMeta | null)[] | null
+  tracking?: number
 }
 
 function countTopAndBottomBlankRows(
@@ -47,7 +48,7 @@ function countTopAndBottomBlankRows(
 }
 
 export function writeFzx(params: FzxWriteParams): Uint8Array {
-  const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta } = params
+  const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta, tracking = 0 } = params
   const bpr = Math.ceil(glyphWidth / 8)
   const bpg = glyphHeight * bpr
 
@@ -148,16 +149,20 @@ export function writeFzx(params: FzxWriteParams): Uint8Array {
 
   // Header
   out[0] = glyphHeight
-  out[1] = 0 // tracking
+  out[1] = tracking & 0xFF
   out[2] = lastChar
 
   // Character table — each offset is relative to that entry's own position
   let dataPos = dataStart
   for (let i = 0; i < numChars; i++) {
     const entryPos = tableStart + i * 3
+    const slotIdx = (32 - startChar) + i
+    const meta = glyphMeta?.[slotIdx]
+    const kern = meta?.bbx ? (meta.bbx[2] & 3) : 0
     const relativeOffset = dataPos - entryPos
-    out[entryPos] = relativeOffset & 0xFF
-    out[entryPos + 1] = (relativeOffset >> 8) & 0xFF
+    const offsetWord = (kern << 14) | (relativeOffset & 0x3FFF)
+    out[entryPos] = offsetWord & 0xFF
+    out[entryPos + 1] = (offsetWord >> 8) & 0xFF
     out[entryPos + 2] = (charInfo[i].shift << 4) | (charInfo[i].width - 1)
     dataPos += charData[i].length
   }
