@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.cli.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": [
+    "src/cli.ts",
+    "src/fontData.ts",
+    "src/fileFormats/bdfParser.ts",
+    "src/fileFormats/bdfWriter.ts",
+    "src/fileFormats/ch8Format.ts",
+    "src/fileFormats/cpmParser.ts",
+    "src/fileFormats/cpmExport.ts",
+    "src/fileFormats/drawParser.ts",
+    "src/fileFormats/drawWriter.ts",
+    "src/fileFormats/fzxParser.ts",
+    "src/fileFormats/fzxWriter.ts",
+    "src/fileFormats/gdosFontParser.ts",
+    "src/fileFormats/gdosFontWriter.ts",
+    "src/fileFormats/pcfParser.ts",
+    "src/fileFormats/pcfWriter.ts",
+    "src/fileFormats/pdbFontParser.ts",
+    "src/fileFormats/pdbFontWriter.ts",
+    "src/fileFormats/psfParser.ts",
+    "src/fileFormats/psfWriter.ts",
+    "src/fileFormats/yaffParser.ts",
+    "src/fileFormats/yaffWriter.ts"
+  ]
+}
