@@ -5,8 +5,10 @@
       "CLI converter with named output formats",
       "Atari 8-bit FNT font load and save",
       "Amiga bitmap font load and save",
+      "PNG export support with various options",
+      "PNG import refinement with codepage mapping",
       "Windows FNT font load and save",
-      "BASIC font export support"
+      "BASIC language export support"
     ]
   },
   {
@@ -21,7 +23,7 @@
   {
     "version": "0.9.1",
     "changes": [
-      "Proportional font support for BDF, PSF, FZX, and GDOS FNT formats",
+      "Proportional font support in formats that support it",
       "Atari ST GEM/GDOS FNT font format load and save",
       "Larger fonts supported in preview window",
       "Font name support"

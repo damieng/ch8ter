@@ -124,7 +124,7 @@ export function AppPane() {
         font.populatedGlyphs.value = result.populated
         recalcMetrics(font)
         addFont(font)
-        charset.value = "imported"
+        charset.value = "iso8859_1"
       } catch (e) {
         alert(`Failed to parse .draw: ${(e as Error).message}`)
       }
@@ -143,7 +143,7 @@ export function AppPane() {
         font.populatedGlyphs.value = result.populated
         recalcMetrics(font)
         addFont(font)
-        charset.value = "imported"
+        charset.value = "iso8859_1"
       } catch (e) {
         alert(`Failed to parse YAFF: ${(e as Error).message}`)
       }
@@ -178,7 +178,7 @@ export function AppPane() {
         font.populatedGlyphs.value = populated
         calcMissingMetrics(font)
         addFont(font)
-        let detectedCharset: Charset = "imported"
+        let detectedCharset: Charset = "iso8859_1"
         if (result.meta?.properties) {
           const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
           const enc = result.meta.properties.CHARSET_ENCODING ?? ""
@@ -206,7 +206,7 @@ export function AppPane() {
         if (populated) font.populatedGlyphs.value = populated
         recalcMetrics(font)
         addFont(font)
-        charset.value = "imported"
+        charset.value = "iso8859_1"
       } catch (e) {
         alert(`Failed to parse PSF: ${(e as Error).message}`)
       }
@@ -228,7 +228,7 @@ export function AppPane() {
         font.populatedGlyphs.value = result.populated
         recalcMetrics(font)
         addFont(font)
-        charset.value = "imported"
+        charset.value = "iso8859_1"
       } catch (e) {
         alert(`Failed to parse FZX: ${(e as Error).message}`)
       }
@@ -261,7 +261,7 @@ export function AppPane() {
         calcMissingMetrics(font)
         addFont(font)
         charset.value = result.source === "atari8bit" ? "atari"
-          : result.source === "gdos" ? "atarist" : "imported"
+          : result.source === "gdos" ? "atarist" : "iso8859_1"
       } catch (e) {
         alert(`Failed to parse .fnt: ${(e as Error).message}`)
       }
@@ -295,7 +295,7 @@ export function AppPane() {
         font.populatedGlyphs.value = populated
         calcMissingMetrics(font)
         addFont(font)
-        let detectedCharset: Charset = "imported"
+        let detectedCharset: Charset = "iso8859_1"
         if (result.meta?.properties) {
           const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
           const enc = result.meta.properties.CHARSET_ENCODING ?? ""

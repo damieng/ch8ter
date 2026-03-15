@@ -370,5 +370,5 @@ export const bdfCharsetMap: Record<string, string> = {
   'ISO8859-15': 'iso8859_15',
   'ISO8859-16': 'iso8859_16',
   'ISO646.1991-IRV': 'ascii',
-  'ISO10646-1': 'imported',
+  'ISO10646-1': 'iso8859_1',
 }

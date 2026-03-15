@@ -3,6 +3,8 @@ import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSet
 import { createFont, addFont, recalcMetrics, charset } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
 import { SizeField } from '../components/SizeField'
+import { CharsetSelect } from '../components/CharsetSelect'
+import { type Charset } from '../store'
 
 interface Props {
   file: File
@@ -44,6 +46,7 @@ export function PngImportDialog({ file, onClose }: Props) {
   })
   const [detected, setDetected] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [codepage, setCodepage] = useState<Charset>('iso8859_1')
 
   // Load image
   useEffect(() => {
@@ -160,7 +163,7 @@ export function PngImportDialog({ file, onClose }: Props) {
     font.populatedGlyphs.value = result.populated
     recalcMetrics(font)
     addFont(font)
-    charset.value = 'imported'
+    charset.value = codepage
     onClose()
   }
 
@@ -186,6 +189,7 @@ export function PngImportDialog({ file, onClose }: Props) {
         <div class="flex items-center gap-3 flex-wrap text-xs">
           <NumField label="Scale" value={settings.scale} onChange={v => update({ scale: v })} min={1} max={16} />
           <SizeField label="Glyph" w={settings.glyphWidth} h={settings.glyphHeight} onW={v => update({ glyphWidth: v })} onH={v => update({ glyphHeight: v })} min={1} max={64} />
+          <CharsetSelect value={codepage} onChange={setCodepage} />
           <SizeField label="Gap" w={settings.gapX} h={settings.gapY} onW={v => update({ gapX: v })} onH={v => update({ gapY: v })} />
           <SizeField label="Border" w={settings.borderX} h={settings.borderY} onW={v => update({ borderX: v })} onH={v => update({ borderY: v })} />
           <div class="ml-auto">

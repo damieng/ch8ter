@@ -847,7 +847,6 @@ const CHARSETS_RAW = {
     0x5F: '\u2190', // ← (left arrow instead of underscore)
     0x7F: '\u03C0', // π (pi)
   }},
-  imported: { label: 'Imported', overrides: {} },
   ...standardCodepages,
   msx: { label: 'MSX International', extends: 'cp437', range: [0, 255] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
     // 0x00-0x1F: control codes (no printable glyphs in standard mode)
@@ -961,7 +960,7 @@ export function switchCharset(newCs: Charset) {
   if (newCs === oldCs) return
 
   const font = fonts.value.find(f => f.id === activeFontId.value)
-  if (font && oldCs !== 'imported' && newCs !== 'imported') {
+  if (font) {
     remapFontForCharset(font, oldCs, newCs)
   }
 
@@ -1054,18 +1053,7 @@ function hexLabel(charCode: number): string {
   return '0x' + charCode.toString(16).toUpperCase().padStart(2, '0')
 }
 
-export function charLabel(charCode: number, font?: FontInstance): string {
-  if (charset.value === 'imported' && font) {
-    const enc = font.encodings.value
-    if (enc) {
-      const idx = charCode - font.startChar.value
-      const cp = idx >= 0 && idx < enc.length ? enc[idx] : -1
-      if (cp > 32 && cp !== 0x7F) {
-        try { return String.fromCodePoint(cp) } catch { /* invalid codepoint */ }
-      }
-      return hexLabel(charCode)
-    }
-  }
+export function charLabel(charCode: number, _font?: FontInstance): string {
   const overrides = CHARSETS[charset.value]?.overrides
   if (overrides && overrides[charCode]) {
     return overrides[charCode]
@@ -1093,11 +1081,6 @@ export function charCodeFromKey(ch: string): number | null {
 // Returns a filter predicate for which glyph indices to show, or null for "show all"
 export function charsetGlyphFilter(font: FontInstance): ((index: number) => boolean) | null {
   const cs = charset.value
-  if (cs === 'imported') {
-    const pop = font.populatedGlyphs.value
-    if (pop) return (i: number) => pop.has(i)
-    return null
-  }
   const def = CHARSETS[cs]
   if (def?.range) {
     const start = font.startChar.value
