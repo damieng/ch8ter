@@ -17,6 +17,7 @@ import { parseDraw } from "../fileFormats/drawParser"
 import { parseFzx } from "../fileFormats/fzxParser"
 import { parseGdosFont } from "../fileFormats/gdosFontParser"
 import { parseCpm } from "../fileFormats/cpmParser"
+import { parsePcf } from "../fileFormats/pcfParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -27,6 +28,13 @@ const ICON = 18
 const APP_VERSION = __APP_VERSION__
 
 const CHANGELOG: { version: string; changes: string[] }[] = [
+  {
+    version: "0.9.2",
+    changes: [
+      "X11 PCF font format load and save",
+      "All font formats now support .gz compressed loading",
+    ],
+  },
   {
     version: "0.9.1",
     changes: [
@@ -67,11 +75,7 @@ const CHANGELOG: { version: string; changes: string[] }[] = [
 ]
 
 
-async function decompress(
-  buf: ArrayBuffer,
-  filename: string,
-): Promise<ArrayBuffer> {
-  if (!filename.endsWith(".gz")) return buf
+async function decompressGz(buf: ArrayBuffer): Promise<ArrayBuffer> {
   const ds = new DecompressionStream("gzip")
   const reader = new Blob([buf]).stream().pipeThrough(ds).getReader()
   const chunks: Uint8Array[] = []
@@ -147,219 +151,259 @@ export function Ch8terPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [pngFile, setPngFile] = useState<File | null>(null)
 
+  function openFontBuffer(name: string, buf: ArrayBuffer) {
+    const lower = name.toLowerCase()
+
+    if (lower.endsWith(".draw")) {
+      try {
+        const text = new TextDecoder().decode(buf)
+        const result = parseDraw(text)
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+        )
+        font.populatedGlyphs.value = result.populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "imported"
+      } catch (e) {
+        alert(`Failed to parse .draw: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".yaff")) {
+      try {
+        const text = new TextDecoder().decode(buf)
+        const result = parseYaff(text)
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+        )
+        if (result.name) font.fontName.value = result.name
+        font.populatedGlyphs.value = result.populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "imported"
+      } catch (e) {
+        alert(`Failed to parse YAFF: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".bdf")) {
+      try {
+        const text = new TextDecoder().decode(buf)
+        const result = parseBdf(text)
+        const hasPropSpacing = result.glyphMeta.some(
+          (gm) =>
+            gm?.dwidth &&
+            gm.dwidth[0] > 0 &&
+            gm.dwidth[0] !== result.glyphWidth,
+        )
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          result.meta,
+          result.encodings,
+          result.baseline,
+          result.glyphMeta,
+          hasPropSpacing ? "proportional" : "monospace",
+        )
+        const populated = new Set<number>()
+        if (result.glyphMeta) {
+          for (let j = 0; j < result.glyphMeta.length; j++) {
+            if (result.glyphMeta[j] !== null) populated.add(j)
+          }
+        }
+        font.populatedGlyphs.value = populated
+        calcMissingMetrics(font)
+        addFont(font)
+        let detectedCharset: Charset = "imported"
+        if (result.meta?.properties) {
+          const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
+          const enc = result.meta.properties.CHARSET_ENCODING ?? ""
+          if (reg) {
+            const key = `${reg}-${enc}`
+            const mapped = bdfCharsetMap[key]
+            if (mapped) detectedCharset = mapped as Charset
+          }
+        }
+        charset.value = detectedCharset
+      } catch (e) {
+        alert(`Failed to parse BDF: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".psf") || lower.endsWith(".psfu")) {
+      try {
+        const result = parsePsf(buf)
+        const { fontData, startChar, populated } = layoutPsfGlyphs(result)
+        const font = createFont(
+          fontData,
+          name,
+          startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+        )
+        if (populated) font.populatedGlyphs.value = populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "imported"
+      } catch (e) {
+        alert(`Failed to parse PSF: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".fzx")) {
+      try {
+        const result = parseFzx(buf)
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          undefined,
+          undefined,
+          undefined,
+          result.glyphMeta,
+          "proportional",
+        )
+        font.populatedGlyphs.value = result.populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "imported"
+      } catch (e) {
+        alert(`Failed to parse FZX: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".fnt")) {
+      try {
+        const result = parseGdosFont(buf)
+        const hasPropSpacing = result.glyphMeta.some(
+          (gm) =>
+            gm?.dwidth &&
+            gm.dwidth[0] > 0 &&
+            gm.dwidth[0] !== result.glyphWidth,
+        )
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          result.meta,
+          undefined,
+          result.baseline,
+          result.glyphMeta,
+          hasPropSpacing ? "proportional" : "monospace",
+        )
+        font.populatedGlyphs.value = result.populated
+        font.ascender.value = result.ascender
+        font.descender.value = result.descender
+        calcMissingMetrics(font)
+        addFont(font)
+        charset.value = "atarist"
+      } catch (e) {
+        alert(`Failed to parse GDOS .fnt: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".pcf")) {
+      try {
+        const result = parsePcf(buf)
+        const hasPropSpacing = result.glyphMeta.some(
+          (gm) =>
+            gm?.dwidth &&
+            gm.dwidth[0] > 0 &&
+            gm.dwidth[0] !== result.glyphWidth,
+        )
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          result.meta,
+          result.encodings,
+          result.baseline,
+          result.glyphMeta,
+          hasPropSpacing ? "proportional" : "monospace",
+        )
+        const populated = new Set<number>()
+        if (result.glyphMeta) {
+          for (let j = 0; j < result.glyphMeta.length; j++) {
+            if (result.glyphMeta[j] !== null) populated.add(j)
+          }
+        }
+        font.populatedGlyphs.value = populated
+        calcMissingMetrics(font)
+        addFont(font)
+        let detectedCharset: Charset = "imported"
+        if (result.meta?.properties) {
+          const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
+          const enc = result.meta.properties.CHARSET_ENCODING ?? ""
+          if (reg) {
+            const key = `${reg}-${enc}`
+            const mapped = bdfCharsetMap[key]
+            if (mapped) detectedCharset = mapped as Charset
+          }
+        }
+        charset.value = detectedCharset
+      } catch (e) {
+        alert(`Failed to parse PCF: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".com")) {
+      try {
+        const { fontData, glyphHeight } = parseCpm(buf)
+        const font = createFont(fontData, name, 0, 8, glyphHeight)
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "cpm"
+      } catch (e) {
+        alert(`Failed to extract font from .com: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".udg")) {
+      const font = createFont(undefined, name, 0)
+      loadFont(font, buf)
+      addFont(font)
+    } else {
+      const font = createFont()
+      loadFont(font, buf)
+      font.fileName.value = name
+      addFont(font)
+      if (lower.endsWith(".ch8")) {
+        charset.value = "zx"
+      }
+    }
+  }
+
   function handleOpen() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.png,.gz"
+      ".ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.png,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
       const lower = file.name.toLowerCase()
+
       if (lower.endsWith(".png")) {
         setPngFile(file)
         return
-      } else if (lower.endsWith(".draw")) {
-        file.text().then((text) => {
-          try {
-            const result = parseDraw(text)
-            const font = createFont(
-              result.fontData,
-              file.name,
-              result.startChar,
-              result.glyphWidth,
-              result.glyphHeight,
-            )
-            font.populatedGlyphs.value = result.populated
-            recalcMetrics(font)
-            addFont(font)
-            charset.value = "imported"
-          } catch (e) {
-            alert(`Failed to parse .draw: ${(e as Error).message}`)
-          }
-        })
-      } else if (lower.endsWith(".yaff")) {
-        file.text().then((text) => {
-          try {
-            const result = parseYaff(text)
-            const font = createFont(
-              result.fontData,
-              file.name,
-              result.startChar,
-              result.glyphWidth,
-              result.glyphHeight,
-            )
-            if (result.name) font.fontName.value = result.name
-            font.populatedGlyphs.value = result.populated
-            recalcMetrics(font)
-            addFont(font)
-            charset.value = "imported"
-          } catch (e) {
-            alert(`Failed to parse YAFF: ${(e as Error).message}`)
-          }
-        })
-      } else if (lower.endsWith(".bdf")) {
-        file.text().then((text) => {
-          try {
-            const result = parseBdf(text)
-            const hasPropSpacing = result.glyphMeta.some(
-              (gm) =>
-                gm?.dwidth &&
-                gm.dwidth[0] > 0 &&
-                gm.dwidth[0] !== result.glyphWidth,
-            )
-            const font = createFont(
-              result.fontData,
-              file.name,
-              result.startChar,
-              result.glyphWidth,
-              result.glyphHeight,
-              result.meta,
-              result.encodings,
-              result.baseline,
-              result.glyphMeta,
-              hasPropSpacing ? "proportional" : "monospace",
-            )
-            // Track which glyph slots were actually in the source file
-            const populated = new Set<number>()
-            if (result.glyphMeta) {
-              for (let j = 0; j < result.glyphMeta.length; j++) {
-                if (result.glyphMeta[j] !== null) populated.add(j)
-              }
-            }
-            font.populatedGlyphs.value = populated
-            calcMissingMetrics(font)
-            addFont(font)
-            // Auto-detect charset from BDF CHARSET_REGISTRY/CHARSET_ENCODING
-            let detectedCharset: Charset = "imported"
-            if (result.meta?.properties) {
-              const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
-              const enc = result.meta.properties.CHARSET_ENCODING ?? ""
-              if (reg) {
-                const key = `${reg}-${enc}`
-                const mapped = bdfCharsetMap[key]
-                if (mapped) detectedCharset = mapped as Charset
-              }
-            }
-            charset.value = detectedCharset
-          } catch (e) {
-            alert(`Failed to parse BDF: ${(e as Error).message}`)
-          }
-        })
-      } else if (
-        lower.endsWith(".psf") ||
-        lower.endsWith(".psfu") ||
-        lower.endsWith(".psf.gz") ||
-        lower.endsWith(".psfu.gz")
-      ) {
-        file
-          .arrayBuffer()
-          .then((buf) => decompress(buf, lower))
-          .then((buf) => {
-            try {
-              const result = parsePsf(buf)
-              const { fontData, startChar, populated } = layoutPsfGlyphs(result)
-              const name = file.name.replace(/\.gz$/i, "")
-              const font = createFont(
-                fontData,
-                name,
-                startChar,
-                result.glyphWidth,
-                result.glyphHeight,
-              )
-              if (populated) font.populatedGlyphs.value = populated
-              recalcMetrics(font)
-              addFont(font)
-              charset.value = "imported"
-            } catch (e) {
-              alert(`Failed to parse PSF: ${(e as Error).message}`)
-            }
-          })
-      } else if (lower.endsWith(".fzx")) {
-        file.arrayBuffer().then((buf) => {
-          try {
-            const result = parseFzx(buf)
-            const font = createFont(
-              result.fontData,
-              file.name,
-              result.startChar,
-              result.glyphWidth,
-              result.glyphHeight,
-              undefined,
-              undefined,
-              undefined,
-              result.glyphMeta,
-              "proportional",
-            )
-            font.populatedGlyphs.value = result.populated
-            recalcMetrics(font)
-            addFont(font)
-            charset.value = "imported"
-          } catch (e) {
-            alert(`Failed to parse FZX: ${(e as Error).message}`)
-          }
-        })
-      } else if (lower.endsWith(".fnt")) {
-        file.arrayBuffer().then((buf) => {
-          try {
-            const result = parseGdosFont(buf)
-            const hasPropSpacing = result.glyphMeta.some(
-              (gm) =>
-                gm?.dwidth &&
-                gm.dwidth[0] > 0 &&
-                gm.dwidth[0] !== result.glyphWidth,
-            )
-            const font = createFont(
-              result.fontData,
-              file.name,
-              result.startChar,
-              result.glyphWidth,
-              result.glyphHeight,
-              result.meta,
-              undefined,
-              result.baseline,
-              result.glyphMeta,
-              hasPropSpacing ? "proportional" : "monospace",
-            )
-            font.populatedGlyphs.value = result.populated
-            font.ascender.value = result.ascender
-            font.descender.value = result.descender
-            calcMissingMetrics(font)
-            addFont(font)
-            charset.value = "atarist"
-          } catch (e) {
-            alert(`Failed to parse GDOS .fnt: ${(e as Error).message}`)
-          }
-        })
-      } else if (lower.endsWith(".com")) {
-        file.arrayBuffer().then((buf) => {
-          try {
-            const { fontData, glyphHeight } = parseCpm(buf)
-            const font = createFont(fontData, file.name, 0, 8, glyphHeight)
-            recalcMetrics(font)
-            addFont(font)
-            charset.value = "cpm"
-          } catch (e) {
-            alert(`Failed to extract font from .com: ${(e as Error).message}`)
-          }
-        })
-      } else if (lower.endsWith(".udg")) {
-        file.arrayBuffer().then((buf) => {
-          const font = createFont(undefined, file.name, 0)
-          loadFont(font, buf)
-          addFont(font)
-        })
-      } else {
-        file.arrayBuffer().then((buf) => {
-          const font = createFont()
-          loadFont(font, buf)
-          font.fileName.value = file.name
-          addFont(font)
-          if (lower.endsWith(".ch8")) {
-            charset.value = "zx"
-          }
-        })
       }
+
+      if (lower.endsWith(".gz")) {
+        const innerName = file.name.slice(0, -3)
+        file.arrayBuffer().then(async (buf) => {
+          try {
+            const decompressed = await decompressGz(buf)
+            openFontBuffer(innerName, decompressed)
+          } catch (e) {
+            alert(`Failed to decompress .gz: ${(e as Error).message}`)
+          }
+        })
+        return
+      }
+
+      file.arrayBuffer().then((buf) => openFontBuffer(file.name, buf))
     }
     input.click()
   }
