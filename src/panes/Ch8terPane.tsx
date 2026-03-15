@@ -18,6 +18,7 @@ import { parseFzx } from "../fileFormats/fzxParser"
 import { parseGdosFont } from "../fileFormats/gdosFontParser"
 import { parseCpm } from "../fileFormats/cpmParser"
 import { parsePcf } from "../fileFormats/pcfParser"
+import { parsePdbFont } from "../fileFormats/pdbFontParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -31,6 +32,8 @@ const CHANGELOG: { version: string; changes: string[] }[] = [
   {
     version: "0.9.2",
     changes: [
+      "PalmOS .pdb font format load and save",
+      "PalmOS 3.3 codepage support",
       "X11 PCF font format load and save",
       "All font formats now support .gz compressed loading",
     ],
@@ -350,6 +353,34 @@ export function Ch8terPane() {
       } catch (e) {
         alert(`Failed to parse PCF: ${(e as Error).message}`)
       }
+    } else if (lower.endsWith(".pdb")) {
+      try {
+        const result = parsePdbFont(buf)
+        const hasPropSpacing = result.glyphMeta.some(
+          (gm) =>
+            gm?.dwidth &&
+            gm.dwidth[0] > 0 &&
+            gm.dwidth[0] !== result.glyphWidth,
+        )
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+          result.meta,
+          undefined,
+          result.baseline,
+          result.glyphMeta,
+          hasPropSpacing ? "proportional" : "monospace",
+        )
+        font.populatedGlyphs.value = result.populated
+        calcMissingMetrics(font)
+        addFont(font)
+        charset.value = "palmos"
+      } catch (e) {
+        alert(`Failed to parse Palm .pdb: ${(e as Error).message}`)
+      }
     } else if (lower.endsWith(".com")) {
       try {
         const { fontData, glyphHeight } = parseCpm(buf)
@@ -379,7 +410,7 @@ export function Ch8terPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.png,.gz"
+      ".ch8,.udg,.com,.bin,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return

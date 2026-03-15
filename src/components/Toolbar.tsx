@@ -26,6 +26,7 @@ import { exportCpm } from '../fileFormats/cpmExport'
 import { writeFzx } from '../fileFormats/fzxWriter'
 import { writeGdosFont } from '../fileFormats/gdosFontWriter'
 import { writePcf } from '../fileFormats/pcfWriter'
+import { writePdbFont } from '../fileFormats/pdbFontWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 
@@ -41,7 +42,7 @@ function download(blob: Blob, filename: string) {
 }
 
 function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt|pcf)$/i, '')
+  return filename.replace(/\.(ch8|udg|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt|pcf|pdb)$/i, '')
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
@@ -177,6 +178,24 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function savePdb() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const pdb = writePdbFont({
+      fontData: data,
+      glyphWidth: font.glyphWidth.value,
+      glyphHeight: font.glyphHeight.value,
+      startChar: font.startChar.value,
+      glyphCount: count,
+      baseline: font.baseline.value,
+      meta: font.meta.value,
+      glyphMeta: font.glyphMeta.value,
+      fontName: font.fontName.value,
+    })
+    download(new Blob([pdb.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.pdb')
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -222,6 +241,9 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePcf}>
             Save as X11 .pcf
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePdb}>
+            Save as Palm .pdb
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com

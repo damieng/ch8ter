@@ -856,6 +856,27 @@ const CHARSETS_RAW = {
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
+  palmos: { label: 'PalmOS 3.3', extends: 'win1252', range: [0, 255] as [number, number], overrides: {
+    // Low control chars used by PalmOS
+    0x08: '\u2190', // ← (left arrow / backspace glyph)
+    0x09: '\u2192', // → (right arrow / tab glyph)
+    0x0A: '\u2193', // ↓ (down arrow / linefeed glyph)
+    0x0B: '\u2191', // ↑ (up arrow)
+    0x14: '\u25C0', // ◀ (OTA secure indicator)
+    0x15: '\u25B6', // ▶ (OTA indicator)
+    0x16: '\u2318', // ⌘ (command stroke)
+    0x17: '\u2702', // ✂ (shortcut stroke)
+    0x18: '\u2026', // … (horizontal ellipsis, preferred location)
+    0x19: '\u2007', // (numeric/figure space)
+    // 0x80-0x9F: mostly same as Windows-1252, with card suits replacing undefined positions
+    0x80: '\u20AC', // € (Euro sign — aligned with Win-1252 since PalmOS 3.3)
+    0x8D: '\u2662', // ♢ (white diamond suit)
+    0x8E: '\u2663', // ♣ (black club suit)
+    0x8F: '\u2661', // ♡ (white heart suit)
+    0x90: '\u2660', // ♠ (black spade suit)
+    0x9D: '\u2318', // ⌘ (command stroke, legacy position)
+    0x9E: '\u2702', // ✂ (shortcut stroke, legacy position)
+  }},
 }
 
 export type Charset = keyof typeof CHARSETS_RAW
