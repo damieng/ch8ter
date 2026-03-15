@@ -6,7 +6,7 @@ import { FontPane, FontPaneTitle } from './panes/FontPane'
 import { Toolbar } from './components/Toolbar'
 import { BasePane } from './components/BasePane'
 import { EditorTitle } from './components/EditorTitle'
-import { Ch8terPane, Ch8terTitle } from './panes/Ch8terPane'
+import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews } from './store'
 import { PreviewPane } from './panes/PreviewPane'
@@ -44,9 +44,9 @@ export function App() {
 
   return (
     <div class="relative w-screen h-screen overflow-hidden bg-gray-200">
-      {/* Ch8ter pane */}
+      {/* App pane */}
       <BasePane
-        title={<Ch8terTitle />}
+        title={<AppTitle />}
         windowId="ch8ter"
         initialX={16}
         initialY={16}
@@ -54,7 +54,7 @@ export function App() {
         zIndex={getZIndex('ch8ter')}
         onFocus={() => setFocus('ch8ter')}
       >
-        <Ch8terPane />
+        <AppPane />
       </BasePane>
 
       {/* Per-font: Glyph Editor + Font windows */}
