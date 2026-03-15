@@ -152,7 +152,7 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
   // Flags: bit 2 clear = font data is little-endian (Intel format)
   view.setUint16(66, 0x00, LE)
 
-  view.setUint32(68, charTableOffset,  LE)  // horizontal offset table (same as char table when unused)
+  view.setUint32(68, 0,                LE)  // horizontal offset table (0 = not present)
   view.setUint32(72, charTableOffset,  LE)  // character offset table
   view.setUint32(76, fontDataOffset,   LE)  // font data
   view.setUint16(80, formWidth,        LE)  // form width in bytes

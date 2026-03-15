@@ -105,6 +105,8 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
 
   if (fRectHeight <= 0 || fRectHeight > 128)
     throw new Error(`Invalid font height: ${fRectHeight}`)
+  if (firstChar < 0)
+    throw new Error(`Invalid firstChar: ${firstChar}`)
   if (lastChar < firstChar)
     throw new Error('lastChar < firstChar')
   if (rowWords <= 0)
