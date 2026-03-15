@@ -384,14 +384,17 @@ export function AppPane() {
       }
     } else if (lower.endsWith(".com")) {
       try {
-        const result = openCom(buf)
-        const font = createFont(
-          result.fontData, name, result.startChar,
-          result.glyphWidth, result.source === 'cpm' ? result.glyphHeight : result.glyphHeight,
-        )
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = result.source === "ega" ? "cp437" : "cpm"
+        const results = openCom(buf)
+        for (const result of results) {
+          const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
+          const font = createFont(
+            result.fontData, name + suffix, result.startChar,
+            result.glyphWidth, result.glyphHeight,
+          )
+          recalcMetrics(font)
+          addFont(font)
+        }
+        charset.value = results[0].source === "ega" ? "cp437" : "cpm"
       } catch (e) {
         alert(`Failed to parse .com font: ${(e as Error).message}`)
       }

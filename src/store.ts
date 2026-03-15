@@ -77,6 +77,18 @@ export function createFont(
   const bpr = Math.ceil(w / 8)
   const bpg = h * bpr
   const initial = data ?? new Uint8Array(96 * bpg)
+  // Count blank glyphs to decide default hideEmpty
+  const numGlyphs = bpg > 0 ? Math.floor(initial.length / bpg) : 0
+  let blankCount = 0
+  for (let g = 0; g < numGlyphs; g++) {
+    let blank = true
+    const off = g * bpg
+    for (let b = 0; b < bpg; b++) {
+      if (initial[off + b] !== 0) { blank = false; break }
+    }
+    if (blank) blankCount++
+  }
+  const defaultHideEmpty = numGlyphs > 0 && blankCount > numGlyphs / 2
   return {
     id,
     fontData: signal(initial),
@@ -98,7 +110,7 @@ export function createFont(
     numericHeight: signal(-1),
     descender: signal(-1),
     gridZoom: signal(5),
-    hideEmpty: signal(true),
+    hideEmpty: signal(defaultHideEmpty),
     spacing: signal(spacingMode),
     editorOpen: signal(false),
     dirty: signal(false),

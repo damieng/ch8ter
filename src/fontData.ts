@@ -203,7 +203,7 @@ export function loadFontFile(
   }
 
   if (lower.endsWith('.com')) {
-    const result = openCom(buf)
+    const result = openCom(buf)[0]
     return {
       fontData: result.fontData, glyphWidth: result.glyphWidth, glyphHeight: result.glyphHeight,
       startChar: result.startChar, glyphCount: result.fontData.length / result.glyphHeight,

@@ -62,7 +62,14 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-3 min-w-[400px] max-w-[500px] max-h-[80vh]">
-        <h2 class="font-bold text-lg">Font Properties</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-lg">Font Properties</h2>
+          <button
+            class="text-gray-400 hover:text-gray-700 text-xl leading-none px-1"
+            onClick={onClose}
+            title="Close"
+          >&times;</button>
+        </div>
         <div class="flex items-center gap-2">
           <span class="text-sm font-medium w-16 shrink-0">Name</span>
           <input
@@ -114,12 +121,6 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
           >Add</button>
         </div>
         <div class="flex justify-end gap-2">
-          <button
-            class="px-4 py-1.5 rounded border border-gray-300 text-sm hover:bg-gray-100"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
           <button
             class="px-4 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
             onClick={handleSave}
