@@ -16,10 +16,11 @@ import { parseYaff } from "../fileFormats/yaffParser"
 import { parseDraw } from "../fileFormats/drawParser"
 import { parseFzx } from "../fileFormats/fzxParser"
 import { openFnt } from "../fileFormats/fntOpener"
-import { parseCpm } from "../fileFormats/cpmParser"
+import { openCom } from "../fileFormats/comOpener"
 import { parsePcf } from "../fileFormats/pcfParser"
 import { parsePdbFont } from "../fileFormats/pdbFontParser"
 import { parseAmigaFont, isAmigaHunk } from "../fileFormats/amigaFontParser"
+import { parseBbc, isBbcFont } from "../fileFormats/bbcParser"
 import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -87,18 +88,21 @@ const showChangelog = signal(false)
 const showHotkeys = signal(false)
 
 const FORMATS: { exts: string; name: string }[] = [
-  { exts: '.bdf .pcf',     name: 'X11' },
-  { exts: '.psf',          name: 'Linux console' },
-  { exts: '.yaff',         name: 'YAFF' },
   { exts: '.draw',         name: 'Acorn Draw' },
-  { exts: '.ch8 .fzx',     name: 'ZX Spectrum' },
-  { exts: '.fnt',          name: 'Atari ST GDOS' },
-  { exts: '.fnt',          name: 'Windows FNT' },
   { exts: '.fnt',          name: 'Atari 8-bit' },
-  { exts: '.pdb',          name: 'PalmOS' },
-  { exts: '',              name: 'Amiga' },
+  { exts: '.fnt',          name: 'Atari ST GDOS' },
+  { exts: '.bbc',          name: 'BBC Micro' },
+  { exts: '.64c',          name: 'Commodore 64' },
+  { exts: '',              name: 'Commodore Amiga' },
   { exts: '.com',          name: 'CP/M Plus' },
+  { exts: '.psf',          name: 'Linux console' },
+  { exts: '.pdb',          name: 'PalmOS' },
+  { exts: '.com',          name: 'PC DOS EGA/VGA' },
   { exts: '.png',          name: 'PNG tile sheet' },
+  { exts: '.fnt',          name: 'Windows FNT' },
+  { exts: '.bdf .pcf',     name: 'X11' },
+  { exts: '.yaff',         name: 'YAFF' },
+  { exts: '.ch8 .fzx',     name: 'ZX Spectrum' },
 ]
 
 const HOTKEYS: { key: string; desc: string }[] = [
@@ -380,13 +384,30 @@ export function AppPane() {
       }
     } else if (lower.endsWith(".com")) {
       try {
-        const { fontData, glyphHeight } = parseCpm(buf)
-        const font = createFont(fontData, name, 0, 8, glyphHeight)
+        const result = openCom(buf)
+        const font = createFont(
+          result.fontData, name, result.startChar,
+          result.glyphWidth, result.source === 'cpm' ? result.glyphHeight : result.glyphHeight,
+        )
         recalcMetrics(font)
         addFont(font)
-        charset.value = "cpm"
+        charset.value = result.source === "ega" ? "cp437" : "cpm"
       } catch (e) {
-        alert(`Failed to extract font from .com: ${(e as Error).message}`)
+        alert(`Failed to parse .com font: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".bbc")) {
+      try {
+        const result = parseBbc(buf)
+        const font = createFont(
+          result.fontData, name, result.startChar,
+          result.glyphWidth, result.glyphHeight,
+        )
+        font.populatedGlyphs.value = result.populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "bbc"
+      } catch (e) {
+        alert(`Failed to parse BBC font: ${(e as Error).message}`)
       }
     } else if (isAmigaHunk(buf)) {
       try {
@@ -416,6 +437,32 @@ export function AppPane() {
       } catch (e) {
         alert(`Failed to parse Amiga font: ${(e as Error).message}`)
       }
+    } else if (isBbcFont(buf)) {
+      try {
+        const result = parseBbc(buf)
+        const font = createFont(
+          result.fontData,
+          name,
+          result.startChar,
+          result.glyphWidth,
+          result.glyphHeight,
+        )
+        font.populatedGlyphs.value = result.populated
+        recalcMetrics(font)
+        addFont(font)
+        charset.value = "bbc"
+      } catch (e) {
+        alert(`Failed to parse BBC font: ${(e as Error).message}`)
+      }
+    } else if (lower.endsWith(".64c")) {
+      // .64c: 2-byte magic header + 8×8 chars in C64 screen code order
+      // Load first 128 chars directly (ignore inverted copy at 128-255)
+      const dataLen = Math.min(128 * 8, buf.byteLength - 2)
+      const fontData = new Uint8Array(buf, 2, dataLen)
+      const font = createFont(fontData, name, 0, 8, 8)
+      recalcMetrics(font)
+      addFont(font)
+      charset.value = "c64"
     } else {
       const font = createFont()
       loadFont(font, buf)
@@ -431,7 +478,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.com,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -526,7 +573,7 @@ export function AppPane() {
               </tr>
             ))}
           </table>
-          <div class="text-xs font-bold text-gray-600 mt-3 mb-1">Load &amp; Save Formats</div>
+          <div class="text-xs font-bold text-gray-600 mt-3 mb-1">File Formats</div>
           <table class="text-xs w-full">
             {FORMATS.map((f, i) => (
               <tr key={i}>

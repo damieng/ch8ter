@@ -21,6 +21,8 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   palm:     { ext: '.pdb',  key: 'pdb' },
   atari8:   { ext: '.fnt',  key: 'atari8' },
   amiga:    { ext: '',       key: 'amiga' },
+  ega:      { ext: '.com',  key: 'ega' },
+  bbc:      { ext: '.bbc',  key: 'bbc' },
   cpm:      { ext: '.com',  key: 'com' },
 }
 

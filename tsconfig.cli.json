@@ -28,6 +28,7 @@
     "src/fileFormats/bdfParser.ts",
     "src/fileFormats/bdfWriter.ts",
     "src/fileFormats/ch8Format.ts",
+    "src/fileFormats/comOpener.ts",
     "src/fileFormats/cpmParser.ts",
     "src/fileFormats/cpmExport.ts",
     "src/fileFormats/drawParser.ts",
@@ -48,6 +49,10 @@
     "src/fileFormats/yaffWriter.ts",
     "src/fileFormats/amigaFontParser.ts",
     "src/fileFormats/amigaFontWriter.ts",
-    "src/fileFormats/atari8BitWriter.ts"
+    "src/fileFormats/atari8BitWriter.ts",
+    "src/fileFormats/bbcParser.ts",
+    "src/fileFormats/bbcWriter.ts",
+    "src/fileFormats/egaComParser.ts",
+    "src/fileFormats/egaComWriter.ts"
   ]
 }

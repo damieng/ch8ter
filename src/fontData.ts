@@ -8,7 +8,7 @@ import { parseYaff } from './fileFormats/yaffParser'
 import { parseDraw } from './fileFormats/drawParser'
 import { parseFzx } from './fileFormats/fzxParser'
 import { openFnt } from './fileFormats/fntOpener'
-import { parseCpm } from './fileFormats/cpmParser'
+import { openCom } from './fileFormats/comOpener'
 import { parsePcf } from './fileFormats/pcfParser'
 import { parsePdbFont } from './fileFormats/pdbFontParser'
 import { parseCh8 } from './fileFormats/ch8Format'
@@ -22,6 +22,9 @@ import { writeGdosFont } from './fileFormats/gdosFontWriter'
 import { exportCpm } from './fileFormats/cpmExport'
 import { writePcf } from './fileFormats/pcfWriter'
 import { writeAmigaFont } from './fileFormats/amigaFontWriter'
+import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
+import { writeBbc } from './fileFormats/bbcWriter'
+import { writeEgaCom } from './fileFormats/egaComWriter'
 import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
 import { writePdbFont } from './fileFormats/pdbFontWriter'
 
@@ -200,10 +203,11 @@ export function loadFontFile(
   }
 
   if (lower.endsWith('.com')) {
-    const { fontData, glyphHeight } = parseCpm(buf)
+    const result = openCom(buf)
     return {
-      fontData, glyphWidth: 8, glyphHeight,
-      startChar: 0, glyphCount: 256, baseline: glyphHeight - 2,
+      fontData: result.fontData, glyphWidth: result.glyphWidth, glyphHeight: result.glyphHeight,
+      startChar: result.startChar, glyphCount: result.fontData.length / result.glyphHeight,
+      baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: null, fontName: name,
     }
@@ -222,7 +226,29 @@ export function loadFontFile(
     }
   }
 
-  // Raw formats: .ch8, .bin
+  if (lower.endsWith('.bbc')) {
+    const result = parseBbc(buf)
+    return {
+      fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
+      startChar: result.startChar, glyphCount: result.fontData.length / 8,
+      baseline: 6, meta: null, encodings: null, glyphMeta: null,
+      populated: result.populated, fontName: name,
+    }
+  }
+
+
+  // Detect BBC Micro soft-font (VDU23 sequences)
+  if (isBbcFont(buf)) {
+    const result = parseBbc(buf)
+    return {
+      fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
+      startChar: result.startChar, glyphCount: result.fontData.length / 8,
+      baseline: 6, meta: null, encodings: null, glyphMeta: null,
+      populated: result.populated, fontName: name,
+    }
+  }
+
+  // Raw formats: .ch8
   const bpg = h // 8px wide = 1 byte per row × h rows
   const fontData = parseCh8(buf, bpg)
   const count = fontData.length / bpg
@@ -306,6 +332,12 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
 
     case 'atari8':
       return writeAtari8Bit(data.fontData, data.startChar)
+
+    case 'ega':
+      return writeEgaCom(data.fontData, data.glyphHeight)
+
+    case 'bbc':
+      return writeBbc(data.fontData, data.startChar, data.glyphCount)
 
     case 'com':
       return exportCpm(data.glyphHeight, data.fontData)

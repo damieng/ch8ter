@@ -29,6 +29,8 @@ import { writePcf } from '../fileFormats/pcfWriter'
 import { writePdbFont } from '../fileFormats/pdbFontWriter'
 import { writeAmigaFont } from '../fileFormats/amigaFontWriter'
 import { writeAtari8Bit } from '../fileFormats/atari8BitWriter'
+import { writeBbc } from '../fileFormats/bbcWriter'
+import { writeEgaCom } from '../fileFormats/egaComWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 import { PngExportDialog } from '../dialogs/PngExportDialog'
@@ -219,6 +221,21 @@ export function SaveBar({ font }: { font: FontInstance }) {
     setOpen(false)
   }
 
+  function saveEgaCom() {
+    const data = saveFont(font)
+    const ega = writeEgaCom(data, font.glyphHeight.value)
+    download(new Blob([ega.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
+    setOpen(false)
+  }
+
+  function saveBbc() {
+    const data = saveFont(font)
+    const count = glyphCount(font)
+    const bbc = writeBbc(data, font.startChar.value, count)
+    download(new Blob([bbc.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.bbc')
+    setOpen(false)
+  }
+
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
@@ -270,6 +287,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveAmiga}>
             Save as Amiga font
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveEgaCom}>
+            Save as EGA/VGA .com
+          </button>
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBbc}>
+            Save as BBC Micro .bbc
           </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
             Save as CP/M Plus .com

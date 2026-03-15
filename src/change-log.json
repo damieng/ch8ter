@@ -2,6 +2,10 @@
   {
     "version": "0.9.4",
     "changes": [
+      "PC DOS EGA/VGA .COM font load and save",
+      "BBC Micro font load and save",
+      "Commodore 64 .64c font load",
+      "Selected codepage persists across page reloads",
       "Recalculate All button in Glyph Metrics"
     ]
   },

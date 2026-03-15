@@ -841,11 +841,60 @@ const CHARSETS_RAW = {
     0x60: '\u00A3', // £ (pound instead of backtick)
     0x7F: '\u00A9', // © (copyright)
   }},
-  c64: { label: 'Commodore 64', range: [32, 127] as [number, number], colorSystem: 'Commodore 64', overrides: {
-    0x5C: '\u00A3', // £ (pound instead of backslash)
-    0x5E: '\u2191', // ↑ (up arrow, ASCII-1963)
-    0x5F: '\u2190', // ← (left arrow instead of underscore)
-    0x7F: '\u03C0', // π (pi)
+  c64: { label: 'Commodore 64', range: [0, 127] as [number, number], colorSystem: 'Commodore 64', overrides: {
+    // C64 screen code → Unicode (from style64.org C64 Pro font mapping)
+    0: '\u0040',  // @
+    1: '\u0061', 2: '\u0062', 3: '\u0063', 4: '\u0064', 5: '\u0065',
+    6: '\u0066', 7: '\u0067', 8: '\u0068', 9: '\u0069', 10: '\u006A',
+    11: '\u006B', 12: '\u006C', 13: '\u006D', 14: '\u006E', 15: '\u006F',
+    16: '\u0070', 17: '\u0071', 18: '\u0072', 19: '\u0073', 20: '\u0074',
+    21: '\u0075', 22: '\u0076', 23: '\u0077', 24: '\u0078', 25: '\u0079',
+    26: '\u007A',
+    27: '\u005B',  // [
+    28: '\u00A3',  // £
+    29: '\u005D',  // ]
+    30: '\u2191',  // ↑
+    31: '\u2190',  // ←
+    // 32-63: identity (space, !, ", ... ?)
+    64: '\u2500',  // ─
+    // 65-90: A-Z (identity)
+    91: '\u253C',  // ┼
+    92: '\u2502',  // │ (vertical line variant)
+    93: '\u2502',  // │
+    94: '\u2571',  // ╱ (diagonal upper right to lower left)
+    95: '\u2572',  // ╲ (diagonal upper left to lower right)
+    96: '\u2573',  // ╳ (diagonal cross)
+    97: '\u258C',  // ▌
+    98: '\u2584',  // ▄
+    99: '\u2594',  // ▔
+    100: '\u2581', // ▁
+    101: '\u258E', // ▎
+    102: '\u2592', // ▒
+    103: '\u25E4', // ◤ (upper-left triangle)
+    104: '\u25E5', // ◥ (upper-right triangle)
+    105: '\u25E3', // ◣ (lower-left triangle)
+    106: '\u25E2', // ◢ (lower-right triangle)
+    107: '\u251C', // ├
+    108: '\u2597', // ▗
+    109: '\u2514', // └
+    110: '\u2510', // ┐
+    111: '\u2582', // ▂
+    112: '\u250C', // ┌
+    113: '\u2534', // ┴
+    114: '\u252C', // ┬
+    115: '\u2524', // ┤
+    116: '\u259E', // ▞ (quadrant upper right and lower left)
+    117: '\u258D', // ▍
+    118: '\u2595', // ▕ (right one eighth block)
+    119: '\u2586', // ▆ (lower three quarters block)
+    120: '\u2585', // ▅ (lower five eighths block)
+    121: '\u2583', // ▃
+    122: '\u2713', // ✓
+    123: '\u2596', // ▖
+    124: '\u259D', // ▝
+    125: '\u2518', // ┘
+    126: '\u2598', // ▘
+    127: '\u259A', // ▚
   }},
   ...standardCodepages,
   msx: { label: 'MSX International', extends: 'cp437', range: [0, 255] as [number, number], colorSystem: 'MSX (TMS9918)', overrides: {
@@ -936,7 +985,16 @@ function resolveCharsets(raw: Record<string, CharsetDefRaw>): Record<string, Cha
 }
 
 export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RAW) as Record<Charset, CharsetDef>
-export const charset = signal<Charset>('zx')
+const CHARSET_KEY = 'ch8ter-charset'
+function loadCharset(): Charset {
+  try {
+    const stored = localStorage.getItem(CHARSET_KEY)
+    if (stored && stored in CHARSETS_RAW) return stored as Charset
+  } catch { /* ignore */ }
+  return 'zx'
+}
+export const charset = signal<Charset>(loadCharset())
+effect(() => { localStorage.setItem(CHARSET_KEY, charset.value) })
 
 // Resolve a codepoint to its Unicode character under a given charset
 function cpToUnicode(cp: number, cs: Charset): string {
