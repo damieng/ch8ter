@@ -15,7 +15,7 @@ import { parsePsf, type PsfParseResult } from "../fileFormats/psfParser"
 import { parseYaff } from "../fileFormats/yaffParser"
 import { parseDraw } from "../fileFormats/drawParser"
 import { parseFzx } from "../fileFormats/fzxParser"
-import { parseGdosFont } from "../fileFormats/gdosFontParser"
+import { openFnt } from "../fileFormats/fntOpener"
 import { parseCpm } from "../fileFormats/cpmParser"
 import { parsePcf } from "../fileFormats/pcfParser"
 import { parsePdbFont } from "../fileFormats/pdbFontParser"
@@ -29,6 +29,12 @@ const ICON = 18
 const APP_VERSION = __APP_VERSION__
 
 const CHANGELOG: { version: string; changes: string[] }[] = [
+  {
+    version: "0.9.3",
+    changes: [
+      "Windows FNT font support",
+    ],
+  },
   {
     version: "0.9.2",
     changes: [
@@ -281,7 +287,7 @@ export function Ch8terPane() {
       }
     } else if (lower.endsWith(".fnt")) {
       try {
-        const result = parseGdosFont(buf)
+        const result = openFnt(buf)
         const hasPropSpacing = result.glyphMeta.some(
           (gm) =>
             gm?.dwidth &&
@@ -301,11 +307,13 @@ export function Ch8terPane() {
           hasPropSpacing ? "proportional" : "monospace",
         )
         font.populatedGlyphs.value = result.populated
-        font.ascender.value = result.ascender
-        font.descender.value = result.descender
+        if (result.source === "gdos") {
+          font.ascender.value = result.ascender
+          font.descender.value = result.descender
+        }
         calcMissingMetrics(font)
         addFont(font)
-        charset.value = "atarist"
+        charset.value = result.source === "gdos" ? "atarist" : "imported"
       } catch (e) {
         alert(`Failed to parse GDOS .fnt: ${(e as Error).message}`)
       }
