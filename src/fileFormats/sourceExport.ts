@@ -1,13 +1,14 @@
 import type { FontInstance } from '../store'
 import { bytesPerGlyph, glyphCount } from '../store'
 
-export type SourceFormat = 'c' | 'csharp' | 'rust' | 'ts' | 'z80' | '6502' | '68000' | 'x86'
+export type SourceFormat = 'c' | 'csharp' | 'rust' | 'ts' | 'basic' | 'z80' | '6502' | '68000' | 'x86'
 
 export const SOURCE_FORMATS: { id: SourceFormat; label: string; ext: string }[] = [
   { id: 'c',      label: 'C Header',   ext: '.h'        },
   { id: 'csharp', label: 'C#',         ext: '.cs'       },
   { id: 'rust',   label: 'Rust',       ext: '.rs'       },
   { id: 'ts',     label: 'TypeScript', ext: '.ts'       },
+  { id: 'basic',  label: 'BASIC',      ext: '.bas'      },
   { id: 'z80',    label: 'Z80',        ext: '.z80.asm'  },
   { id: '6502',   label: '6502',       ext: '.6502.asm' },
   { id: '68000',  label: '68000',      ext: '.68000.asm'},
@@ -88,6 +89,14 @@ export function exportSource(font: FontInstance, format: SourceFormat): string {
       lines.push(`\t${hex}, // ${charComment(startChar + g)}`)
     }
     lines.push(`]);`)
+
+  } else if (format === 'basic') {
+    for (let g = 0; g < count; g++) {
+      const bytes = Array.from(data.subarray(g * bpg, (g + 1) * bpg))
+      const vals = bytes.join(',')
+      const lineNum = 1000 + g * 10
+      lines.push(`${lineNum} DATA ${vals}`)
+    }
 
   } else if (format === 'z80') {
     lines.push(`\t; ${filename}`)

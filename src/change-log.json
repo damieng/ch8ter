@@ -1,20 +1,21 @@
 [
   {
-    "version": "0.9.3",
+    "version": "0.9.3 - 2026-03-15",
     "changes": [
       "CLI converter with named output formats",
       "Atari 8-bit FNT font load and save",
       "Amiga bitmap font load and save",
-      "Windows FNT font load and save"
+      "Windows FNT font load and save",
+      "BASIC font export support"
     ]
   },
   {
     "version": "0.9.2",
     "changes": [
-      "PalmOS .pdb font format load and save",
+      "PalmOS PDB font format load and save",
       "PalmOS 3.3 codepage support",
       "X11 PCF font format load and save",
-      "All font formats now support .gz compressed loading"
+      "All font formats now support GZ compressed loading"
     ]
   },
   {
@@ -39,7 +40,7 @@
   {
     "version": "0.8.0",
     "changes": [
-      "CP/M Plus .com font load and save",
+      "CP/M Plus COM font load and save",
       "Source code export: C#, TypeScript, hex ASM formats",
       "Source code export: C, Rust, Z80, 6502, 68000, x86"
     ]
