@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSettings } from '../fileFormats/pngImport'
 import { createFont, addFont, recalcMetrics, charset } from '../store'
-import { ZoomIn } from 'lucide-preact'
+import { ZoomControl } from '../components/ZoomControl'
 
 interface Props {
   file: File
@@ -189,17 +189,8 @@ export function PngImportDialog({ file, onClose }: Props) {
           <span class="text-gray-500">Border</span>
           <NumField label="X" value={settings.borderX} onChange={v => update({ borderX: v })} />
           <NumField label="Y" value={settings.borderY} onChange={v => update({ borderY: v })} />
-          <div class="ml-auto flex items-center gap-1">
-            <ZoomIn size={14} class="text-gray-400" />
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={zoom}
-              onInput={(e) => setZoom(parseInt((e.target as HTMLInputElement).value))}
-              class="w-24"
-            />
-            <span class="text-xs text-gray-500 w-10">{zoom * 100}%</span>
+          <div class="ml-auto">
+            <ZoomControl value={zoom} onChange={setZoom} />
           </div>
         </div>
 

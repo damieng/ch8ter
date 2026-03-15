@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
-import { ZoomIn, Eye, Maximize2, EyeOff } from 'lucide-preact'
+import { Eye, Maximize2, EyeOff } from 'lucide-preact'
 import { type FontInstance, glyphCount, bytesPerGlyph, selectGlyph, selectAll, activeFontId, openPreview, openGlyphEditor, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter, shiftUp, shiftDown, shiftLeft, shiftRight } from '../store'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
 import { COLOR_SYSTEMS } from '../colorSystems'
@@ -8,43 +8,15 @@ import { GlyphTile } from '../components/GlyphTile'
 import { SaveBar, ExportBar } from '../components/Toolbar'
 import { ToolsDropdown } from '../components/ToolsDropdown'
 import { SelectDropdown } from '../components/SelectDropdown'
+import { ZoomControl } from '../components/ZoomControl'
 import { MetricsDialog } from '../dialogs/MetricsDialog'
-import { useClickOutside } from '../hooks/useClickOutside'
 
 export function FontPaneTitle({ font }: { font: FontInstance }) {
   return <span>Font — {font.fileName.value} ({font.spacing.value})</span>
 }
 
 function ZoomDropdown({ font }: { font: FontInstance }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useClickOutside(ref, () => setOpen(false))
-
-  return (
-    <div class="relative" ref={ref}>
-      <button
-        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
-        onClick={() => setOpen(!open)}
-      >
-        <ZoomIn size={16} />
-        {font.gridZoom.value * 100}%
-      </button>
-      {open && (
-        <div class="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-2 px-3 flex items-center gap-2">
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={font.gridZoom.value}
-            onInput={(e) => { font.gridZoom.value = parseInt((e.target as HTMLInputElement).value) }}
-            class="w-40"
-          />
-          <span class="text-sm whitespace-nowrap">{font.gridZoom.value * 100}%</span>
-        </div>
-      )}
-    </div>
-  )
+  return <ZoomControl value={font.gridZoom.value} onChange={(v) => { font.gridZoom.value = v }} />
 }
 
 function SizeButton({ font }: { font: FontInstance }) {

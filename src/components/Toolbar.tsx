@@ -31,6 +31,7 @@ import { writeAmigaFont } from '../fileFormats/amigaFontWriter'
 import { writeAtari8Bit } from '../fileFormats/atari8BitWriter'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
+import { PngExportDialog } from '../dialogs/PngExportDialog'
 
 const ICON = 18
 
@@ -291,6 +292,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
 export function ExportBar({ font }: { font: FontInstance }) {
   const [open, setOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
+  const [pngOpen, setPngOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false))
 
@@ -349,11 +351,15 @@ export function ExportBar({ font }: { font: FontInstance }) {
             Export as .woff (variable)
           </button>
           <div class="border-t border-gray-200 my-1" />
+          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { setPngOpen(true); setOpen(false) }}>
+            Export PNG Sprite Sheet...
+          </button>
           <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { setSourceOpen(true); setOpen(false) }}>
             Export Source...
           </button>
         </div>
       )}
+      {pngOpen && <PngExportDialog font={font} onClose={() => setPngOpen(false)} />}
       {sourceOpen && <SourceExportDialog font={font} onClose={() => setSourceOpen(false)} />}
     </div>
   )
