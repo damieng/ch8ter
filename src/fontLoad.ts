@@ -14,7 +14,7 @@ import { parsePdbFont } from './fileFormats/pdbFontParser'
 import { parseCh8 } from './fileFormats/ch8Format'
 import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
-import { bdfCharsetMap } from './codepages'
+import { bdfCharsetMap } from './charsets'
 import { bpr } from './bitUtils'
 
 export interface FontConversionData {
