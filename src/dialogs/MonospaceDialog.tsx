@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
-import { type FontInstance, createMonospaceVariant } from '../store'
+import { type FontInstance } from '../store'
+import { createMonospaceVariant } from '../createVariants'
 
 interface Props {
   font: FontInstance

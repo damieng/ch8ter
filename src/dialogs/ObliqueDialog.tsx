@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
-import { type FontInstance, createObliqueVariant } from '../store'
+import { type FontInstance } from '../store'
+import { createObliqueVariant } from '../createVariants'
 import { shearGlyphBytes } from '../glyphTransforms'
 import { drawGlyphToCtx } from '../drawGlyph'
 import { bpr } from '../bitUtils'

@@ -5,10 +5,8 @@ import {
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Wrench, ChevronDown
 } from 'lucide-preact'
 import { CenterHIcon } from './CenterHIcon'
-import {
-  type FontInstance,
-  createBoldVariant, createOutlineVariant, createProportionalVariant
-} from '../store'
+import { type FontInstance } from '../store'
+import { createBoldVariant, createOutlineVariant, createProportionalVariant } from '../createVariants'
 import {
   flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
   shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
