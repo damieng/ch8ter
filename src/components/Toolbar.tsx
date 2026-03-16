@@ -11,30 +11,18 @@ import {
   type FontInstance,
   flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
   shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
-  saveFont, glyphCount
+  saveFont, fontToConversionData
 } from '../store'
 import { execTransformGlyph } from '../undoHistory'
 import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
-import { writeBdf } from '../fileFormats/bdfWriter'
-import { writePsf } from '../fileFormats/psfWriter'
 import { exportTtf } from '../fileFormats/ttfExport'
 import { exportVarTtf } from '../fileFormats/ttfVarExport'
-import { writeYaff } from '../fileFormats/yaffWriter'
 import { ttfToWoff } from '../fileFormats/woffExport'
-import { writeDraw } from '../fileFormats/drawWriter'
-import { exportCpm } from '../fileFormats/cpmExport'
-import { writeFzx } from '../fileFormats/fzxWriter'
-import { writeGdosFont } from '../fileFormats/gdosFontWriter'
-import { writePcf } from '../fileFormats/pcfWriter'
-import { writePdbFont } from '../fileFormats/pdbFontWriter'
-import { writeAmigaFont } from '../fileFormats/amigaFontWriter'
-import { writeAtari8Bit } from '../fileFormats/atari8BitWriter'
-import { writeBbc } from '../fileFormats/bbcWriter'
-import { writeEgaCom } from '../fileFormats/egaComWriter'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 import { PngExportDialog } from '../dialogs/PngExportDialog'
 import { Dropdown } from './Dropdown'
-import { baseName } from '../fontData'
+import { baseName } from '../fontLoad'
+import { saveFontFile, TEXT_FORMATS } from '../fontSave'
 
 const ICON = 18
 
@@ -50,78 +38,16 @@ function download(blob: Blob, filename: string) {
 export function SaveBar({ font }: { font: FontInstance }) {
   const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
-  function saveAs(writer: (data: Uint8Array, count: number) => Uint8Array | string, ext: string, blobOpts?: BlobPropertyBag) {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const result = writer(data, count)
+  function saveAs(formatKey: string, fileExt: string) {
+    const data = fontToConversionData(font)
+    const result = saveFontFile(formatKey, data)
+    const blobOpts = TEXT_FORMATS.has(formatKey) ? { type: 'text/plain' } : undefined
     const blobData = typeof result === 'string' ? result : result.buffer as ArrayBuffer
-    download(new Blob([blobData], blobOpts), baseName(font.fileName.value) + ext)
+    download(new Blob([blobData], blobOpts), baseName(font.fileName.value) + fileExt)
   }
 
-  const saveCh8 = () => saveAs((data) => data, '.ch8')
-
-  const saveBdf = () => saveAs((data, count) => writeBdf({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
-    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
-  }), '.bdf', { type: 'text/plain' })
-
-  const savePsf = () => saveAs((data, count) => writePsf({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count,
-  }), '.psf')
-
-  const saveYaff = () => saveAs((data, count) => writeYaff({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count,
-    name: font.fontName.value || baseName(font.fileName.value),
-  }), '.yaff', { type: 'text/plain' })
-
-  const saveDraw = () => saveAs((data, count) => writeDraw({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count,
-  }), '.draw', { type: 'text/plain' })
-
-  const saveFzx = () => saveAs((data, count) => writeFzx({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, glyphMeta: font.glyphMeta.value,
-  }), '.fzx')
-
-  const saveFnt = () => saveAs((data, count) => writeGdosFont({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, glyphMeta: font.glyphMeta.value,
-    baseline: font.baseline.value, ascender: font.ascender.value, descender: font.descender.value,
-    name: baseName(font.fileName.value), fontName: font.fontName.value, meta: font.meta.value,
-  }), '.fnt')
-
-  const savePcf = () => saveAs((data, count) => writePcf({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
-    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
-  }), '.pcf')
-
-  const savePdb = () => saveAs((data, count) => writePdbFont({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
-    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
-  }), '.pdb')
-
-  const saveAtari8Bit = () => saveAs((data) => writeAtari8Bit(data, font.startChar.value), '.fnt')
-
-  const saveAmiga = () => saveAs((data, count) => writeAmigaFont({
-    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
-    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
-    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
-  }), '-' + font.glyphHeight.value)
-
-  const saveEgaCom = () => saveAs((data) => writeEgaCom(data, font.glyphHeight.value), '.com')
-
-  const saveBbc = () => saveAs((data, count) => writeBbc(data, font.startChar.value, count), '.bbc')
-
-  const saveCpm = () => saveAs((data) => exportCpm(font.glyphHeight.value, data), '.com')
-
-  const btn = (label: string, fn: () => void, close: () => void) => (
-    <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { fn(); close() }}>
+  const btn = (label: string, formatKey: string, fileExt: string, close: () => void) => (
+    <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { saveAs(formatKey, fileExt); close() }}>
       {label}
     </button>
   )
@@ -135,20 +61,20 @@ export function SaveBar({ font }: { font: FontInstance }) {
     >
       {(close) => (
         <>
-          {is8x8 && btn('Save as .ch8', saveCh8, close)}
-          {btn('Save as .bdf', saveBdf, close)}
-          {btn('Save as .psf', savePsf, close)}
-          {btn('Save as .yaff', saveYaff, close)}
-          {btn('Save as .draw', saveDraw, close)}
-          {btn('Save as .fzx', saveFzx, close)}
-          {btn('Save as Atari ST .fnt', saveFnt, close)}
-          {btn('Save as X11 .pcf', savePcf, close)}
-          {btn('Save as Palm .pdb', savePdb, close)}
-          {btn('Save as Atari 8-bit .fnt', saveAtari8Bit, close)}
-          {btn('Save as Amiga font', saveAmiga, close)}
-          {btn('Save as EGA/VGA .com', saveEgaCom, close)}
-          {btn('Save as BBC Micro .bbc', saveBbc, close)}
-          {btn('Save as CP/M Plus .com', saveCpm, close)}
+          {is8x8 && btn('Save as .ch8', 'ch8', '.ch8', close)}
+          {btn('Save as .bdf', 'bdf', '.bdf', close)}
+          {btn('Save as .psf', 'psf', '.psf', close)}
+          {btn('Save as .yaff', 'yaff', '.yaff', close)}
+          {btn('Save as .draw', 'draw', '.draw', close)}
+          {btn('Save as .fzx', 'fzx', '.fzx', close)}
+          {btn('Save as Atari ST .fnt', 'fnt', '.fnt', close)}
+          {btn('Save as X11 .pcf', 'pcf', '.pcf', close)}
+          {btn('Save as Palm .pdb', 'pdb', '.pdb', close)}
+          {btn('Save as Atari 8-bit .fnt', 'atari8', '.fnt', close)}
+          {btn('Save as Amiga font', 'amiga', '-' + font.glyphHeight.value, close)}
+          {btn('Save as EGA/VGA .com', 'ega', '.com', close)}
+          {btn('Save as BBC Micro .bbc', 'bbc', '.bbc', close)}
+          {btn('Save as CP/M Plus .com', 'com', '.com', close)}
         </>
       )}
     </Dropdown>

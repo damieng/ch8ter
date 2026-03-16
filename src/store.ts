@@ -3,6 +3,7 @@ import { getBit, setBit, clearBit } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
+import { baseName } from './fontLoad'
 import { isFixedWidth } from './unicodeRanges'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
 import {
@@ -1230,4 +1231,31 @@ export function saveFont(font: FontInstance): Uint8Array {
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   return data
+}
+
+/** Extract a plain FontConversionData snapshot from a FontInstance (marks font as saved). */
+export function fontToConversionData(font: FontInstance): import('./fontLoad').FontConversionData {
+  const fontData = saveFont(font)
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpr = Math.ceil(w / 8)
+  const bpg = h * bpr
+  return {
+    fontData,
+    glyphWidth: w,
+    glyphHeight: h,
+    startChar: font.startChar.value,
+    glyphCount: bpg > 0 ? Math.floor(fontData.length / bpg) : 0,
+    baseline: font.baseline.value,
+    meta: font.meta.value,
+    encodings: font.encodings.value,
+    glyphMeta: font.glyphMeta.value,
+    populated: font.populatedGlyphs.value,
+    fontName: font.fontName.value || baseName(font.fileName.value),
+    spacingMode: font.spacing.value,
+    detectedCharset: '',
+    useCalcMissing: false,
+    ascender: font.ascender.value >= 0 ? font.ascender.value : undefined,
+    descender: font.descender.value >= 0 ? font.descender.value : undefined,
+  }
 }

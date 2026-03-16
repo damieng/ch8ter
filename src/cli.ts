@@ -5,7 +5,8 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { gunzipSync } from 'zlib'
 import { basename, extname, join, dirname } from 'path'
-import { loadFontFile, saveFontFile, type FontConversionData } from './fontData'
+import { loadFontFile, type FontConversionData } from './fontLoad'
+import { saveFontFile } from './fontSave'
 
 // Map format names to file extensions and internal save keys
 const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
