@@ -1,7 +1,7 @@
 import { ChevronDown, MousePointer } from 'lucide-preact'
 import {
   type FontInstance,
-  selectAll, selectNumbers, selectUppercase, selectLowercase, selectSymbols, invertSelection
+  selectAll, selectNone, selectNumbers, selectUppercase, selectLowercase, selectSymbols, invertSelection
 } from '../store'
 import { Dropdown } from './Dropdown'
 
@@ -34,6 +34,7 @@ export function SelectDropdown({ font }: { font: FontInstance }) {
           {item('Symbols', () => selectSymbols(font), undefined, close)}
           <div class="border-t border-gray-200 my-1" />
           {item('Invert Selection', () => invertSelection(font), undefined, close)}
+          {item('None', () => selectNone(font), undefined, close)}
         </>
       )}
     </Dropdown>
