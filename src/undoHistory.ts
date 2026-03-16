@@ -1,4 +1,4 @@
-import { type FontInstance, bytesPerGlyph, bytesPerRow } from './store'
+import { type FontInstance, bytesPerGlyph, bytesPerRow, markDirty } from './store'
 import { setBit } from './bitUtils'
 
 export interface UndoCommand {
@@ -54,16 +54,6 @@ function restoreGlyph(font: FontInstance, index: number, bytes: Uint8Array) {
   const data = new Uint8Array(font.fontData.value)
   data.set(bytes, index * bpg)
   font.fontData.value = data
-}
-
-function markDirty(font: FontInstance) {
-  const a = font.fontData.value
-  const b = font.savedSnapshot.value
-  if (a.length !== b.length) { font.dirty.value = true; return }
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) { font.dirty.value = true; return }
-  }
-  font.dirty.value = false
 }
 
 // --- Command factories ---

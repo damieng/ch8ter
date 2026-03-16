@@ -575,7 +575,7 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
   font.lastClickedGlyph.value = activeNewIdx
 }
 
-function markDirty(font: FontInstance) {
+export function markDirty(font: FontInstance) {
   const a = font.fontData.value
   const b = font.savedSnapshot.value
   if (a.length !== b.length) { font.dirty.value = true; return }
