@@ -1,46 +1,6 @@
 import type { FontInstance } from '../store'
 import { glyphCount, bytesPerRow, bytesPerGlyph } from '../store'
-
-// --- Binary writer ---
-
-class BW {
-  private buf: DataView
-  private pos = 0
-  constructor(size: number) { this.buf = new DataView(new ArrayBuffer(size)) }
-  get offset() { return this.pos }
-  set offset(v: number) { this.pos = v }
-  get buffer() { return this.buf.buffer }
-  u8(v: number) { this.buf.setUint8(this.pos++, v) }
-  u16(v: number) { this.buf.setUint16(this.pos, v); this.pos += 2 }
-  i16(v: number) { this.buf.setInt16(this.pos, v); this.pos += 2 }
-  u32(v: number) { this.buf.setUint32(this.pos, v); this.pos += 4 }
-  i32(v: number) { this.buf.setInt32(this.pos, v); this.pos += 4 }
-  tag(s: string) { for (let i = 0; i < 4; i++) this.u8(s.charCodeAt(i)) }
-  fixed(v: number) { this.i32(Math.round(v * 65536)) }
-  datetime(d: Date) {
-    const epoch = Date.UTC(1904, 0, 1)
-    const secs = Math.floor((d.getTime() - epoch) / 1000)
-    this.u32(Math.floor(secs / 0x100000000))
-    this.u32(secs >>> 0)
-  }
-  bytes() { return new Uint8Array(this.buf.buffer, 0, this.pos) }
-}
-
-function calcChecksum(data: Uint8Array): number {
-  let sum = 0
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength)
-  const len = Math.ceil(data.byteLength / 4) * 4
-  for (let i = 0; i < len; i += 4) {
-    if (i + 4 <= data.byteLength) {
-      sum = (sum + view.getUint32(i)) >>> 0
-    } else {
-      let val = 0
-      for (let j = 0; j < 4; j++) val = (val << 8) | (i + j < data.byteLength ? data[i + j] : 0)
-      sum = (sum + val) >>> 0
-    }
-  }
-  return sum
-}
+import { BinaryWriter, buildCmap, buildName, buildPost, assembleTtf } from './ttfUtils'
 
 // --- Pixel component shape ---
 // 12-point contour centered at origin: 4 on-curve (edge midpoints) + 8 off-curve (2 per corner)
@@ -89,7 +49,7 @@ const PIXEL_CIRCLE: { x: number; y: number }[] = [
 
 function encodePixelGlyph(scale: number): Uint8Array {
   const half = scale / 2
-  const w = new BW(200)
+  const w = new BinaryWriter(200)
 
   // Header
   w.i16(1) // numberOfContours
@@ -150,7 +110,7 @@ function encodeCompositeGlyph(
   if (positions.length === 0) return new Uint8Array(0)
 
   const half = scale / 2
-  const w = new BW(10 + positions.length * 10)
+  const w = new BinaryWriter(10 + positions.length * 10)
 
   // Header
   w.i16(-1) // numberOfContours = -1 (composite)
@@ -184,7 +144,7 @@ function buildFvar(rondNameId: number, pixlNameId: number, instanceNameIds: numb
   const axisCount = 2
   const instanceCount = instanceNameIds.length
   const instanceSize = 4 + axisCount * 4 // subfamilyNameID(2) + flags(2) + coordinates(4 * axisCount)
-  const w = new BW(16 + axisCount * axisSize + instanceCount * instanceSize)
+  const w = new BinaryWriter(16 + axisCount * axisSize + instanceCount * instanceSize)
 
   w.u16(1); w.u16(0)        // majorVersion, minorVersion
   w.u16(16)                   // offsetToAxesArray
@@ -321,7 +281,7 @@ function buildGvarProper(numGlyphs: number, scale: number): Uint8Array {
   const tupleHeaderSize = 4 + 4 // variationDataSize(2) + tupleIndex(2) + peakTuple(2*2)
   const glyphDataHeaderSize = 4 + tupleCount * tupleHeaderSize
 
-  const glyphData = new BW(glyphDataHeaderSize + serializedSize)
+  const glyphData = new BinaryWriter(glyphDataHeaderSize + serializedSize)
   glyphData.u16(0x8000 | tupleCount) // SHARED_POINT_NUMBERS | count
   glyphData.u16(glyphDataHeaderSize) // offsetToSerializedData
 
@@ -369,7 +329,7 @@ function buildGvarProper(numGlyphs: number, scale: number): Uint8Array {
   const paddedLen = glyphDataLen + (glyphDataLen % 2)
 
   const totalSize = gvarHeaderSize + offsetsSize + paddedLen
-  const gvar = new BW(totalSize)
+  const gvar = new BinaryWriter(totalSize)
 
   gvar.u16(1); gvar.u16(0) // version 1.0
   gvar.u16(2)               // axisCount
@@ -394,90 +354,6 @@ function buildGvarProper(numGlyphs: number, scale: number): Uint8Array {
   return gvar.bytes()
 }
 
-// --- Reuse table builders from ttfExport ---
-
-function buildCmap(glyphUnicodes: { unicode: number; glyphId: number }[]): Uint8Array {
-  const entries = glyphUnicodes
-    .filter(e => e.unicode >= 0 && e.unicode <= 0xFFFF)
-    .sort((a, b) => a.unicode - b.unicode)
-
-  const segments: { start: number; end: number; delta: number }[] = []
-  for (const e of entries) {
-    const last = segments.length > 0 ? segments[segments.length - 1] : null
-    if (last && e.unicode === last.end + 1 && e.glyphId - e.unicode === last.delta) {
-      last.end = e.unicode
-    } else {
-      segments.push({ start: e.unicode, end: e.unicode, delta: e.glyphId - e.unicode })
-    }
-  }
-  segments.push({ start: 0xFFFF, end: 0xFFFF, delta: 1 })
-
-  const segCount = segments.length
-  const searchRange = 2 * (1 << Math.floor(Math.log2(segCount)))
-  const entrySelector = Math.floor(Math.log2(segCount))
-  const rangeShift = 2 * segCount - searchRange
-  const fmt4Size = 16 + segCount * 8
-
-  const w = new BW(4 + 8 + fmt4Size)
-  w.u16(0); w.u16(1)
-  w.u16(3); w.u16(1); w.u32(12)
-  w.u16(4); w.u16(fmt4Size); w.u16(0); w.u16(segCount * 2)
-  w.u16(searchRange); w.u16(entrySelector); w.u16(rangeShift)
-  for (const seg of segments) w.u16(seg.end)
-  w.u16(0)
-  for (const seg of segments) w.u16(seg.start)
-  for (const seg of segments) w.i16(seg.delta)
-  for (let i = 0; i < segCount; i++) w.u16(0)
-
-  return w.bytes()
-}
-
-function buildName(familyName: string, styleName: string, extraNames: { id: number; value: string }[]): Uint8Array {
-  const fullName = familyName + ' ' + styleName
-  const psName = familyName.replace(/\s/g, '') + '-' + styleName
-
-  const strings = [
-    { id: 1, value: familyName },
-    { id: 2, value: styleName },
-    { id: 3, value: psName },
-    { id: 4, value: fullName },
-    { id: 5, value: 'Version 1.000' },
-    { id: 6, value: psName },
-    ...extraNames,
-  ]
-
-  const encoded = strings.map(s => {
-    const buf = new Uint8Array(s.value.length * 2)
-    for (let i = 0; i < s.value.length; i++) {
-      buf[i * 2] = s.value.charCodeAt(i) >> 8
-      buf[i * 2 + 1] = s.value.charCodeAt(i) & 0xFF
-    }
-    return { id: s.id, data: buf }
-  })
-
-  const headerSize = 6 + strings.length * 12
-  const totalStr = encoded.reduce((s, e) => s + e.data.length, 0)
-  const w = new BW(headerSize + totalStr)
-  w.u16(0); w.u16(strings.length); w.u16(headerSize)
-  let strOff = 0
-  for (const es of encoded) {
-    w.u16(3); w.u16(1); w.u16(0x0409); w.u16(es.id)
-    w.u16(es.data.length); w.u16(strOff); strOff += es.data.length
-  }
-  for (const es of encoded) for (const b of es.data) w.u8(b)
-
-  return w.bytes()
-}
-
-function buildPost(): Uint8Array {
-  const w = new BW(32)
-  w.fixed(3.0); w.fixed(0)
-  w.i16(-100); w.i16(50)
-  w.u32(1) // isFixedPitch
-  w.u32(0); w.u32(0); w.u32(0); w.u32(0)
-  return w.bytes()
-}
-
 // --- STAT table (required by Windows for variable fonts) ---
 
 function buildStat(rondNameId: number, pixlNameId: number): Uint8Array {
@@ -485,7 +361,7 @@ function buildStat(rondNameId: number, pixlNameId: number): Uint8Array {
   const axisCount = 2
   const axisSize = 8 // tag(4) + nameID(2) + ordering(2)
   const headerSize = 20 // version(4) + designAxisSize(2) + designAxisCount(2) + designAxesOffset(4) + axisValueCount(2) + axisValuesOffset(4) + elidedFallbackNameID(2)
-  const w = new BW(headerSize + axisCount * axisSize)
+  const w = new BinaryWriter(headerSize + axisCount * axisSize)
 
   w.u16(1); w.u16(1)      // version 1.1
   w.u16(axisSize)           // designAxisSize
@@ -616,11 +492,11 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   }
 
   // loca (long format)
-  const locaW = new BW(locaOffsets.length * 4)
+  const locaW = new BinaryWriter(locaOffsets.length * 4)
   for (const o of locaOffsets) locaW.u32(o)
 
   // hmtx
-  const hmtxW = new BW(numGlyphs * 4)
+  const hmtxW = new BinaryWriter(numGlyphs * 4)
   for (let i = 0; i < numGlyphs; i++) {
     hmtxW.u16(advanceWidth)
     hmtxW.i16(0) // lsb (0 for simplicity)
@@ -628,7 +504,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
 
   // head
   const now = new Date()
-  const headW = new BW(54)
+  const headW = new BinaryWriter(54)
   headW.u16(1); headW.u16(0)
   headW.fixed(1.0)
   headW.u32(0) // checksumAdjustment
@@ -642,7 +518,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   headW.i16(0)
 
   // hhea
-  const hheaW = new BW(36)
+  const hheaW = new BinaryWriter(36)
   hheaW.u16(1); hheaW.u16(0)
   hheaW.i16(ascent); hheaW.i16(0); hheaW.i16(lineGap)
   hheaW.u16(advanceWidth)
@@ -655,7 +531,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   hheaW.u16(numGlyphs)
 
   // maxp
-  const maxpW = new BW(32)
+  const maxpW = new BinaryWriter(32)
   maxpW.u32(0x00010000)
   maxpW.u16(numGlyphs)
   maxpW.u16(PIXEL_PTS.length) // maxPoints (simple glyph)
@@ -673,7 +549,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   maxpW.u16(1)                 // maxComponentDepth
 
   // OS/2
-  const os2W = new BW(96)
+  const os2W = new BinaryWriter(96)
   os2W.u16(4)
   os2W.i16(Math.round(advanceWidth * 0.5))
   os2W.u16(400); os2W.u16(5); os2W.u16(0)
@@ -721,7 +597,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
   const statTable = buildStat(ROND_NAME_ID, PIXL_NAME_ID)
 
   // Assemble
-  const tables: { tag: string; data: Uint8Array }[] = [
+  return assembleTtf([
     { tag: 'OS/2', data: os2W.bytes() },
     { tag: 'cmap', data: cmapTable },
     { tag: 'fvar', data: fvarTable },
@@ -735,43 +611,5 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
     { tag: 'maxp', data: maxpW.bytes() },
     { tag: 'name', data: nameTable },
     { tag: 'post', data: postTable },
-  ].sort((a, b) => a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0)
-
-  const numTables = tables.length
-  const entrySelector = Math.floor(Math.log2(numTables))
-  const searchRange = (1 << entrySelector) * 16
-  const rangeShift = numTables * 16 - searchRange
-
-  const headerSize = 12 + numTables * 16
-  let tableOffset = headerSize
-  const tableEntries = tables.map(t => {
-    const padded = t.data.length + ((4 - (t.data.length % 4)) % 4)
-    const entry = { tag: t.tag, checksum: calcChecksum(t.data), offset: tableOffset, length: t.data.length, data: t.data }
-    tableOffset += padded
-    return entry
-  })
-
-  const totalSize = tableOffset
-  const out = new BW(totalSize)
-  out.u32(0x00010000)
-  out.u16(numTables); out.u16(searchRange); out.u16(entrySelector); out.u16(rangeShift)
-
-  for (const e of tableEntries) {
-    out.tag(e.tag); out.u32(e.checksum); out.u32(e.offset); out.u32(e.length)
-  }
-
-  for (const e of tableEntries) {
-    for (const b of e.data) out.u8(b)
-    const pad = (4 - (e.length % 4)) % 4
-    for (let i = 0; i < pad; i++) out.u8(0)
-  }
-
-  // Fix head checksumAdjustment
-  const fullBytes = new Uint8Array(out.buffer, 0, totalSize)
-  const fullChecksum = calcChecksum(fullBytes)
-  const adjustment = (0xB1B0AFBA - fullChecksum) >>> 0
-  const headEntry = tableEntries.find(e => e.tag === 'head')!
-  new DataView(out.buffer).setUint32(headEntry.offset + 8, adjustment)
-
-  return (out.buffer as ArrayBuffer).slice(0, totalSize)
+  ])
 }
