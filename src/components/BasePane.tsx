@@ -62,10 +62,9 @@ export function BasePane({
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (dragging.current) {
-        setPos({
-          x: e.clientX - offset.current.x,
-          y: e.clientY - offset.current.y,
-        })
+        const next = { x: e.clientX - offset.current.x, y: e.clientY - offset.current.y }
+        posRef.current = next
+        setPos(next)
       }
       if (resizing.current) {
         const dx = e.clientX - resizeStart.current.x
@@ -73,7 +72,6 @@ export function BasePane({
         let newW = Math.max(150, resizeStart.current.w + dx)
         let newH = Math.max(100, resizeStart.current.h + dy)
         if (aspectRatio) {
-          // Use the larger delta to drive both dimensions
           const titleH = titleRef.current?.offsetHeight ?? 30
           const contentW = newW
           const contentH = newH - titleH
@@ -81,7 +79,9 @@ export function BasePane({
           newW = driven
           newH = driven + titleH
         }
-        setSize({ w: newW, h: newH })
+        const next = { w: newW, h: newH }
+        sizeRef.current = next
+        setSize(next)
       }
     }
     function onMouseUp() {

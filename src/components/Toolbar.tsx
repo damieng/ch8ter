@@ -34,6 +34,7 @@ import { writeEgaCom } from '../fileFormats/egaComWriter'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 import { PngExportDialog } from '../dialogs/PngExportDialog'
 import { Dropdown } from './Dropdown'
+import { baseName } from '../fontData'
 
 const ICON = 18
 
@@ -46,185 +47,78 @@ function download(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-function baseName(filename: string): string {
-  return filename.replace(/\.(ch8|bdf|psf|psfu|bin|ttf|woff|yaff|draw|fzx|fnt|pcf|pdb)$/i, '')
-}
-
 export function SaveBar({ font }: { font: FontInstance }) {
   const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
-  function saveCh8() {
-    const data = saveFont(font)
-    download(new Blob([data.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.ch8')
-  }
-
-  function saveBdf() {
+  function saveAs(writer: (data: Uint8Array, count: number) => Uint8Array | string, ext: string, blobOpts?: BlobPropertyBag) {
     const data = saveFont(font)
     const count = glyphCount(font)
-    const bdf = writeBdf({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      baseline: font.baseline.value,
-      meta: font.meta.value,
-      glyphMeta: font.glyphMeta.value,
-      fontName: font.fontName.value,
-    })
-    download(new Blob([bdf], { type: 'text/plain' }), baseName(font.fileName.value) + '.bdf')
+    const result = writer(data, count)
+    const blobData = typeof result === 'string' ? result : result.buffer as ArrayBuffer
+    download(new Blob([blobData], blobOpts), baseName(font.fileName.value) + ext)
   }
 
-  function savePsf() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const psf = writePsf({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-    })
-    download(new Blob([psf.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.psf')
-  }
+  const saveCh8 = () => saveAs((data) => data, '.ch8')
 
-  function saveYaff() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const yaff = writeYaff({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      name: font.fontName.value || baseName(font.fileName.value),
-    })
-    download(new Blob([yaff], { type: 'text/plain' }), baseName(font.fileName.value) + '.yaff')
-  }
+  const saveBdf = () => saveAs((data, count) => writeBdf({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
+    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
+  }), '.bdf', { type: 'text/plain' })
 
-  function saveDraw() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const draw = writeDraw({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-    })
-    download(new Blob([draw], { type: 'text/plain' }), baseName(font.fileName.value) + '.draw')
-  }
+  const savePsf = () => saveAs((data, count) => writePsf({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count,
+  }), '.psf')
 
-  function saveFzx() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const fzx = writeFzx({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      glyphMeta: font.glyphMeta.value,
-    })
-    download(new Blob([fzx.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fzx')
-  }
+  const saveYaff = () => saveAs((data, count) => writeYaff({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count,
+    name: font.fontName.value || baseName(font.fileName.value),
+  }), '.yaff', { type: 'text/plain' })
 
-  function saveFnt() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const fnt = writeGdosFont({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      glyphMeta: font.glyphMeta.value,
-      baseline: font.baseline.value,
-      ascender: font.ascender.value,
-      descender: font.descender.value,
-      name: baseName(font.fileName.value),
-      fontName: font.fontName.value,
-      meta: font.meta.value,
-    })
-    download(new Blob([fnt.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
-  }
+  const saveDraw = () => saveAs((data, count) => writeDraw({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count,
+  }), '.draw', { type: 'text/plain' })
 
-  function savePcf() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const pcf = writePcf({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      baseline: font.baseline.value,
-      meta: font.meta.value,
-      glyphMeta: font.glyphMeta.value,
-      fontName: font.fontName.value,
-    })
-    download(new Blob([pcf.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.pcf')
-  }
+  const saveFzx = () => saveAs((data, count) => writeFzx({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, glyphMeta: font.glyphMeta.value,
+  }), '.fzx')
 
-  function savePdb() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const pdb = writePdbFont({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      baseline: font.baseline.value,
-      meta: font.meta.value,
-      glyphMeta: font.glyphMeta.value,
-      fontName: font.fontName.value,
-    })
-    download(new Blob([pdb.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.pdb')
-  }
+  const saveFnt = () => saveAs((data, count) => writeGdosFont({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, glyphMeta: font.glyphMeta.value,
+    baseline: font.baseline.value, ascender: font.ascender.value, descender: font.descender.value,
+    name: baseName(font.fileName.value), fontName: font.fontName.value, meta: font.meta.value,
+  }), '.fnt')
 
-  function saveAtari8Bit() {
-    const data = saveFont(font)
-    const a8 = writeAtari8Bit(data, font.startChar.value)
-    download(new Blob([a8.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
-  }
+  const savePcf = () => saveAs((data, count) => writePcf({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
+    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
+  }), '.pcf')
 
-  function saveAmiga() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const amiga = writeAmigaFont({
-      fontData: data,
-      glyphWidth: font.glyphWidth.value,
-      glyphHeight: font.glyphHeight.value,
-      startChar: font.startChar.value,
-      glyphCount: count,
-      baseline: font.baseline.value,
-      meta: font.meta.value,
-      glyphMeta: font.glyphMeta.value,
-      fontName: font.fontName.value,
-    })
-    const height = font.glyphHeight.value
-    download(new Blob([amiga.buffer as ArrayBuffer]), baseName(font.fileName.value) + '-' + height)
-  }
+  const savePdb = () => saveAs((data, count) => writePdbFont({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
+    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
+  }), '.pdb')
 
-  function saveEgaCom() {
-    const data = saveFont(font)
-    const ega = writeEgaCom(data, font.glyphHeight.value)
-    download(new Blob([ega.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
-  }
+  const saveAtari8Bit = () => saveAs((data) => writeAtari8Bit(data, font.startChar.value), '.fnt')
 
-  function saveBbc() {
-    const data = saveFont(font)
-    const count = glyphCount(font)
-    const bbc = writeBbc(data, font.startChar.value, count)
-    download(new Blob([bbc.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.bbc')
-  }
+  const saveAmiga = () => saveAs((data, count) => writeAmigaFont({
+    fontData: data, glyphWidth: font.glyphWidth.value, glyphHeight: font.glyphHeight.value,
+    startChar: font.startChar.value, glyphCount: count, baseline: font.baseline.value,
+    meta: font.meta.value, glyphMeta: font.glyphMeta.value, fontName: font.fontName.value,
+  }), '-' + font.glyphHeight.value)
 
-  function saveCpm() {
-    const data = saveFont(font)
-    const com = exportCpm(font.glyphHeight.value, data)
-    download(new Blob([com.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
-  }
+  const saveEgaCom = () => saveAs((data) => writeEgaCom(data, font.glyphHeight.value), '.com')
+
+  const saveBbc = () => saveAs((data, count) => writeBbc(data, font.startChar.value, count), '.bbc')
+
+  const saveCpm = () => saveAs((data) => exportCpm(font.glyphHeight.value, data), '.com')
 
   const btn = (label: string, fn: () => void, close: () => void) => (
     <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { fn(); close() }}>

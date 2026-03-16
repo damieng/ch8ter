@@ -8,7 +8,7 @@
 //   Char definitions: variable-length bitmap rows (1 byte/row for width<=8, 2 for 9-16)
 
 import type { GlyphMeta } from './bdfParser'
-import { setBit } from '../bitUtils'
+import { getBit, setBit } from '../bitUtils'
 
 export interface FzxParseResult {
   fontData: Uint8Array
@@ -102,10 +102,8 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
 
       // Read source pixels (MSB = leftmost)
       for (let px = 0; px < c.width; px++) {
-        const srcByte = bytes[srcPos + (px >> 3)]
-        if (srcByte & (0x80 >> (px & 7))) {
-          const destX = c.kern + px
-          setBit(fontData, dstRowStart, destX)
+        if (getBit(bytes, srcPos, px)) {
+          setBit(fontData, dstRowStart, c.kern + px)
         }
       }
     }

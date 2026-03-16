@@ -102,7 +102,7 @@ function detectBdfCharset(meta: FontMeta | null): string {
   return 'iso8859_1'
 }
 
-function baseName(filename: string): string {
+export function baseName(filename: string): string {
   const base = filename.replace(/^.*[\\/]/, '')
   return base.replace(/\.\w+$/i, '')
 }

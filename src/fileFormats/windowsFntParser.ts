@@ -9,7 +9,7 @@
 // v3 header: 148 bytes, 6-byte char table entries (offsets are UInt32)
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { setBit } from '../bitUtils'
+import { getBit, setBit } from '../bitUtils'
 
 export interface WindowsFntParseResult {
   fontData: Uint8Array
@@ -140,10 +140,10 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
       // v3: row-major, MSBit-first
       const srcBpr = Math.ceil(w / 8)
       for (let y = 0; y < cellH; y++) {
+        const srcRow = bitmapOff + y * srcBpr
+        if (srcRow + Math.ceil(w / 8) > bytes.length) continue
         for (let x = 0; x < w; x++) {
-          const srcOff = bitmapOff + y * srcBpr + (x >> 3)
-          if (srcOff >= bytes.length) continue
-          if (bytes[srcOff] & (0x80 >> (x & 7))) {
+          if (getBit(bytes, srcRow, x)) {
             hasPixels = true
             setBit(fontData, base + y * outBpr, x)
           }
@@ -154,10 +154,10 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
       // Each column is ceil(height/8) bytes, columns stored left to right
       const bytesPerCol = Math.ceil(cellH / 8)
       for (let x = 0; x < w; x++) {
+        const colBase = bitmapOff + x * bytesPerCol
+        if (colBase + bytesPerCol > bytes.length) continue
         for (let y = 0; y < cellH; y++) {
-          const srcOff = bitmapOff + x * bytesPerCol + (y >> 3)
-          if (srcOff >= bytes.length) continue
-          if (bytes[srcOff] & (0x80 >> (y & 7))) {
+          if (getBit(bytes, colBase, y)) {
             hasPixels = true
             setBit(fontData, base + y * outBpr, x)
           }

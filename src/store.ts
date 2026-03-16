@@ -1,5 +1,5 @@
 import { signal, type Signal, effect } from '@preact/signals'
-import { getBit, setBit } from './bitUtils'
+import { getBit, setBit, clearBit } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
@@ -1235,13 +1235,9 @@ export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: n
   const bpr = bytesPerRow(font)
   const bpg = bytesPerGlyph(font)
   const data = new Uint8Array(font.fontData.value)
-  const offset = glyphIndex * bpg + y * bpr + Math.floor(x / 8)
-  const bit = 0x80 >> (x % 8)
-  if (on) {
-    data[offset] |= bit
-  } else {
-    data[offset] &= ~bit
-  }
+  const rowOffset = glyphIndex * bpg + y * bpr
+  if (on) setBit(data, rowOffset, x)
+  else clearBit(data, rowOffset, x)
   font.fontData.value = data
   markDirty(font)
 }

@@ -45,7 +45,7 @@
 //                   Missing glyphs: offset=-1 (0xFF), width=0xFF
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { setBit } from '../bitUtils'
+import { getBit, setBit } from '../bitUtils'
 
 export interface PdbFontParseResult {
   fontData: Uint8Array
@@ -175,9 +175,7 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
       const srcRowBase = bitmapStart + y * rowBytes
       const dstRow = glyphBase + y * bpr
       for (let px = 0; px < glyphW; px++) {
-        const sx = xStart + px
-        const srcByte = rec[srcRowBase + (sx >> 3)]
-        if (srcByte & (0x80 >> (sx & 7))) {
+        if (getBit(rec, srcRowBase, xStart + px)) {
           setBit(fontData, dstRow, px)
           hasPixels = true
         }
