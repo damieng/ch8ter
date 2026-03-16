@@ -346,7 +346,7 @@ function hexLabel(charCode: number): string {
 
 export function charLabel(charCode: number): string {
   const overrides = CHARSETS[charset.value]?.overrides
-  if (overrides && overrides[charCode]) {
+  if (overrides && overrides[charCode] !== undefined) {
     return overrides[charCode]
   }
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
