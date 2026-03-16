@@ -1093,6 +1093,7 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
   }
 
   // Place unmapped glyphs at their original codepoint position as fallback
+  let droppedGlyphs = 0
   for (const { oldIdx, oldCp } of unmapped) {
     const fallbackIdx = oldCp - newStart
     if (fallbackIdx >= 0 && fallbackIdx < newCount && !filled.has(fallbackIdx)) {
@@ -1101,13 +1102,21 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
       filled.add(fallbackIdx)
       newPop.add(fallbackIdx)
       if (newGlyphMeta && oldGm?.[oldIdx]) newGlyphMeta[fallbackIdx] = oldGm[oldIdx]
+    } else {
+      droppedGlyphs++
     }
   }
 
   font.startChar.value = newStart
   font.fontData.value = newData
-  font.savedSnapshot.value = new Uint8Array(newData)
   if (newGlyphMeta) font.glyphMeta.value = newGlyphMeta
+  if (droppedGlyphs > 0) {
+    // Glyphs were lost — keep font dirty so user gets a save warning
+    font.dirty.value = true
+  } else {
+    // Lossless remap — update snapshot so font stays clean
+    font.savedSnapshot.value = new Uint8Array(newData)
+  }
   font.populatedGlyphs.value = newPop
 
   // Remap selection: follow the active glyph's Unicode character
@@ -1135,16 +1144,19 @@ export function charLabel(charCode: number, _font?: FontInstance): string {
   return hexLabel(charCode)
 }
 
+// Cached reverse map for O(1) charCodeFromKey lookups
+let _reverseCache: { cs: Charset; map: Map<string, number> } | null = null
+
 // Reverse lookup: given a typed character, find its char code in the font.
 export function charCodeFromKey(ch: string): number | null {
   const codepoints = [...ch]
   if (codepoints.length !== 1) return null
-  const overrides = CHARSETS[charset.value]?.overrides
-  if (overrides) {
-    for (const [code, label] of Object.entries(overrides)) {
-      if (label === ch) return parseInt(code)
-    }
+  const cs = charset.value
+  if (!_reverseCache || _reverseCache.cs !== cs) {
+    _reverseCache = { cs, map: buildUnicodeReverse(cs) }
   }
+  const mapped = _reverseCache.map.get(ch)
+  if (mapped !== undefined) return mapped
   const code = codepoints[0].codePointAt(0)!
   if (code >= 32 && code <= 126) return code
   return null
