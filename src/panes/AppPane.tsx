@@ -9,7 +9,7 @@ import {
   calcMissingMetrics,
   type Charset,
 } from "../store"
-import { loadFontFile, type FontConversionData } from "../fontData"
+import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
