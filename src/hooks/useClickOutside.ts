@@ -1,4 +1,4 @@
-import { useEffect } from 'preact/hooks'
+import { useEffect, useRef } from 'preact/hooks'
 import type { RefObject } from 'preact'
 
 /**
@@ -9,6 +9,9 @@ export function useClickOutside(
   refs: RefObject<HTMLElement | null> | RefObject<HTMLElement | null>[],
   onClose: () => void,
 ) {
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       const target = e.target as Node
@@ -16,9 +19,9 @@ export function useClickOutside(
       for (const ref of refList) {
         if (ref.current?.contains(target)) return
       }
-      onClose()
+      onCloseRef.current()
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [refs, onClose])
+  }, [refs])
 }
