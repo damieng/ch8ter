@@ -1,4 +1,4 @@
-import { signal, type Signal, effect } from '@preact/signals'
+import { signal, type Signal } from '@preact/signals'
 import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
@@ -126,59 +126,14 @@ export function createFont(
   }
 }
 
-// --- localStorage persistence ---
+// --- Persistence (types re-exported, logic in persistence.ts) ---
 
-const STORAGE_KEY = 'ch8ter-fonts'
-const LAYOUT_KEY = 'ch8ter-layout'
-
-interface StoredFont {
-  fileName: string
-  fontName?: string
-  startChar: number
-  fontData: string // base64
-  glyphWidth?: number
-  glyphHeight?: number
-  baseline?: number
-  ascender?: number
-  capHeight?: number
-  xHeight?: number
-  numericHeight?: number
-  descender?: number
-  meta?: FontMeta | null
-  encodings?: number[] | null
-  glyphMeta?: (GlyphMeta | null)[] | null
-  populatedGlyphs?: number[] | null
-  hideEmpty?: boolean
-  spacing?: SpacingMode
-}
-
-// --- Window layout persistence ---
-
-export interface WindowRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface StoredPreview {
-  id: string
-  fontId: string
-  selectedFontId?: string
-  textKey?: string
-  zoom?: number
-  systemIdx?: number
-  fg?: string
-  bg?: string
-  proportional?: boolean
-  lineHeight?: number
-}
-
-interface StoredLayout {
-  windows: Record<string, WindowRect>
-  previews: StoredPreview[]
-  focusedId: string
-}
+import {
+  type WindowRect, type StoredPreview,
+  loadFontsFromStorage, loadLayoutFromStorage,
+  setupFontAutoSave, setupLayoutAutoSave,
+} from './persistence'
+export type { WindowRect, StoredPreview } from './persistence'
 
 export const windowLayouts = signal<Record<string, WindowRect>>({})
 export const storedPreviews = signal<StoredPreview[]>([])
@@ -187,30 +142,6 @@ export const storedFocusedId = signal<string>('ch8ter')
 export function updateWindowLayout(id: string, rect: Partial<WindowRect>) {
   const current = windowLayouts.value[id] ?? { x: 0, y: 0, w: 0, h: 0 }
   windowLayouts.value = { ...windowLayouts.value, [id]: { ...current, ...rect } }
-}
-
-function loadLayout() {
-  try {
-    const raw = localStorage.getItem(LAYOUT_KEY)
-    if (!raw) return
-    const layout: StoredLayout = JSON.parse(raw)
-    if (layout.windows) windowLayouts.value = layout.windows
-    if (layout.previews) storedPreviews.value = layout.previews
-    if (layout.focusedId) storedFocusedId.value = layout.focusedId
-  } catch { /* ignore */ }
-}
-
-function saveLayout() {
-  const layout: StoredLayout = {
-    windows: windowLayouts.value,
-    previews: previews.value.map(p => {
-      // Merge runtime preview state
-      const stored = storedPreviews.value.find(s => s.id === p.id)
-      return { id: p.id, fontId: p.fontId, ...stored }
-    }),
-    focusedId: storedFocusedId.value,
-  }
-  localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
 }
 
 export function updatePreviewSettings(id: string, settings: Partial<StoredPreview>) {
@@ -225,123 +156,13 @@ export function updatePreviewSettings(id: string, settings: Partial<StoredPrevie
   }
 }
 
-function toBase64(data: Uint8Array): string {
-  // Build binary string in chunks to avoid O(n²) string concat
-  const chunks: string[] = []
-  const CHUNK = 8192
-  for (let i = 0; i < data.length; i += CHUNK) {
-    chunks.push(String.fromCharCode(...data.subarray(i, Math.min(i + CHUNK, data.length))))
-  }
-  return btoa(chunks.join(''))
-}
-
-function fromBase64(b64: string): Uint8Array {
-  const binary = atob(b64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes
-}
-
-function loadFromStorage(): FontInstance[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const stored: StoredFont[] = JSON.parse(raw)
-    if (!Array.isArray(stored) || stored.length === 0) return null
-    return stored.map(s => {
-      const data = fromBase64(s.fontData)
-      const font = createFont(
-        data,
-        s.fileName,
-        s.startChar,
-        s.glyphWidth ?? 8,
-        s.glyphHeight ?? 8,
-        s.meta ?? undefined,
-        s.encodings ?? undefined,
-        s.baseline,
-        s.glyphMeta ?? undefined,
-        s.spacing ?? 'monospace',
-      )
-      if (s.fontName) font.fontName.value = s.fontName
-      if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
-      if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
-      font.savedSnapshot.value = new Uint8Array(data)
-      font.dirty.value = false
-      if (s.ascender != null) font.ascender.value = s.ascender
-      if (s.capHeight != null) font.capHeight.value = s.capHeight
-      if (s.xHeight != null) font.xHeight.value = s.xHeight
-      if (s.numericHeight != null) font.numericHeight.value = s.numericHeight
-      if (s.descender != null) font.descender.value = s.descender
-      // Auto-calc metrics if not stored
-      if (s.ascender == null) {
-        const lookup = buildGlyphLookup(s.startChar)
-        const m = calcAllMetrics(data, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, lookup)
-        font.ascender.value = m.ascender
-        font.capHeight.value = m.capHeight
-        font.xHeight.value = m.xHeight
-        font.numericHeight.value = m.numericHeight
-        font.descender.value = m.descender
-      }
-      return font
-    })
-  } catch {
-    return null
-  }
-}
-
-function saveToStorage() {
-  const stored: StoredFont[] = fonts.value.map(f => ({
-    fileName: f.fileName.value,
-    fontName: f.fontName.value || undefined,
-    startChar: f.startChar.value,
-    fontData: toBase64(f.fontData.value),
-    glyphWidth: f.glyphWidth.value,
-    glyphHeight: f.glyphHeight.value,
-    baseline: f.baseline.value,
-    ascender: f.ascender.value,
-    capHeight: f.capHeight.value,
-    xHeight: f.xHeight.value,
-    numericHeight: f.numericHeight.value,
-    descender: f.descender.value,
-    meta: f.meta.value,
-    encodings: f.encodings.value,
-    glyphMeta: f.glyphMeta.value,
-    populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
-    hideEmpty: f.hideEmpty.value,
-    spacing: f.spacing.value,
-  }))
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
-}
-
 // --- Global state ---
-const restored = loadFromStorage()
+const restored = loadFontsFromStorage()
 export const fonts = signal<FontInstance[]>(restored ?? [createFont()])
 export const activeFontId = signal<string>(fonts.value[0].id)
 
-// Auto-save to localStorage on any font data/name/list change
-effect(() => {
-  // Access all reactive values we want to track
-  const allFonts = fonts.value
-  for (const f of allFonts) {
-    f.fontData.value
-    f.fileName.value
-    f.fontName.value
-    f.startChar.value
-    f.glyphWidth.value
-    f.glyphHeight.value
-    f.meta.value
-    f.glyphMeta.value
-    f.baseline.value
-    f.ascender.value
-    f.capHeight.value
-    f.xHeight.value
-    f.numericHeight.value
-    f.descender.value
-    f.hideEmpty.value
-    f.spacing.value
-  }
-  saveToStorage()
-})
+// Auto-save fonts to localStorage
+setupFontAutoSave(() => fonts.value)
 
 /** Build a GlyphLookup that maps Unicode characters to glyph indices via the active charset. */
 function buildGlyphLookup(startChar: number): GlyphLookup {
@@ -454,10 +275,14 @@ export function closePreview(id: string) {
 }
 
 // Restore previews and layout from localStorage
-loadLayout()
+const restoredLayout = loadLayoutFromStorage()
+if (restoredLayout) {
+  if (restoredLayout.windows) windowLayouts.value = restoredLayout.windows
+  if (restoredLayout.previews) storedPreviews.value = restoredLayout.previews
+  if (restoredLayout.focusedId) storedFocusedId.value = restoredLayout.focusedId
+}
 const restoredPreviews = storedPreviews.value
 if (restoredPreviews.length > 0) {
-  // Ensure preview IDs don't conflict
   const maxId = restoredPreviews.reduce((max, p) => {
     const n = parseInt(p.id.replace('preview-', ''))
     return isNaN(n) ? max : Math.max(max, n)
@@ -467,16 +292,12 @@ if (restoredPreviews.length > 0) {
 }
 
 // Auto-save layout
-let layoutTimer: ReturnType<typeof setTimeout> | null = null
-effect(() => {
-  // Track window layouts and preview state
-  windowLayouts.value
-  previews.value
-  storedPreviews.value
-  storedFocusedId.value
-  if (layoutTimer) clearTimeout(layoutTimer)
-  layoutTimer = setTimeout(saveLayout, 300)
-})
+setupLayoutAutoSave(
+  () => windowLayouts.value,
+  () => previews.value,
+  () => storedPreviews.value,
+  () => storedFocusedId.value,
+)
 
 // --- Charset (re-exported from charsets.ts) ---
 
