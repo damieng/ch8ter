@@ -45,7 +45,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
 
   // Read metadata
   const copyright = readNullTermString(bytes, 6, 60)
-  const dfFace = view.getUint32(105, true)
+  const dfFace = dfVersion === 0x0300 ? view.getUint32(141, true) : view.getUint32(105, true)
   const faceName = dfFace > 0 && dfFace < bytes.length
     ? readNullTermString(bytes, dfFace, bytes.length - dfFace)
     : ''
@@ -81,7 +81,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     charEntrySize = 6 // width: u16, offset: u32
   } else {
     // v1 and v2
-    headerSize = dfVersion === 0x0100 ? 117 : 118
+    headerSize = 118
     charEntrySize = 4 // width: u16, offset: u16
   }
 
