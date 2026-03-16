@@ -9,10 +9,12 @@ import { CenterHIcon } from './CenterHIcon'
 import { IconBtn } from './IconBtn'
 import {
   type FontInstance,
-  flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
-  shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
   saveFont, fontToConversionData
 } from '../store'
+import {
+  flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
+  shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
+} from '../glyphTransforms'
 import { execTransformGlyph } from '../undoHistory'
 import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
 import { exportTtf } from '../fileFormats/ttfExport'

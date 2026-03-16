@@ -7,10 +7,12 @@ import {
 import { CenterHIcon } from './CenterHIcon'
 import {
   type FontInstance,
-  flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
-  shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
   createBoldVariant, createOutlineVariant, createProportionalVariant
 } from '../store'
+import {
+  flipXBytes, flipYBytes, invertBytes, rotateCWBytes, rotateCCWBytes,
+  shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
+} from '../glyphTransforms'
 import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from '../dialogs/ObliqueDialog'
 import { MonospaceDialog } from '../dialogs/MonospaceDialog'
