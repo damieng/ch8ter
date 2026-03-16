@@ -1,7 +1,7 @@
 import type preact from 'preact'
 import type { RefObject } from 'preact'
 import { createPortal } from 'preact/compat'
-import { useState, useRef, useEffect, useMemo, useCallback } from 'preact/hooks'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'preact/hooks'
 import { ZoomIn } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { isFixedWidth } from '../unicodeRanges'
@@ -178,17 +178,26 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
 
   const [cols, setCols] = useState(32)
 
-  useEffect(() => {
-    function updateCols() {
-      if (containerRef.current) {
-        const cw = containerRef.current.clientWidth - 24
-        const cellSize = gw * zoom
-        setCols(Math.max(10, Math.floor(cw / cellSize)))
-      }
+  // Measure container synchronously before first paint so cols is correct
+  // from the start (avoids a blank-canvas flash on initial load).
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      const cw = containerRef.current.clientWidth - 24
+      const cellSize = gw * zoom
+      setCols(Math.max(10, Math.floor(cw / cellSize)))
     }
-    updateCols()
-    const obs = new ResizeObserver(updateCols)
-    if (containerRef.current) obs.observe(containerRef.current)
+  }, [zoom, gw])
+
+  // Track ongoing resizes asynchronously via ResizeObserver.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new ResizeObserver(() => {
+      const cw = el.clientWidth - 24
+      const cellSize = gw * zoom
+      setCols(Math.max(10, Math.floor(cw / cellSize)))
+    })
+    obs.observe(el)
     return () => obs.disconnect()
   }, [zoom, gw])
 
@@ -253,20 +262,6 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
 
   // Normal reactive render
   useEffect(renderCanvas, [renderCanvas])
-
-  // Extra safety: force a few redraws shortly after mount in case layout/font/text
-  // settle slightly later than initial effect timing.
-  useEffect(() => {
-    let ticks = 0
-    const id = window.setInterval(() => {
-      ticks += 1
-      renderCanvas()
-      if (ticks >= 5) {
-        window.clearInterval(id)
-      }
-    }, 250)
-    return () => window.clearInterval(id)
-  }, [renderCanvas])
 
   function hitTest(clientX: number, clientY: number): number {
     if (!canvasRef.current) return 0
