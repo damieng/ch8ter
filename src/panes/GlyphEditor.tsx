@@ -14,6 +14,10 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
 
+  // Keep a ref so document-level event handlers always see current values
+  // without needing to re-register on every render.
+  const editorState = useRef({ idx, w, cellSize: 0, gap: 1 })
+
   // Square cells: fit the largest square cell size into the container
   const gap = 1
   const cellSize = Math.max(1, Math.floor(Math.min(
@@ -22,6 +26,8 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   )))
   const gridW = cellSize * w + gap * (w + 1)
   const gridH = cellSize * h + gap * (h + 1)
+
+  editorState.current = { idx, w, cellSize, gap }
 
   function handleCell(x: number, y: number, e: MouseEvent) {
     e.preventDefault()
@@ -32,32 +38,33 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
     setPixel(font, idx, x, y, painting.current)
   }
 
-  function onMouseMove(e: MouseEvent) {
-    if (!draggingGuide.current) return
-    const grid = gridRef.current
-    if (!grid) return
-    const rect = grid.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const col = Math.max(1, Math.min(w, Math.round(x / (cellSize + gap))))
-    setGlyphAdvance(font, idx, col)
-  }
-
-  function onMouseUp() {
-    draggingGuide.current = false
-    if (painting.current !== null) {
-      commitPaintStroke(font)
-    }
-    painting.current = null
-  }
-
   useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!draggingGuide.current) return
+      const grid = gridRef.current
+      if (!grid) return
+      const { idx: curIdx, w: curW, cellSize: curCell, gap: curGap } = editorState.current
+      const rect = grid.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const col = Math.max(1, Math.min(curW, Math.round(x / (curCell + curGap))))
+      setGlyphAdvance(font, curIdx, col)
+    }
+
+    function onMouseUp() {
+      draggingGuide.current = false
+      if (painting.current !== null) {
+        commitPaintStroke(font)
+      }
+      painting.current = null
+    }
+
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
     }
-  }, [idx, w, cellSize, gap])
+  }, [])
 
   useEffect(() => {
     const el = containerRef.current
