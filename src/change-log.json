@@ -1,6 +1,7 @@
 [
   {
     "version": "0.9.4",
+    "date": "2026-03-16",
     "changes": [
       "PC DOS EGA/VGA .COM font load and save",
       "BBC Micro font load and save",
@@ -10,7 +11,8 @@
     ]
   },
   {
-    "version": "0.9.3 - 2026-03-15",
+    "version": "0.9.3",
+    "date": "2026-03-15",
     "changes": [
       "CLI converter with named output formats",
       "Atari 8-bit FNT font load and save",

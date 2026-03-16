@@ -225,7 +225,7 @@ export function AppPane() {
           {CHANGELOG.map((release) => (
             <div key={release.version} class="mb-2 last:mb-0">
               <div class="text-xs font-bold text-gray-600">
-                v{release.version}
+                v{release.version} - {release.date}
               </div>
               <ul class="text-xs text-gray-500 ml-3 list-disc">
                 {release.changes.map((c, i) => (
