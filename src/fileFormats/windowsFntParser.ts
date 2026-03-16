@@ -9,7 +9,7 @@
 // v3 header: 148 bytes, 6-byte char table entries (offsets are UInt32)
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 export interface WindowsFntParseResult {
   fontData: Uint8Array
@@ -112,7 +112,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
 
   const cellW = maxWidth
   const cellH = dfPixHeight
-  const outBpr = Math.ceil(cellW / 8)
+  const outBpr = bpr(cellW)
   const outBpg = cellH * outBpr
 
   const fontData = new Uint8Array(numChars * outBpg)
@@ -138,10 +138,10 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
 
     if (dfVersion === 0x0300) {
       // v3: row-major, MSBit-first
-      const srcBpr = Math.ceil(w / 8)
+      const srcBpr = bpr(w)
       for (let y = 0; y < cellH; y++) {
         const srcRow = bitmapOff + y * srcBpr
-        if (srcRow + Math.ceil(w / 8) > bytes.length) continue
+        if (srcRow + bpr(w) > bytes.length) continue
         for (let x = 0; x < w; x++) {
           if (getBit(bytes, srcRow, x)) {
             hasPixels = true
@@ -152,7 +152,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     } else {
       // v1/v2: column-major, MSBit-first
       // Each column is ceil(height/8) bytes, columns stored left to right
-      const bytesPerCol = Math.ceil(cellH / 8)
+      const bytesPerCol = bpr(cellH)
       for (let x = 0; x < w; x++) {
         const colBase = bitmapOff + x * bytesPerCol
         if (colBase + bytesPerCol > bytes.length) continue

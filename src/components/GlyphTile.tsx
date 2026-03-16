@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'preact/hooks'
 import { type FontInstance, charLabel } from '../store'
 import { drawGlyphToCtx } from '../drawGlyph'
+import { bpr } from '../bitUtils'
 
 interface Props {
   font: FontInstance
@@ -17,8 +18,8 @@ export function GlyphTile({ font, index, size, selected, active, muted, onClick 
 
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const canvasW = Math.round(size * w / Math.max(w, h))
   const canvasH = Math.round(size * h / Math.max(w, h))
 
@@ -37,7 +38,7 @@ export function GlyphTile({ font, index, size, selected, active, muted, onClick 
     ctx.fillRect(0, 0, canvasW, canvasH)
 
     ctx.fillStyle = '#1e293b'
-    drawGlyphToCtx(ctx, data, offset, w, h, bpr, 0, 0, scaleX, scaleY)
+    drawGlyphToCtx(ctx, data, offset, w, h, rowBytes, 0, 0, scaleX, scaleY)
 
     // Baseline indicator
     const bl = font.baseline.value

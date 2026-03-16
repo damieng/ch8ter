@@ -1,5 +1,6 @@
 // Character metric classification for ISO-8859-1.
 // Each character is tagged with which font metrics it exhibits.
+import { bpr } from './bitUtils'
 
 export const Metric = {
   Baseline:  1,   // sits on the baseline (most printable chars)
@@ -64,30 +65,30 @@ interface FontData {
 }
 
 function glyphTopRow(data: Uint8Array, glyphIdx: number, w: number, h: number): number {
-  const bpr = Math.ceil(w / 8)
-  const base = glyphIdx * h * bpr
+  const rowBytes = bpr(w)
+  const base = glyphIdx * h * rowBytes
   for (let y = 0; y < h; y++) {
-    for (let b = 0; b < bpr; b++) {
-      if (data[base + y * bpr + b]) return y
+    for (let b = 0; b < rowBytes; b++) {
+      if (data[base + y * rowBytes + b]) return y
     }
   }
   return -1
 }
 
 function glyphBottomRow(data: Uint8Array, glyphIdx: number, w: number, h: number): number {
-  const bpr = Math.ceil(w / 8)
-  const base = glyphIdx * h * bpr
+  const rowBytes = bpr(w)
+  const base = glyphIdx * h * rowBytes
   for (let y = h - 1; y >= 0; y--) {
-    for (let b = 0; b < bpr; b++) {
-      if (data[base + y * bpr + b]) return y
+    for (let b = 0; b < rowBytes; b++) {
+      if (data[base + y * rowBytes + b]) return y
     }
   }
   return -1
 }
 
 function scanTop(fd: FontData, chars: string): number {
-  const bpr = Math.ceil(fd.w / 8)
-  const bpg = fd.h * bpr
+  const rowBytes = bpr(fd.w)
+  const bpg = fd.h * rowBytes
   const gc = bpg > 0 ? Math.floor(fd.data.length / bpg) : 0
   let best = fd.h
   for (let i = 0; i < chars.length; i++) {
@@ -100,8 +101,8 @@ function scanTop(fd: FontData, chars: string): number {
 }
 
 function scanBottom(fd: FontData, chars: string): number {
-  const bpr = Math.ceil(fd.w / 8)
-  const bpg = fd.h * bpr
+  const rowBytes = bpr(fd.w)
+  const bpg = fd.h * rowBytes
   const gc = bpg > 0 ? Math.floor(fd.data.length / bpg) : 0
   let best = -1
   for (let i = 0; i < chars.length; i++) {

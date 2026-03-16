@@ -1,7 +1,7 @@
 // Parse .draw bitmap font files.
 // Format: hex label (e.g. "00:") followed by tab-indented rows of '#' (set) and '-' (unset) pixels.
 
-import { setBit } from '../bitUtils'
+import { bpr, setBit } from '../bitUtils'
 
 export interface DrawParseResult {
   fontData: Uint8Array
@@ -58,8 +58,8 @@ export function parseDraw(text: string): DrawParseResult {
   }
 
   const totalSlots = maxCp - minCp + 1
-  const bpr = Math.ceil(glyphWidth / 8)
-  const bpg = glyphHeight * bpr
+  const rowBytes = bpr(glyphWidth)
+  const bpg = glyphHeight * rowBytes
   const fontData = new Uint8Array(totalSlots * bpg)
   const populated = new Set<number>()
 
@@ -72,7 +72,7 @@ export function parseDraw(text: string): DrawParseResult {
       const row = g.rows[y]
       for (let x = 0; x < glyphWidth && x < row.length; x++) {
         if (row[x] === '#') {
-          setBit(fontData, offset + y * bpr, x)
+          setBit(fontData, offset + y * rowBytes, x)
         }
       }
     }

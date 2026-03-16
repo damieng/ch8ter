@@ -1,6 +1,6 @@
 // Write .draw bitmap font files.
 
-import { getBit } from '../bitUtils'
+import { bpr, getBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 interface DrawWriteParams {
@@ -13,8 +13,8 @@ interface DrawWriteParams {
 
 export function writeDraw(params: DrawWriteParams): string {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount } = params
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const lines: string[] = []
 
   for (let i = 0; i < glyphCount; i++) {
@@ -29,7 +29,7 @@ export function writeDraw(params: DrawWriteParams): string {
     for (let y = 0; y < h; y++) {
       let row = ''
       for (let x = 0; x < w; x++) {
-        row += getBit(fontData, offset + y * bpr, x) ? '#' : '-'
+        row += getBit(fontData, offset + y * rowBytes, x) ? '#' : '-'
       }
       if (first) {
         lines.push(`${hex}:\t${row}`)

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { type Charset, createFont, addFont, charset } from '../store'
+import { bpr } from '../bitUtils'
 
 const CODEPAGES: { value: Charset; label: string; startChar: number; glyphCount: number }[] = [
   { value: 'amiga', label: 'Amiga (ISO-8859-1)', startChar: 32, glyphCount: 224 },
@@ -50,8 +51,8 @@ export function NewFontDialog({ onClose }: Props) {
 
   function handleCreate() {
     const cp = CODEPAGES.find(c => c.value === codepage)!
-    const bpr = Math.ceil(width / 8)
-    const bpg = height * bpr
+    const rowBytes = bpr(width)
+    const bpg = height * rowBytes
     const data = new Uint8Array(cp.glyphCount * bpg)
     const font = createFont(data, 'untitled', cp.startChar, width, height)
     font.hideEmpty.value = false

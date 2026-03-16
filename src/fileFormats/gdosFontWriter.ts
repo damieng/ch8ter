@@ -8,7 +8,7 @@
 // No horizontal offset table is written.
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 interface GdosFontWriteParams {
   fontData: Uint8Array
@@ -26,12 +26,12 @@ interface GdosFontWriteParams {
 }
 
 function rightmostPixel(
-  fontData: Uint8Array, glyphOffset: number, bpr: number,
+  fontData: Uint8Array, glyphOffset: number, rowBytes: number,
   glyphWidth: number, glyphHeight: number,
 ): number {
   let rightmost = 0
   for (let y = 0; y < glyphHeight; y++) {
-    const rowBase = glyphOffset + y * bpr
+    const rowBase = glyphOffset + y * rowBytes
     for (let x = glyphWidth - 1; x >= rightmost; x--) {
       if (getBit(fontData, rowBase, x)) {
         rightmost = x + 1
@@ -47,8 +47,8 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
           glyphMeta, baseline, ascender, descender, name, fontName, meta } = params
   const props = meta?.properties ?? {}
 
-  const bpr = Math.ceil(glyphWidth / 8)
-  const bpg = glyphHeight * bpr
+  const rowBytes = bpr(glyphWidth)
+  const bpg = glyphHeight * rowBytes
 
   const loChar = startChar
   const hiChar = startChar + glyphCount - 1
@@ -60,7 +60,7 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
     if (meta?.bbx) {
       charWidths.push(Math.min(glyphWidth, Math.max(1, meta.bbx[0])))
     } else {
-      const w = rightmostPixel(fontData, i * bpg, bpr, glyphWidth, glyphHeight)
+      const w = rightmostPixel(fontData, i * bpg, rowBytes, glyphWidth, glyphHeight)
       charWidths.push(Math.max(1, w))
     }
   }
@@ -87,7 +87,7 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
 
     for (let y = 0; y < formHeight; y++) {
       const dstRow = y * formWidth
-      const srcRow = glyphBase + y * bpr
+      const srcRow = glyphBase + y * rowBytes
       for (let px = 0; px < charWidth; px++) {
         if (getBit(fontData, srcRow, px)) {
           const x = xStart + px

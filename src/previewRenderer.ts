@@ -4,6 +4,7 @@ import type { FontInstance } from './store'
 import { glyphAdvance } from './store'
 import { isFixedWidth } from './unicodeRanges'
 import { drawGlyphToCtx } from './drawGlyph'
+import { bpr } from './bitUtils'
 
 export interface RenderOptions {
   canvas: HTMLCanvasElement
@@ -30,8 +31,8 @@ export function renderText({
   const startChar = font.startChar.value
   const gw = font.glyphWidth.value
   const gh = font.glyphHeight.value
-  const bpr = Math.ceil(gw / 8)
-  const bpg = gh * bpr
+  const rowBytes = bpr(gw)
+  const bpg = gh * rowBytes
   const gc = bpg > 0 ? Math.floor(data.length / bpg) : 0
   const cellW = gw * scale
   const rowH = lineHeight * scale
@@ -40,7 +41,7 @@ export function renderText({
   const rowCount = Math.max(1, lines.length)
 
   function drawGlyph(glyphIdx: number, gx: number, rowY: number) {
-    drawGlyphToCtx(ctx, data, glyphIdx * bpg, gw, gh, bpr, gx, rowY + glyphYOff, scale, scale)
+    drawGlyphToCtx(ctx, data, glyphIdx * bpg, gw, gh, rowBytes, gx, rowY + glyphYOff, scale, scale)
   }
 
 

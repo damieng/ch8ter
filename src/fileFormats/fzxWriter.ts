@@ -3,7 +3,7 @@
 // Each offset in the character table is relative to the position of that offset word itself.
 
 import type { GlyphMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 interface FzxWriteParams {
@@ -17,14 +17,14 @@ interface FzxWriteParams {
 }
 
 function countTopAndBottomBlankRows(
-  fontData: Uint8Array, glyphOffset: number, bpr: number,
+  fontData: Uint8Array, glyphOffset: number, rowBytes: number,
   glyphWidth: number, glyphHeight: number
 ): [number, number] {
   let top = 0
   for (let y = 0; y < glyphHeight; y++) {
     let blank = true
     for (let x = 0; x < glyphWidth; x++) {
-      if (getBit(fontData, glyphOffset + y * bpr, x)) {
+      if (getBit(fontData, glyphOffset + y * rowBytes, x)) {
         blank = false
         break
       }
@@ -37,7 +37,7 @@ function countTopAndBottomBlankRows(
   for (let y = glyphHeight - 1; y > top; y--) {
     let blank = true
     for (let x = 0; x < glyphWidth; x++) {
-      if (getBit(fontData, glyphOffset + y * bpr, x)) {
+      if (getBit(fontData, glyphOffset + y * rowBytes, x)) {
         blank = false
         break
       }
@@ -51,8 +51,8 @@ function countTopAndBottomBlankRows(
 
 export function writeFzx(params: FzxWriteParams): Uint8Array {
   const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta, tracking = 0 } = params
-  const bpr = Math.ceil(glyphWidth / 8)
-  const bpg = glyphHeight * bpr
+  const rowBytes = bpr(glyphWidth)
+  const bpg = glyphHeight * rowBytes
 
   // FZX only supports chars 32..255
   const firstSlot = Math.max(0, 32 - startChar)
@@ -97,7 +97,7 @@ export function writeFzx(params: FzxWriteParams): Uint8Array {
       bottomBlank = glyphHeight - shift - numRows
     } else {
       // Auto-detect: trim blank rows, use full glyphWidth
-      const [top, bottom] = countTopAndBottomBlankRows(fontData, glyphOffset, bpr, glyphWidth, glyphHeight)
+      const [top, bottom] = countTopAndBottomBlankRows(fontData, glyphOffset, rowBytes, glyphWidth, glyphHeight)
       topBlank = top
       bottomBlank = bottom
       shift = topBlank === glyphHeight ? 0 : topBlank
@@ -122,7 +122,7 @@ export function writeFzx(params: FzxWriteParams): Uint8Array {
       for (let px = 0; px < width; px++) {
         const srcX = srcXStart + px
         if (srcX >= glyphWidth) break
-        if (getBit(fontData, glyphOffset + y * bpr, srcX)) {
+        if (getBit(fontData, glyphOffset + y * rowBytes, srcX)) {
           setBit(data, row * charBytesPerRow, px)
         }
       }

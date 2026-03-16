@@ -10,6 +10,7 @@ import { COLOR_SYSTEMS } from '../colorSystems'
 import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
 import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { bpr } from '../bitUtils'
 
 function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, systems, systemIdx, onToggle, onFgPick, onBgPick, onSystemChange }: {
   anchorRef: RefObject<HTMLDivElement | null>
@@ -214,8 +215,8 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       return wrapText(text, cols)
     }
     const start = font.startChar.value
-    const bpr = Math.ceil(gw / 8)
-    const bpg = gh * bpr
+    const rowBytes = bpr(gw)
+    const bpg = gh * rowBytes
     const data = font.fontData.value
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
     const maxPixelWidth = cols * gw
@@ -287,8 +288,8 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       }
     } else {
       const start = font?.startChar.value ?? 32
-      const bpr = Math.ceil(gw / 8)
-      const bpg = gh * bpr
+      const rowBytes = bpr(gw)
+      const bpg = gh * rowBytes
       const data = font?.fontData.value
       const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
       const line = wrappedLines[row]

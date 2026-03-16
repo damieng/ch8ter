@@ -45,7 +45,7 @@
 //                   Missing glyphs: offset=-1 (0xFF), width=0xFF
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 export interface PdbFontParseResult {
   fontData: Uint8Array
@@ -153,8 +153,8 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
   if (cellWidth <= 0) cellWidth = maxWidth > 0 ? maxWidth : 8
 
   // Extract glyphs from single raster into per-glyph format
-  const bpr = Math.ceil(cellWidth / 8)
-  const bpg = fRectHeight * bpr
+  const glyphRowBytes = bpr(cellWidth)
+  const bpg = fRectHeight * glyphRowBytes
   const fontData = new Uint8Array(numChars * bpg)
   const populated = new Set<number>()
   const glyphMeta: (GlyphMeta | null)[] = new Array(numChars).fill(null)
@@ -173,7 +173,7 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
 
     for (let y = 0; y < fRectHeight; y++) {
       const srcRowBase = bitmapStart + y * rowBytes
-      const dstRow = glyphBase + y * bpr
+      const dstRow = glyphBase + y * glyphRowBytes
       for (let px = 0; px < glyphW; px++) {
         if (getBit(rec, srcRowBase, xStart + px)) {
           setBit(fontData, dstRow, px)

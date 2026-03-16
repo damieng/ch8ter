@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo } from 'preact/hooks'
 import { type FontInstance, bytesPerGlyph } from '../store'
 import { drawGlyphToCtx } from '../drawGlyph'
+import { bpr } from '../bitUtils'
 
 interface Props {
   font: FontInstance
@@ -35,8 +36,8 @@ export function ConfirmDialog({ font, onConfirm, onCancel }: Props) {
     const gw = font.glyphWidth.value
     const gh = font.glyphHeight.value
     const start = font.startChar.value
-    const bpr = Math.ceil(gw / 8)
-    const bpg = gh * bpr
+    const rowBytes = bpr(gw)
+    const bpg = gh * rowBytes
     const gc = bpg > 0 ? Math.floor(data.length / bpg) : 0
 
     const text = 'AaBbCc123'
@@ -50,7 +51,7 @@ export function ConfirmDialog({ font, onConfirm, onCancel }: Props) {
     for (let i = 0; i < text.length; i++) {
       const gi = text.charCodeAt(i) - start
       if (gi < 0 || gi >= gc) continue
-      drawGlyphToCtx(ctx, data, gi * bpg, gw, gh, bpr, i * gw * scale, 0, scale, scale)
+      drawGlyphToCtx(ctx, data, gi * bpg, gw, gh, rowBytes, i * gw * scale, 0, scale, scale)
     }
   }, [font])
 

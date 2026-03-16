@@ -1,5 +1,5 @@
 import { signal, type Signal, effect } from '@preact/signals'
-import { getBit, setBit, clearBit } from './bitUtils'
+import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
@@ -48,7 +48,7 @@ export interface FontInstance {
 }
 
 export function bytesPerRow(font: FontInstance): number {
-  return Math.ceil(font.glyphWidth.value / 8)
+  return calcBpr(font.glyphWidth.value)
 }
 
 export function bytesPerGlyph(font: FontInstance): number {
@@ -82,7 +82,7 @@ export function createFont(
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const bpg = h * bpr
   const initial = data ?? new Uint8Array(96 * bpg)
   // Count blank glyphs to decide default hideEmpty
@@ -494,7 +494,7 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
 
   const oldStart = font.startChar.value
   const oldCount = glyphCount(font)
-  const bpr = Math.ceil(font.glyphWidth.value / 8)
+  const bpr = calcBpr(font.glyphWidth.value)
   const bpg = font.glyphHeight.value * bpr
   const oldData = font.fontData.value
   const oldGm = font.glyphMeta.value
@@ -767,7 +767,7 @@ function setPixelBit(bytes: Uint8Array, bpr: number, x: number, y: number) {
 }
 
 export function flipXBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -776,7 +776,7 @@ export function flipXBytes(bytes: Uint8Array, w: number, h: number): Uint8Array 
 }
 
 export function flipYBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -785,7 +785,7 @@ export function flipYBytes(bytes: Uint8Array, w: number, h: number): Uint8Array 
 }
 
 export function invertBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -797,7 +797,7 @@ export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Arr
   // Rotate CW: (x,y) -> (h-1-y, x) — output is w×h but transposed
   // For non-square, output dims swap but we keep same bpg for simplicity
   // Only works cleanly for square glyphs; for non-square, use same dims
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -809,7 +809,7 @@ export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Arr
 }
 
 export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -821,7 +821,7 @@ export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Ar
 }
 
 export function shiftUp(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++) {
     const srcY = (y + 1) % h
@@ -831,7 +831,7 @@ export function shiftUp(bytes: Uint8Array, w: number, h: number): Uint8Array {
 }
 
 export function shiftDown(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++) {
     const srcY = (y - 1 + h) % h
@@ -841,7 +841,7 @@ export function shiftDown(bytes: Uint8Array, w: number, h: number): Uint8Array {
 }
 
 export function shiftLeft(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -850,7 +850,7 @@ export function shiftLeft(bytes: Uint8Array, w: number, h: number): Uint8Array {
 }
 
 export function shiftRight(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -859,7 +859,7 @@ export function shiftRight(bytes: Uint8Array, w: number, h: number): Uint8Array 
 }
 
 export function centerHorizontalBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   let leftBlank = 0
   for (let x = 0; x < w; x++) {
     let used = false
@@ -961,7 +961,7 @@ export function createOutlineVariant(font: FontInstance) {
 // For each original pixel, compute exact sheared position. Then draw Bresenham
 // lines between all pairs of originally 8-connected pixels to preserve strokes.
 export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number, w: number, h: number): Uint8Array {
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const tan = Math.tan((angleDegrees * Math.PI) / 180)
 
   const orig: { x: number; y: number }[] = []
@@ -1121,9 +1121,9 @@ export function createMonospaceVariant(
   const src = font.fontData.value
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const bpg = h * bpr
-  const newBpr = Math.ceil(newW / 8)
+  const newBpr = calcBpr(newW)
   const newBpg = h * newBpr
   const count = glyphCount(font)
   const start = font.startChar.value
@@ -1193,9 +1193,9 @@ export function resizeFont(
   const oldH = font.glyphHeight.value
   if (newW === oldW && newH === oldH) return
 
-  const oldBpr = Math.ceil(oldW / 8)
+  const oldBpr = calcBpr(oldW)
   const oldBpg = oldH * oldBpr
-  const newBpr = Math.ceil(newW / 8)
+  const newBpr = calcBpr(newW)
   const newBpg = newH * newBpr
   const count = glyphCount(font)
   const src = font.fontData.value
@@ -1247,7 +1247,7 @@ export function fontToConversionData(font: FontInstance): import('./fontLoad').F
   const fontData = saveFont(font)
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
-  const bpr = Math.ceil(w / 8)
+  const bpr = calcBpr(w)
   const bpg = h * bpr
   return {
     fontData,

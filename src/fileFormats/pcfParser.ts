@@ -1,7 +1,7 @@
 // Parse PCF (Portable Compiled Format) font files used by X11.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 export interface PcfParseResult {
   glyphWidth: number
@@ -155,7 +155,7 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
   const bitmapData = parseBitmaps(view, bytes, bitmapsEntry, metrics)
 
   // Build output: map glyphs into a contiguous array
-  const outBpr = Math.ceil(cellW / 8)
+  const outBpr = bpr(cellW)
   const outBpg = cellH * outBpr
 
   // Determine encoding range
@@ -207,7 +207,7 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
     const py = fontAscent - m.ascent
 
     // bd is already normalized to byte-padded MSBit-first rows
-    const srcBpr = Math.ceil(glyphW / 8)
+    const srcBpr = bpr(glyphW)
     const base = outputIdx * outBpg
 
     for (let y = 0; y < glyphH; y++) {
@@ -484,8 +484,8 @@ function parseBitmaps(
       continue
     }
 
-    const srcStride = align(Math.ceil(glyphW / 8), glyphPad)
-    const dstStride = Math.ceil(glyphW / 8)
+    const srcStride = align(bpr(glyphW), glyphPad)
+    const dstStride = bpr(glyphW)
     const srcStart = bitmapStart + offsets[i]
 
     const normalized = new Uint8Array(glyphH * dstStride)

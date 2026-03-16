@@ -14,7 +14,7 @@
 //   [110..]:    CharLoc, CharSpace, CharKern, CharData
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 export interface AmigaFontWriteParams {
   fontData: Uint8Array
@@ -34,8 +34,8 @@ export function writeAmigaFont(params: AmigaFontWriteParams): Uint8Array {
     glyphMeta, baseline, fontName, meta,
   } = params
 
-  const bpr = Math.ceil(glyphWidth / 8)
-  const bpg = glyphHeight * bpr
+  const rowBytes = bpr(glyphWidth)
+  const bpg = glyphHeight * rowBytes
   const loChar = startChar
   const hiChar = startChar + glyphCount - 1
   const numChars = glyphCount
@@ -57,7 +57,7 @@ export function writeAmigaFont(params: AmigaFontWriteParams): Uint8Array {
     const glyphBase = i * bpg
     for (let y = 0; y < glyphHeight; y++) {
       for (let x = glyphWidth - 1; x >= rightmost; x--) {
-        if (getBit(fontData, glyphBase + y * bpr, x)) {
+        if (getBit(fontData, glyphBase + y * rowBytes, x)) {
           rightmost = x + 1
           break
         }
@@ -97,7 +97,7 @@ export function writeAmigaFont(params: AmigaFontWriteParams): Uint8Array {
     const bitW = bitWidths[i]
 
     for (let y = 0; y < glyphHeight; y++) {
-      const srcRow = glyphBase + y * bpr
+      const srcRow = glyphBase + y * rowBytes
       const dstRowBase = y * paddedModulo
       for (let px = 0; px < bitW; px++) {
         if (getBit(fontData, srcRow, px)) {

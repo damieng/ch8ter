@@ -1,5 +1,6 @@
 // Write PSF2 font files from our internal format.
 
+import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 const PSF2_MAGIC = 0x864AB572
@@ -15,8 +16,8 @@ interface PsfWriteParams {
 
 export function writePsf(params: PsfWriteParams): Uint8Array {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount } = params
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const headerSize = 32
 
   // Collect non-empty glyphs (keep space even if empty)

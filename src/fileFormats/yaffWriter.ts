@@ -1,6 +1,6 @@
 // Write .yaff (Yet Another Font Format) bitmap font files.
 
-import { getBit } from '../bitUtils'
+import { bpr, getBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 interface YaffWriteParams {
@@ -14,8 +14,8 @@ interface YaffWriteParams {
 
 export function writeYaff(params: YaffWriteParams): string {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, name } = params
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const lines: string[] = []
 
   lines.push(`name: ${name}`)
@@ -35,7 +35,7 @@ export function writeYaff(params: YaffWriteParams): string {
     for (let y = 0; y < h; y++) {
       let row = '    '
       for (let x = 0; x < w; x++) {
-        row += getBit(fontData, offset + y * bpr, x) ? '@' : '.'
+        row += getBit(fontData, offset + y * rowBytes, x) ? '@' : '.'
       }
       lines.push(row)
     }

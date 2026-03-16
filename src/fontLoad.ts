@@ -15,6 +15,7 @@ import { parseCh8 } from './fileFormats/ch8Format'
 import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
 import { bdfCharsetMap } from './codepages'
+import { bpr } from './bitUtils'
 
 export interface FontConversionData {
   fontData: Uint8Array
@@ -54,8 +55,8 @@ function layoutPsfGlyphs(psf: PsfParseResult): {
   startChar: number
   populated: Set<number> | null
 } {
-  const bpr = Math.ceil(psf.glyphWidth / 8)
-  const bpg = psf.glyphHeight * bpr
+  const rowBytes = bpr(psf.glyphWidth)
+  const bpg = psf.glyphHeight * rowBytes
 
   if (psf.unicodeMap && psf.unicodeMap.size > 0) {
     let minCp = 0x7fffffff, maxCp = 0
@@ -106,8 +107,8 @@ function detectBdfCharset(meta: FontMeta | null): string {
 function makeResult(
   fields: Partial<FontConversionData> & Pick<FontConversionData, 'fontData' | 'glyphWidth' | 'glyphHeight' | 'startChar' | 'fontName'>,
 ): FontConversionData {
-  const bpr = Math.ceil(fields.glyphWidth / 8)
-  const bpg = fields.glyphHeight * bpr
+  const rowBytes = bpr(fields.glyphWidth)
+  const bpg = fields.glyphHeight * rowBytes
   return {
     glyphCount: bpg > 0 ? Math.floor(fields.fontData.length / bpg) : 0,
     baseline: fields.glyphHeight - 2,

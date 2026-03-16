@@ -4,7 +4,7 @@
 // NFNT font record. See pdbFontParser.ts for format details.
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 export interface PdbFontWriteParams {
@@ -25,8 +25,8 @@ export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
     glyphMeta, baseline, fontName, meta,
   } = params
 
-  const bpr = Math.ceil(glyphWidth / 8)
-  const bpg = glyphHeight * bpr
+  const glyphRowBytes = bpr(glyphWidth)
+  const bpg = glyphHeight * glyphRowBytes
   const firstChar = startChar
   const lastChar = startChar + glyphCount - 1
   const numChars = glyphCount
@@ -87,7 +87,7 @@ export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
     const glyphBase = i * bpg
 
     for (let y = 0; y < glyphHeight; y++) {
-      const srcRow = glyphBase + y * bpr
+      const srcRow = glyphBase + y * glyphRowBytes
       const dstRowBase = y * rowBytes
       for (let px = 0; px < pixW; px++) {
         // Read from per-glyph format

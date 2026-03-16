@@ -1,6 +1,6 @@
 // Text wrapping, cursor mapping, and glyph measurement for the preview renderer.
 
-import { getBit } from './bitUtils'
+import { getBit, bpr } from './bitUtils'
 
 export const INVERSE_CHAR = '\x01'
 
@@ -175,13 +175,13 @@ export function selectedCells(offsets: number[][], selStart: number, selEnd: num
 
 // Find the leftmost and rightmost set pixel columns in a glyph.
 export function glyphBounds(data: Uint8Array, glyphIdx: number, w = 8, h = 8): { left: number; width: number } {
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const offset = glyphIdx * bpg
   let minX = w, maxX = -1
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (getBit(data, offset + y * bpr, x)) {
+      if (getBit(data, offset + y * rowBytes, x)) {
         if (x < minX) minX = x
         if (x > maxX) maxX = x
       }

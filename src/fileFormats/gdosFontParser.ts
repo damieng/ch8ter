@@ -42,7 +42,7 @@
 //     If flag bit 2 is set, font data WORDs are in Motorola (BE) byte order.
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { getBit, setBit } from '../bitUtils'
+import { bpr, getBit, setBit } from '../bitUtils'
 
 export interface GdosFontParseResult {
   fontData: Uint8Array
@@ -159,8 +159,8 @@ export function parseGdosFont(buf: ArrayBuffer): GdosFontParseResult {
   if (maxWidth === 0) maxWidth = 8
 
   // --- Extract glyphs into fixed-width grid ---
-  const bpr = Math.ceil(maxWidth / 8)
-  const bpg = formHeight * bpr
+  const rowBytes = bpr(maxWidth)
+  const bpg = formHeight * rowBytes
   const fontData = new Uint8Array(numChars * bpg)
   const populated = new Set<number>()
   const glyphMeta: (GlyphMeta | null)[] = new Array(numChars).fill(null)
@@ -175,7 +175,7 @@ export function parseGdosFont(buf: ArrayBuffer): GdosFontParseResult {
     let hasPixels = false
 
     for (let y = 0; y < formHeight; y++) {
-      const dstRow = glyphBase + y * bpr
+      const dstRow = glyphBase + y * rowBytes
       for (let px = 0; px < charWidth; px++) {
         if (getRasterBit(raster, formWidth, xStart + px, y)) {
           setBit(fontData, dstRow, px)

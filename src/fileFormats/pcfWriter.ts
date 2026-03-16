@@ -1,6 +1,7 @@
 // Write PCF (Portable Compiled Format) font files.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 interface PcfWriteParams {
@@ -36,8 +37,8 @@ function pad4(n: number): number { return (n + 3) & ~3 }
 
 export function writePcf(params: PcfWriteParams): Uint8Array {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta, fontName } = params
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
 
   // Collect non-empty glyphs (keep space)
   const included: { srcIdx: number; cp: number }[] = []
@@ -74,7 +75,7 @@ export function writePcf(params: PcfWriteParams): Uint8Array {
   })
 
   // Bitmap data: byte-padded rows, MSBit first (matches our internal format)
-  const paddedBpr = pad4(bpr)
+  const paddedBpr = pad4(rowBytes)
   const bitmapOffsets: number[] = []
   const bitmapChunks: Uint8Array[] = []
   let bitmapTotalSize = 0
@@ -83,8 +84,8 @@ export function writePcf(params: PcfWriteParams): Uint8Array {
     const chunk = new Uint8Array(paddedBpr * h)
     const srcOff = srcIdx * bpg
     for (let y = 0; y < h; y++) {
-      for (let b = 0; b < bpr; b++) {
-        chunk[y * paddedBpr + b] = fontData[srcOff + y * bpr + b]
+      for (let b = 0; b < rowBytes; b++) {
+        chunk[y * paddedBpr + b] = fontData[srcOff + y * rowBytes + b]
       }
     }
     bitmapChunks.push(chunk)
@@ -214,7 +215,7 @@ export function writePcf(params: PcfWriteParams): Uint8Array {
   const padSizes = [1, 2, 4, 8]
   for (let p = 0; p < 4; p++) {
     const padAlign = padSizes[p]
-    const paddedRowBytes = (bpr + padAlign - 1) & ~(padAlign - 1)
+    const paddedRowBytes = (rowBytes + padAlign - 1) & ~(padAlign - 1)
     bitmapsView.setInt32(bp, paddedRowBytes * h * numGlyphs, false); bp += 4
   }
   for (const chunk of bitmapChunks) {

@@ -1,6 +1,7 @@
 // Write BDF (Bitmap Distribution Format) font files from our internal format.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 
 interface BdfWriteParams {
@@ -30,8 +31,8 @@ const NUMERIC_PROPS = new Set([
 
 export function writeBdf(params: BdfWriteParams): string {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta, fontName: paramFontName } = params
-  const bpr = Math.ceil(w / 8)
-  const bpg = h * bpr
+  const rowBytes = bpr(w)
+  const bpg = h * rowBytes
   const lines: string[] = []
 
   const fontName = meta?.fontName || `-misc-unknown-medium-r-normal--${h}-${h * 10}-75-75-c-${w * 10}-iso10646-1`
@@ -99,8 +100,8 @@ export function writeBdf(params: BdfWriteParams): string {
     const offset = i * bpg
     for (let y = 0; y < h; y++) {
       let hex = ''
-      for (let b = 0; b < bpr; b++) {
-        hex += fontData[offset + y * bpr + b].toString(16).toUpperCase().padStart(2, '0')
+      for (let b = 0; b < rowBytes; b++) {
+        hex += fontData[offset + y * rowBytes + b].toString(16).toUpperCase().padStart(2, '0')
       }
       lines.push(hex)
     }

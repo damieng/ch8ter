@@ -1,6 +1,6 @@
 // Parse BDF (Bitmap Distribution Format) font files into our internal format.
 
-import { setBit } from '../bitUtils'
+import { bpr, setBit } from '../bitUtils'
 
 export interface FontMeta {
   format?: string       // e.g. 'BDF 2.1'
@@ -120,8 +120,8 @@ export function parseBdf(text: string): BdfParseResult {
   const cellW = fontBBW || 8
   const cellH = fontBBH || 16
   const totalGlyphs = maxEnc - minEnc + 1
-  const bpr = Math.ceil(cellW / 8)
-  const bpg = cellH * bpr
+  const rowBytes = bpr(cellW)
+  const bpg = cellH * rowBytes
   const fontData = new Uint8Array(totalGlyphs * bpg)
   const encodings = new Array<number>(totalGlyphs)
   const glyphMetaArr: (GlyphMeta | null)[] = new Array(totalGlyphs).fill(null)
@@ -189,7 +189,7 @@ export function parseBdf(text: string): BdfParseResult {
               if (byte & (1 << bit)) {
                 const destX = px + srcBit
                 if (destX >= 0 && destX < cellW) {
-                  setBit(fontData, base + destY * bpr, destX)
+                  setBit(fontData, base + destY * rowBytes, destX)
                 }
               }
               srcBit++
