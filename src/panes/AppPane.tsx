@@ -4,24 +4,13 @@ import { FilePlus, FolderOpen } from "lucide-preact"
 import {
   createFont,
   addFont,
-  loadFont,
   charset,
   recalcMetrics,
   calcMissingMetrics,
   type Charset,
 } from "../store"
-import { parseBdf } from "../fileFormats/bdfParser"
-import { parsePsf, type PsfParseResult } from "../fileFormats/psfParser"
-import { parseYaff } from "../fileFormats/yaffParser"
-import { parseDraw } from "../fileFormats/drawParser"
-import { parseFzx } from "../fileFormats/fzxParser"
-import { openFnt } from "../fileFormats/fntOpener"
+import { loadFontFile, type FontConversionData } from "../fontData"
 import { openCom } from "../fileFormats/comOpener"
-import { parsePcf } from "../fileFormats/pcfParser"
-import { parsePdbFont } from "../fileFormats/pdbFontParser"
-import { parseAmigaFont, isAmigaHunk } from "../fileFormats/amigaFontParser"
-import { parseBbc, isBbcFont } from "../fileFormats/bbcParser"
-import { bdfCharsetMap } from "../codepages"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
@@ -49,39 +38,6 @@ async function decompressGz(buf: ArrayBuffer): Promise<ArrayBuffer> {
     off += c.length
   }
   return out.buffer
-}
-
-function layoutPsfGlyphs(psf: PsfParseResult): {
-  fontData: Uint8Array
-  startChar: number
-  populated: Set<number> | null
-} {
-  const bpr = Math.ceil(psf.glyphWidth / 8)
-  const bpg = psf.glyphHeight * bpr
-
-  if (psf.unicodeMap && psf.unicodeMap.size > 0) {
-    // Map glyphs by unicode codepoint into a contiguous range
-    let minCp = 0x7fffffff,
-      maxCp = 0
-    for (const cp of psf.unicodeMap.keys()) {
-      if (cp < minCp) minCp = cp
-      if (cp > maxCp) maxCp = cp
-    }
-    const totalSlots = maxCp - minCp + 1
-    const out = new Uint8Array(totalSlots * bpg)
-    const populated = new Set<number>()
-    for (const [cp, glyphIdx] of psf.unicodeMap) {
-      const srcOff = glyphIdx * bpg
-      const idx = cp - minCp
-      const dstOff = idx * bpg
-      out.set(psf.fontData.subarray(srcOff, srcOff + bpg), dstOff)
-      populated.add(idx)
-    }
-    return { fontData: out, startChar: minCp, populated }
-  }
-
-  // No unicode table — treat as sequential from codepoint 0
-  return { fontData: psf.fontData, startChar: 0, populated: null }
 }
 
 const showChangelog = signal(false)
@@ -152,237 +108,32 @@ export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [pngFile, setPngFile] = useState<File | null>(null)
 
+  function applyLoadResult(name: string, result: FontConversionData) {
+    const font = createFont(
+      result.fontData, name, result.startChar,
+      result.glyphWidth, result.glyphHeight,
+      result.meta ?? undefined, result.encodings ?? undefined,
+      result.baseline, result.glyphMeta ?? undefined,
+      result.spacingMode,
+    )
+    if (result.populated) font.populatedGlyphs.value = result.populated
+    if (result.source === 'gdos' && result.ascender !== undefined) {
+      font.ascender.value = result.ascender
+    }
+    if (result.source === 'gdos' && result.descender !== undefined) {
+      font.descender.value = result.descender
+    }
+    if (result.useCalcMissing) calcMissingMetrics(font)
+    else recalcMetrics(font)
+    addFont(font)
+    charset.value = result.detectedCharset as Charset
+  }
+
   function openFontBuffer(name: string, buf: ArrayBuffer) {
     const lower = name.toLowerCase()
 
-    if (lower.endsWith(".draw")) {
-      try {
-        const text = new TextDecoder().decode(buf)
-        const result = parseDraw(text)
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-        )
-        font.populatedGlyphs.value = result.populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "iso8859_1"
-      } catch (e) {
-        alert(`Failed to parse .draw: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".yaff")) {
-      try {
-        const text = new TextDecoder().decode(buf)
-        const result = parseYaff(text)
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-        )
-        if (result.name) font.fontName.value = result.name
-        font.populatedGlyphs.value = result.populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "iso8859_1"
-      } catch (e) {
-        alert(`Failed to parse YAFF: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".bdf")) {
-      try {
-        const text = new TextDecoder().decode(buf)
-        const result = parseBdf(text)
-        const hasPropSpacing = result.glyphMeta.some(
-          (gm) =>
-            gm?.dwidth &&
-            gm.dwidth[0] > 0 &&
-            gm.dwidth[0] !== result.glyphWidth,
-        )
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          result.meta,
-          result.encodings,
-          result.baseline,
-          result.glyphMeta,
-          hasPropSpacing ? "proportional" : "monospace",
-        )
-        const populated = new Set<number>()
-        if (result.glyphMeta) {
-          for (let j = 0; j < result.glyphMeta.length; j++) {
-            if (result.glyphMeta[j] !== null) populated.add(j)
-          }
-        }
-        font.populatedGlyphs.value = populated
-        calcMissingMetrics(font)
-        addFont(font)
-        let detectedCharset: Charset = "iso8859_1"
-        if (result.meta?.properties) {
-          const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
-          const enc = result.meta.properties.CHARSET_ENCODING ?? ""
-          if (reg) {
-            const key = `${reg}-${enc}`
-            const mapped = bdfCharsetMap[key]
-            if (mapped) detectedCharset = mapped as Charset
-          }
-        }
-        charset.value = detectedCharset
-      } catch (e) {
-        alert(`Failed to parse BDF: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".psf") || lower.endsWith(".psfu")) {
-      try {
-        const result = parsePsf(buf)
-        const { fontData, startChar, populated } = layoutPsfGlyphs(result)
-        const font = createFont(
-          fontData,
-          name,
-          startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-        )
-        if (populated) font.populatedGlyphs.value = populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "iso8859_1"
-      } catch (e) {
-        alert(`Failed to parse PSF: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".fzx")) {
-      try {
-        const result = parseFzx(buf)
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          undefined,
-          undefined,
-          undefined,
-          result.glyphMeta,
-          "proportional",
-        )
-        font.populatedGlyphs.value = result.populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "iso8859_1"
-      } catch (e) {
-        alert(`Failed to parse FZX: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".fnt")) {
-      try {
-        const result = openFnt(buf)
-        const hasPropSpacing = result.glyphMeta?.some(
-          (gm) =>
-            gm?.dwidth &&
-            gm.dwidth[0] > 0 &&
-            gm.dwidth[0] !== result.glyphWidth,
-        ) ?? false
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          result.meta ?? undefined,
-          undefined,
-          result.baseline,
-          result.glyphMeta ?? undefined,
-          hasPropSpacing ? "proportional" : "monospace",
-        )
-        font.populatedGlyphs.value = result.populated
-        if (result.source === "gdos") {
-          font.ascender.value = result.ascender
-          font.descender.value = result.descender
-        }
-        calcMissingMetrics(font)
-        addFont(font)
-        charset.value = result.source === "atari8bit" ? "atari"
-          : result.source === "gdos" ? "atarist" : "iso8859_1"
-      } catch (e) {
-        alert(`Failed to parse .fnt: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".pcf")) {
-      try {
-        const result = parsePcf(buf)
-        const hasPropSpacing = result.glyphMeta.some(
-          (gm) =>
-            gm?.dwidth &&
-            gm.dwidth[0] > 0 &&
-            gm.dwidth[0] !== result.glyphWidth,
-        )
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          result.meta,
-          result.encodings,
-          result.baseline,
-          result.glyphMeta,
-          hasPropSpacing ? "proportional" : "monospace",
-        )
-        const populated = new Set<number>()
-        if (result.glyphMeta) {
-          for (let j = 0; j < result.glyphMeta.length; j++) {
-            if (result.glyphMeta[j] !== null) populated.add(j)
-          }
-        }
-        font.populatedGlyphs.value = populated
-        calcMissingMetrics(font)
-        addFont(font)
-        let detectedCharset: Charset = "iso8859_1"
-        if (result.meta?.properties) {
-          const reg = result.meta.properties.CHARSET_REGISTRY ?? ""
-          const enc = result.meta.properties.CHARSET_ENCODING ?? ""
-          if (reg) {
-            const key = `${reg}-${enc}`
-            const mapped = bdfCharsetMap[key]
-            if (mapped) detectedCharset = mapped as Charset
-          }
-        }
-        charset.value = detectedCharset
-      } catch (e) {
-        alert(`Failed to parse PCF: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".pdb")) {
-      try {
-        const result = parsePdbFont(buf)
-        const hasPropSpacing = result.glyphMeta.some(
-          (gm) =>
-            gm?.dwidth &&
-            gm.dwidth[0] > 0 &&
-            gm.dwidth[0] !== result.glyphWidth,
-        )
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          result.meta,
-          undefined,
-          result.baseline,
-          result.glyphMeta,
-          hasPropSpacing ? "proportional" : "monospace",
-        )
-        font.populatedGlyphs.value = result.populated
-        calcMissingMetrics(font)
-        addFont(font)
-        charset.value = "palmos"
-      } catch (e) {
-        alert(`Failed to parse Palm .pdb: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".com")) {
+    // .com files can contain multiple fonts — handle separately
+    if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
         for (const result of results) {
@@ -394,86 +145,18 @@ export function AppPane() {
           recalcMetrics(font)
           addFont(font)
         }
-        charset.value = results[0].source === "ega" ? "cp437" : "cpm"
+        charset.value = (results[0].source === "ega" ? "cp437" : "cpm") as Charset
       } catch (e) {
         alert(`Failed to parse .com font: ${(e as Error).message}`)
       }
-    } else if (lower.endsWith(".bbc")) {
-      try {
-        const result = parseBbc(buf)
-        const font = createFont(
-          result.fontData, name, result.startChar,
-          result.glyphWidth, result.glyphHeight,
-        )
-        font.populatedGlyphs.value = result.populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "bbc"
-      } catch (e) {
-        alert(`Failed to parse BBC font: ${(e as Error).message}`)
-      }
-    } else if (isAmigaHunk(buf)) {
-      try {
-        const result = parseAmigaFont(buf)
-        const hasPropSpacing = result.glyphMeta.some(
-          (gm) =>
-            gm?.dwidth &&
-            gm.dwidth[0] > 0 &&
-            gm.dwidth[0] !== result.glyphWidth,
-        )
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-          result.meta,
-          undefined,
-          result.baseline,
-          result.glyphMeta,
-          hasPropSpacing ? "proportional" : "monospace",
-        )
-        font.populatedGlyphs.value = result.populated
-        calcMissingMetrics(font)
-        addFont(font)
-        charset.value = "amiga"
-      } catch (e) {
-        alert(`Failed to parse Amiga font: ${(e as Error).message}`)
-      }
-    } else if (isBbcFont(buf)) {
-      try {
-        const result = parseBbc(buf)
-        const font = createFont(
-          result.fontData,
-          name,
-          result.startChar,
-          result.glyphWidth,
-          result.glyphHeight,
-        )
-        font.populatedGlyphs.value = result.populated
-        recalcMetrics(font)
-        addFont(font)
-        charset.value = "bbc"
-      } catch (e) {
-        alert(`Failed to parse BBC font: ${(e as Error).message}`)
-      }
-    } else if (lower.endsWith(".64c")) {
-      // .64c: 2-byte magic header + 8×8 chars in C64 screen code order
-      // Load first 128 chars directly (ignore inverted copy at 128-255)
-      const dataLen = Math.min(128 * 8, buf.byteLength - 2)
-      const fontData = new Uint8Array(buf, 2, dataLen)
-      const font = createFont(fontData, name, 0, 8, 8)
-      recalcMetrics(font)
-      addFont(font)
-      charset.value = "c64"
-    } else {
-      const font = createFont()
-      loadFont(font, buf)
-      font.fileName.value = name
-      addFont(font)
-      if (lower.endsWith(".ch8")) {
-        charset.value = "zx"
-      }
+      return
+    }
+
+    try {
+      const result = loadFontFile(name, buf)
+      applyLoadResult(name, result)
+    } catch (e) {
+      alert(`Failed to open font: ${(e as Error).message}`)
     }
   }
 

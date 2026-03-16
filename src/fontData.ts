@@ -23,6 +23,7 @@ import { exportCpm } from './fileFormats/cpmExport'
 import { writePcf } from './fileFormats/pcfWriter'
 import { writeAmigaFont } from './fileFormats/amigaFontWriter'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
+import { bdfCharsetMap } from './codepages'
 import { writeBbc } from './fileFormats/bbcWriter'
 import { writeEgaCom } from './fileFormats/egaComWriter'
 import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
@@ -40,6 +41,12 @@ export interface FontConversionData {
   glyphMeta: (GlyphMeta | null)[] | null
   populated: Set<number> | null
   fontName: string
+  spacingMode: 'monospace' | 'proportional'
+  detectedCharset: string
+  useCalcMissing: boolean
+  source?: string
+  ascender?: number
+  descender?: number
 }
 
 function layoutPsfGlyphs(psf: PsfParseResult): {
@@ -79,6 +86,22 @@ function populatedFromGlyphMeta(glyphMeta: (GlyphMeta | null)[]): Set<number> {
   return populated
 }
 
+function detectPropSpacing(glyphMeta: (GlyphMeta | null)[] | null, glyphWidth: number): boolean {
+  return glyphMeta?.some(gm => gm?.dwidth && gm.dwidth[0] > 0 && gm.dwidth[0] !== glyphWidth) ?? false
+}
+
+function detectBdfCharset(meta: FontMeta | null): string {
+  if (meta?.properties) {
+    const reg = meta.properties.CHARSET_REGISTRY ?? ''
+    const enc = meta.properties.CHARSET_ENCODING ?? ''
+    if (reg) {
+      const mapped = bdfCharsetMap[`${reg}-${enc}`]
+      if (mapped) return mapped
+    }
+  }
+  return 'iso8859_1'
+}
+
 function baseName(filename: string): string {
   const base = filename.replace(/^.*[\\/]/, '')
   return base.replace(/\.\w+$/i, '')
@@ -110,6 +133,7 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: result.populated, fontName: name,
+      spacingMode: 'monospace', detectedCharset: 'iso8859_1', useCalcMissing: false,
     }
   }
 
@@ -123,6 +147,7 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: result.populated, fontName: result.name || name,
+      spacingMode: 'monospace', detectedCharset: 'iso8859_1', useCalcMissing: false,
     }
   }
 
@@ -137,6 +162,8 @@ export function loadFontFile(
       baseline: result.baseline ?? result.glyphHeight - 2,
       meta: result.meta, encodings: result.encodings, glyphMeta: result.glyphMeta,
       populated: populatedFromGlyphMeta(result.glyphMeta), fontName: result.meta.family || name,
+      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+      detectedCharset: detectBdfCharset(result.meta), useCalcMissing: true,
     }
   }
 
@@ -150,6 +177,7 @@ export function loadFontFile(
       startChar: layout.startChar, glyphCount: count, baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: layout.populated, fontName: name,
+      spacingMode: 'monospace', detectedCharset: 'iso8859_1', useCalcMissing: false,
     }
   }
 
@@ -162,6 +190,7 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: result.glyphMeta,
       populated: result.populated, fontName: name,
+      spacingMode: 'proportional', detectedCharset: 'iso8859_1', useCalcMissing: false,
     }
   }
 
@@ -174,6 +203,11 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.baseline,
       meta: result.meta ?? null, encodings: null, glyphMeta: result.glyphMeta,
       populated: result.populated, fontName: (result.meta as { family?: string } | null)?.family || name,
+      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+      detectedCharset: result.source === 'atari8bit' ? 'atari' : result.source === 'gdos' ? 'atarist' : 'iso8859_1',
+      useCalcMissing: true, source: result.source,
+      ascender: result.source === 'gdos' ? result.ascender : undefined,
+      descender: result.source === 'gdos' ? result.descender : undefined,
     }
   }
 
@@ -187,6 +221,8 @@ export function loadFontFile(
       baseline: result.baseline ?? result.glyphHeight - 2,
       meta: result.meta, encodings: result.encodings, glyphMeta: result.glyphMeta,
       populated: populatedFromGlyphMeta(result.glyphMeta), fontName: result.meta.family || name,
+      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+      detectedCharset: detectBdfCharset(result.meta), useCalcMissing: true,
     }
   }
 
@@ -199,6 +235,8 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.baseline,
       meta: result.meta, encodings: null, glyphMeta: result.glyphMeta,
       populated: result.populated, fontName: result.meta?.family || name,
+      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+      detectedCharset: 'palmos', useCalcMissing: true,
     }
   }
 
@@ -210,6 +248,8 @@ export function loadFontFile(
       baseline: result.glyphHeight - 2,
       meta: null, encodings: null, glyphMeta: null,
       populated: null, fontName: name,
+      spacingMode: 'monospace', detectedCharset: result.source === 'ega' ? 'cp437' : 'cpm',
+      useCalcMissing: false, source: result.source,
     }
   }
 
@@ -223,28 +263,31 @@ export function loadFontFile(
       startChar: result.startChar, glyphCount: count, baseline: result.baseline,
       meta: result.meta, encodings: null, glyphMeta: result.glyphMeta,
       populated: result.populated, fontName: result.meta?.family || name,
+      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+      detectedCharset: 'amiga', useCalcMissing: true,
     }
   }
 
-  if (lower.endsWith('.bbc')) {
+  if (lower.endsWith('.bbc') || isBbcFont(buf)) {
     const result = parseBbc(buf)
     return {
       fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
       startChar: result.startChar, glyphCount: result.fontData.length / 8,
       baseline: 6, meta: null, encodings: null, glyphMeta: null,
       populated: result.populated, fontName: name,
+      spacingMode: 'monospace', detectedCharset: 'bbc', useCalcMissing: false,
     }
   }
 
-
-  // Detect BBC Micro soft-font (VDU23 sequences)
-  if (isBbcFont(buf)) {
-    const result = parseBbc(buf)
+  if (lower.endsWith('.64c')) {
+    const dataLen = Math.min(128 * 8, buf.byteLength - 2)
+    const fontData = new Uint8Array(buf, 2, dataLen)
     return {
-      fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
-      startChar: result.startChar, glyphCount: result.fontData.length / 8,
-      baseline: 6, meta: null, encodings: null, glyphMeta: null,
-      populated: result.populated, fontName: name,
+      fontData, glyphWidth: 8, glyphHeight: 8,
+      startChar: 0, glyphCount: Math.floor(dataLen / 8), baseline: 6,
+      meta: null, encodings: null, glyphMeta: null,
+      populated: null, fontName: name,
+      spacingMode: 'monospace', detectedCharset: 'c64', useCalcMissing: false,
     }
   }
 
@@ -258,6 +301,7 @@ export function loadFontFile(
     startChar: start, glyphCount: count, baseline: h - 2,
     meta: null, encodings: null, glyphMeta: null,
     populated: null, fontName: name,
+    spacingMode: 'monospace', detectedCharset: 'zx', useCalcMissing: false,
   }
 }
 
