@@ -2,6 +2,8 @@
 
 An online bitmap font editor for retro computing character sets. Edit pixel-level glyphs in variable-size fonts, preview text with authentic color palettes, and import/export in multiple formats.
 
+Try it now at https://damieng.github.io/ch8ter/
+
 ## Features
 
 ### Font management
