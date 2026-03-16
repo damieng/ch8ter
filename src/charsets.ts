@@ -349,6 +349,7 @@ export function charLabel(charCode: number): string {
   if (overrides && overrides[charCode] !== undefined) {
     return overrides[charCode]
   }
+  if (charCode === 32) return '\u2423'
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
   if (charCode >= 160 && charCode <= 255) return String.fromCharCode(charCode)
   return hexLabel(charCode)
