@@ -1,4 +1,5 @@
 import { signal, type Signal, effect } from '@preact/signals'
+import { getBit, setBit } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
