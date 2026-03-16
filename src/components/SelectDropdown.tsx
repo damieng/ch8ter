@@ -1,8 +1,6 @@
 import { ChevronDown, MousePointer } from 'lucide-preact'
-import {
-  type FontInstance,
-  selectAll, selectNone, selectNumbers, selectUppercase, selectLowercase, selectSymbols, invertSelection
-} from '../store'
+import { type FontInstance } from '../store'
+import { selectAll, selectNone, selectNumbers, selectUppercase, selectLowercase, selectSymbols, invertSelection } from '../selection'
 import { Dropdown } from './Dropdown'
 
 const ICON = 16
