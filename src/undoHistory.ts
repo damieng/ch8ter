@@ -202,6 +202,11 @@ export function commitPaintStroke(font: FontInstance) {
   let changed = false
   for (let i = 0; i < before.length; i++) { if (before[i] !== after[i]) { changed = true; break } }
   if (!changed) return
+  // Assign a new array ref so the fontData signal fires for all subscribers
+  // (tiles, preview, localStorage persistence).  During the stroke itself,
+  // setPixel mutated in place and only bumped paintVersion.
+  font.fontData.value = new Uint8Array(font.fontData.value)
+  markDirty(font)
   const cmd: UndoCommand = {
     name: 'Paint',
     execute() { restoreGlyph(font, index, after); markDirty(font) },

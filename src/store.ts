@@ -42,6 +42,8 @@ export interface FontInstance {
   spacing: Signal<SpacingMode>
   editorOpen: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
+  /** Bumped on each in-place pixel edit; lets the glyph editor re-render without copying fontData. */
+  paintVersion: Signal<number>
   undoHistory: UndoHistory
 }
 
@@ -121,6 +123,7 @@ export function createFont(
     editorOpen: signal(false),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
+    paintVersion: signal(0),
     undoHistory: new UndoHistory(),
   }
 }
@@ -644,15 +647,21 @@ export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance:
   font.dirty.value = true
 }
 
+/**
+ * Set a pixel during a paint stroke.  Mutates the existing Uint8Array in
+ * place (no allocation) and bumps paintVersion to trigger re-renders in
+ * the glyph editor.  The fontData signal is NOT updated here — that
+ * happens in commitPaintStroke which creates the new array reference
+ * needed for undo snapshots and downstream subscribers (tiles, preview).
+ */
 export function setPixel(font: FontInstance, glyphIndex: number, x: number, y: number, on: boolean) {
   const bpr = bytesPerRow(font)
   const bpg = bytesPerGlyph(font)
-  const data = new Uint8Array(font.fontData.value)
+  const data = font.fontData.value
   const rowOffset = glyphIndex * bpg + y * bpr
   if (on) setBit(data, rowOffset, x)
   else clearBit(data, rowOffset, x)
-  font.fontData.value = data
-  markDirty(font)
+  font.paintVersion.value++
 }
 
 export function selectGlyph(font: FontInstance, index: number, shift: boolean, ctrl: boolean) {

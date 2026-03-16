@@ -69,6 +69,10 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
     return () => obs.disconnect()
   }, [])
 
+  // Subscribe to paintVersion so we re-render on each in-place pixel edit.
+  // fontData signal only fires at commit time (mouseup).
+  font.paintVersion.value
+
   const cells = []
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
