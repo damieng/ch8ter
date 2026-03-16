@@ -14,8 +14,10 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
 
-  // Keep a ref so document-level event handlers always see current values
+  // Keep refs so document-level event handlers always see current values
   // without needing to re-register on every render.
+  const fontRef = useRef(font)
+  fontRef.current = font
   const editorState = useRef({ idx, w, cellSize: 0, gap: 1 })
 
   // Square cells: fit the largest square cell size into the container
@@ -47,13 +49,13 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
       const rect = grid.getBoundingClientRect()
       const x = e.clientX - rect.left
       const col = Math.max(1, Math.min(curW, Math.round(x / (curCell + curGap))))
-      setGlyphAdvance(font, curIdx, col)
+      setGlyphAdvance(fontRef.current, curIdx, col)
     }
 
     function onMouseUp() {
       draggingGuide.current = false
       if (painting.current !== null) {
-        commitPaintStroke(font)
+        commitPaintStroke(fontRef.current)
       }
       painting.current = null
     }

@@ -165,13 +165,13 @@ export const activeFontId = signal<string>(fonts.value[0].id)
 setupFontAutoSave(() => fonts.value)
 
 /** Build a GlyphLookup that maps Unicode characters to glyph indices via the active charset. */
-function buildGlyphLookup(startChar: number): GlyphLookup {
+function buildGlyphLookup(startChar: number, count: number): GlyphLookup {
   const reverse = buildUnicodeReverse(charset.value)
   return (ch: string) => {
     const cp = reverse.get(ch)
     if (cp === undefined) return undefined
     const idx = cp - startChar
-    return idx >= 0 ? idx : undefined
+    return idx >= 0 && idx < count ? idx : undefined
   }
 }
 
@@ -183,7 +183,7 @@ export function calcMissingMetrics(font: FontInstance) {
   const h = font.glyphHeight.value
   const bl = font.baseline.value
   const props = font.meta.value?.properties
-  const lookup = buildGlyphLookup(start)
+  const lookup = buildGlyphLookup(start, glyphCount(font))
 
   if (font.capHeight.value < 0) {
     const fromProp = props?.['CAP_HEIGHT']
@@ -205,7 +205,7 @@ export function calcMissingMetrics(font: FontInstance) {
 }
 
 export function recalcMetrics(font: FontInstance) {
-  const lookup = buildGlyphLookup(font.startChar.value)
+  const lookup = buildGlyphLookup(font.startChar.value, glyphCount(font))
   const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value, lookup)
   font.baseline.value = m.baseline
   font.ascender.value = m.ascender
@@ -545,7 +545,6 @@ export function resizeFont(
   font.glyphWidth.value = newW
   font.glyphHeight.value = newH
   font.fontData.value = dst
-  font.savedSnapshot.value = new Uint8Array(dst)
   font.dirty.value = true
   font.undoHistory.clear()
 }

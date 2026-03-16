@@ -4,6 +4,7 @@ import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import type { FontInstance, SpacingMode } from './store'
 import { createFont } from './store'
+import { bpr } from './bitUtils'
 import { calcAllMetrics, type GlyphLookup } from './charMetrics'
 import { buildUnicodeReverse, charset } from './charsets'
 
@@ -81,13 +82,13 @@ function fromBase64(b64: string): Uint8Array {
 
 // --- Glyph lookup for metrics ---
 
-function buildGlyphLookup(startChar: number): GlyphLookup {
+function buildGlyphLookup(startChar: number, count: number): GlyphLookup {
   const reverse = buildUnicodeReverse(charset.value)
   return (ch: string) => {
     const cp = reverse.get(ch)
     if (cp === undefined) return undefined
     const idx = cp - startChar
-    return idx >= 0 ? idx : undefined
+    return idx >= 0 && idx < count ? idx : undefined
   }
 }
 
@@ -125,8 +126,12 @@ export function loadFontsFromStorage(): FontInstance[] | null {
       if (s.descender != null) font.descender.value = s.descender
       // Auto-calc metrics if not stored
       if (s.ascender == null) {
-        const lookup = buildGlyphLookup(s.startChar)
-        const m = calcAllMetrics(data, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, lookup)
+        const w = s.glyphWidth ?? 8
+        const h = s.glyphHeight ?? 8
+        const bpg = h * bpr(w)
+        const count = bpg > 0 ? Math.floor(data.length / bpg) : 0
+        const lookup = buildGlyphLookup(s.startChar, count)
+        const m = calcAllMetrics(data, s.startChar, w, h, lookup)
         font.ascender.value = m.ascender
         font.capHeight.value = m.capHeight
         font.xHeight.value = m.xHeight
