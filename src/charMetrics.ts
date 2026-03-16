@@ -56,12 +56,19 @@ const X_HEIGHT_CHARS = 'xzvwcoe'
 const NUM_HEIGHT_CHARS = '014789'
 const DESCENDER_CHARS = 'gpqy'
 
-// Raw font data params to avoid circular dependency with store
+/**
+ * Optional lookup that maps a Unicode character to its glyph index in the font.
+ * When provided, metric detection finds glyphs by their Unicode identity
+ * (e.g. 'H' → screen code 72 in C64) rather than assuming codepoint == index.
+ */
+export type GlyphLookup = (ch: string) => number | undefined
+
+// Raw font data params
 interface FontData {
   data: Uint8Array
-  startChar: number
   w: number
   h: number
+  lookup: (ch: string) => number
 }
 
 function glyphTopRow(data: Uint8Array, glyphIdx: number, w: number, h: number): number {
@@ -92,8 +99,8 @@ function scanTop(fd: FontData, chars: string): number {
   const gc = bpg > 0 ? Math.floor(fd.data.length / bpg) : 0
   let best = fd.h
   for (let i = 0; i < chars.length; i++) {
-    const gi = chars.charCodeAt(i) - fd.startChar
-    if (gi < 0 || gi >= gc) continue
+    const gi = fd.lookup(chars[i])
+    if (gi === undefined || gi < 0 || gi >= gc) continue
     const top = glyphTopRow(fd.data, gi, fd.w, fd.h)
     if (top >= 0 && top < best) best = top
   }
@@ -106,21 +113,32 @@ function scanBottom(fd: FontData, chars: string): number {
   const gc = bpg > 0 ? Math.floor(fd.data.length / bpg) : 0
   let best = -1
   for (let i = 0; i < chars.length; i++) {
-    const gi = chars.charCodeAt(i) - fd.startChar
-    if (gi < 0 || gi >= gc) continue
+    const gi = fd.lookup(chars[i])
+    if (gi === undefined || gi < 0 || gi >= gc) continue
     const bot = glyphBottomRow(fd.data, gi, fd.w, fd.h)
     if (bot > best) best = bot
   }
   return best
 }
 
-function fd(data: Uint8Array, startChar: number, w: number, h: number): FontData {
-  return { data, startChar, w, h }
+/** Build the default lookup: Unicode codepoint minus startChar. */
+function defaultLookup(startChar: number): (ch: string) => number {
+  return (ch: string) => ch.codePointAt(0)! - startChar
+}
+
+function makeFd(data: Uint8Array, startChar: number, w: number, h: number, glyphLookup?: GlyphLookup): FontData {
+  const fallback = defaultLookup(startChar)
+  return {
+    data, w, h,
+    lookup: glyphLookup
+      ? (ch: string) => glyphLookup(ch) ?? fallback(ch)
+      : fallback,
+  }
 }
 
 // Baseline is absolute (row index from top).
-export function calcBaseline(data: Uint8Array, startChar: number, w: number, h: number): number {
-  const bot = scanBottom(fd(data, startChar, w, h), BASELINE_CHARS)
+export function calcBaseline(data: Uint8Array, startChar: number, w: number, h: number, glyphLookup?: GlyphLookup): number {
+  const bot = scanBottom(makeFd(data, startChar, w, h, glyphLookup), BASELINE_CHARS)
   return bot >= 0 ? bot + 1 : h - 1
 }
 
@@ -129,39 +147,39 @@ export function calcBaseline(data: Uint8Array, startChar: number, w: number, h: 
 // Descender: pixels below baseline (positive = lower).
 // Returns -1 if not detectable.
 
-export function calcAscender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
-  const top = scanTop(fd(data, startChar, w, h), ASCENDER_CHARS)
+export function calcAscender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number, glyphLookup?: GlyphLookup): number {
+  const top = scanTop(makeFd(data, startChar, w, h, glyphLookup), ASCENDER_CHARS)
   return top >= 0 ? baseline - top : -1
 }
 
-export function calcCapHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
-  const top = scanTop(fd(data, startChar, w, h), CAP_HEIGHT_CHARS)
+export function calcCapHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number, glyphLookup?: GlyphLookup): number {
+  const top = scanTop(makeFd(data, startChar, w, h, glyphLookup), CAP_HEIGHT_CHARS)
   return top >= 0 ? baseline - top : -1
 }
 
-export function calcXHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
-  const top = scanTop(fd(data, startChar, w, h), X_HEIGHT_CHARS)
+export function calcXHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number, glyphLookup?: GlyphLookup): number {
+  const top = scanTop(makeFd(data, startChar, w, h, glyphLookup), X_HEIGHT_CHARS)
   return top >= 0 ? baseline - top : -1
 }
 
-export function calcNumericHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
-  const top = scanTop(fd(data, startChar, w, h), NUM_HEIGHT_CHARS)
+export function calcNumericHeight(data: Uint8Array, startChar: number, w: number, h: number, baseline: number, glyphLookup?: GlyphLookup): number {
+  const top = scanTop(makeFd(data, startChar, w, h, glyphLookup), NUM_HEIGHT_CHARS)
   return top >= 0 ? baseline - top : -1
 }
 
-export function calcDescender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number): number {
-  const bot = scanBottom(fd(data, startChar, w, h), DESCENDER_CHARS)
+export function calcDescender(data: Uint8Array, startChar: number, w: number, h: number, baseline: number, glyphLookup?: GlyphLookup): number {
+  const bot = scanBottom(makeFd(data, startChar, w, h, glyphLookup), DESCENDER_CHARS)
   return bot >= 0 ? (bot + 1) - baseline : -1
 }
 
-export function calcAllMetrics(data: Uint8Array, startChar: number, w: number, h: number) {
-  const baseline = calcBaseline(data, startChar, w, h)
+export function calcAllMetrics(data: Uint8Array, startChar: number, w: number, h: number, glyphLookup?: GlyphLookup) {
+  const baseline = calcBaseline(data, startChar, w, h, glyphLookup)
   return {
     baseline,
-    ascender: calcAscender(data, startChar, w, h, baseline),
-    capHeight: calcCapHeight(data, startChar, w, h, baseline),
-    xHeight: calcXHeight(data, startChar, w, h, baseline),
-    numericHeight: calcNumericHeight(data, startChar, w, h, baseline),
-    descender: calcDescender(data, startChar, w, h, baseline),
+    ascender: calcAscender(data, startChar, w, h, baseline, glyphLookup),
+    capHeight: calcCapHeight(data, startChar, w, h, baseline, glyphLookup),
+    xHeight: calcXHeight(data, startChar, w, h, baseline, glyphLookup),
+    numericHeight: calcNumericHeight(data, startChar, w, h, baseline, glyphLookup),
+    descender: calcDescender(data, startChar, w, h, baseline, glyphLookup),
   }
 }

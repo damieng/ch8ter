@@ -5,7 +5,7 @@ import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
 import { baseName } from './fontLoad'
 import { isFixedWidth } from './unicodeRanges'
-import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender } from './charMetrics'
+import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, type GlyphLookup } from './charMetrics'
 import {
   type Charset, CHARSETS, charset,
   charsetGlyphFilter as charsetGlyphFilterImpl,
@@ -276,7 +276,8 @@ function loadFromStorage(): FontInstance[] | null {
       if (s.descender != null) font.descender.value = s.descender
       // Auto-calc metrics if not stored
       if (s.ascender == null) {
-        const m = calcAllMetrics(data, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8)
+        const lookup = buildGlyphLookup(s.startChar)
+        const m = calcAllMetrics(data, s.startChar, s.glyphWidth ?? 8, s.glyphHeight ?? 8, lookup)
         font.ascender.value = m.ascender
         font.capHeight.value = m.capHeight
         font.xHeight.value = m.xHeight
@@ -344,6 +345,17 @@ effect(() => {
   saveToStorage()
 })
 
+/** Build a GlyphLookup that maps Unicode characters to glyph indices via the active charset. */
+function buildGlyphLookup(startChar: number): GlyphLookup {
+  const reverse = buildUnicodeReverse(charset.value)
+  return (ch: string) => {
+    const cp = reverse.get(ch)
+    if (cp === undefined) return undefined
+    const idx = cp - startChar
+    return idx >= 0 ? idx : undefined
+  }
+}
+
 // Fill in only metrics that are still at default (-1), using BDF properties where available
 export function calcMissingMetrics(font: FontInstance) {
   const data = font.fontData.value
@@ -352,28 +364,30 @@ export function calcMissingMetrics(font: FontInstance) {
   const h = font.glyphHeight.value
   const bl = font.baseline.value
   const props = font.meta.value?.properties
+  const lookup = buildGlyphLookup(start)
 
   if (font.capHeight.value < 0) {
     const fromProp = props?.['CAP_HEIGHT']
-    font.capHeight.value = fromProp != null ? parseInt(fromProp) : calcCapHeight(data, start, w, h, bl)
+    font.capHeight.value = fromProp != null ? parseInt(fromProp) : calcCapHeight(data, start, w, h, bl, lookup)
   }
   if (font.xHeight.value < 0) {
     const fromProp = props?.['X_HEIGHT']
-    font.xHeight.value = fromProp != null ? parseInt(fromProp) : calcXHeight(data, start, w, h, bl)
+    font.xHeight.value = fromProp != null ? parseInt(fromProp) : calcXHeight(data, start, w, h, bl, lookup)
   }
   if (font.ascender.value < 0) {
-    font.ascender.value = calcAscender(data, start, w, h, bl)
+    font.ascender.value = calcAscender(data, start, w, h, bl, lookup)
   }
   if (font.numericHeight.value < 0) {
-    font.numericHeight.value = calcNumericHeight(data, start, w, h, bl)
+    font.numericHeight.value = calcNumericHeight(data, start, w, h, bl, lookup)
   }
   if (font.descender.value < 0) {
-    font.descender.value = calcDescender(data, start, w, h, bl)
+    font.descender.value = calcDescender(data, start, w, h, bl, lookup)
   }
 }
 
 export function recalcMetrics(font: FontInstance) {
-  const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value)
+  const lookup = buildGlyphLookup(font.startChar.value)
+  const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value, lookup)
   font.baseline.value = m.baseline
   font.ascender.value = m.ascender
   font.capHeight.value = m.capHeight
