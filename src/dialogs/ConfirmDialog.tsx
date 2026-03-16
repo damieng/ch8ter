@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo } from 'preact/hooks'
 import { type FontInstance, bytesPerGlyph } from '../store'
+import { drawGlyphToCtx } from '../drawGlyph'
 
 interface Props {
   font: FontInstance
@@ -49,15 +50,7 @@ export function ConfirmDialog({ font, onConfirm, onCancel }: Props) {
     for (let i = 0; i < text.length; i++) {
       const gi = text.charCodeAt(i) - start
       if (gi < 0 || gi >= gc) continue
-      const base = gi * bpg
-      for (let y = 0; y < gh; y++) {
-        for (let x = 0; x < gw; x++) {
-          const byteIdx = base + y * bpr + Math.floor(x / 8)
-          if (data[byteIdx] & (0x80 >> (x % 8))) {
-            ctx.fillRect(i * gw * scale + x * scale, y * scale, scale, scale)
-          }
-        }
-      }
+      drawGlyphToCtx(ctx, data, gi * bpg, gw, gh, bpr, i * gw * scale, 0, scale, scale)
     }
   }, [font])
 

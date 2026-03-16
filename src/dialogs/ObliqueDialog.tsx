@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { type FontInstance, shearGlyphBytes, createObliqueVariant } from '../store'
+import { drawGlyphToCtx } from '../drawGlyph'
 
 const PREVIEW_GLYPHS = [
   // Show a mix: uppercase, lowercase, digits, symbols
@@ -49,14 +50,7 @@ function PreviewGrid({ font, angle }: { font: FontInstance; angle: number }) {
       ctx.fillRect(ox, oy, cellW, cellH)
 
       ctx.fillStyle = '#1e293b'
-      for (let y = 0; y < gh; y++) {
-        for (let x = 0; x < gw; x++) {
-          const byteIdx = y * bpr + Math.floor(x / 8)
-          if (sheared[byteIdx] & (0x80 >> (x % 8))) {
-            ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale)
-          }
-        }
-      }
+      drawGlyphToCtx(ctx, sheared, 0, gw, gh, bpr, ox, oy, scale, scale)
     })
   }, [font.fontData.value, angle])
 

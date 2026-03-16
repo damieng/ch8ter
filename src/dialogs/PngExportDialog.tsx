@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { Download } from 'lucide-preact'
 import { type FontInstance, bytesPerRow, glyphCount } from '../store'
+import { drawGlyphToCtx } from '../drawGlyph'
 import { ZoomControl } from '../components/ZoomControl'
 import { SizeField } from '../components/SizeField'
 import { NumField } from '../components/NumField'
@@ -192,13 +193,7 @@ function renderExport(
     const oy = borderY + row * cellH
     const glyphBase = g * bpg
 
-    for (let py = 0; py < gh; py++) {
-      for (let px = 0; px < gw; px++) {
-        if (data[glyphBase + py * bpr + (px >> 3)] & (0x80 >> (px & 7))) {
-          ctx.fillRect(ox + px * scale, oy + py * scale, scale, scale)
-        }
-      }
-    }
+    drawGlyphToCtx(ctx, data, glyphBase, gw, gh, bpr, ox, oy, scale, scale)
   }
 
   return { canvas, cols, rows }

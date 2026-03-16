@@ -3,6 +3,7 @@
 import type { FontInstance } from './store'
 import { glyphAdvance } from './store'
 import { isFixedWidth } from './unicodeRanges'
+import { drawGlyphToCtx } from './drawGlyph'
 
 export interface RenderOptions {
   canvas: HTMLCanvasElement
@@ -39,17 +40,7 @@ export function renderText({
   const rowCount = Math.max(1, lines.length)
 
   function drawGlyph(glyphIdx: number, gx: number, rowY: number) {
-    const base = glyphIdx * bpg
-    for (let y = 0; y < gh; y++) {
-      const py = rowY + glyphYOff + y * scale
-      if (py + scale <= rowY || py >= rowY + rowH) continue
-      for (let x = 0; x < gw; x++) {
-        const byteIdx = base + y * bpr + Math.floor(x / 8)
-        if (data[byteIdx] & (0x80 >> (x % 8))) {
-          ctx.fillRect(gx + x * scale, py, scale, scale)
-        }
-      }
-    }
+    drawGlyphToCtx(ctx, data, glyphIdx * bpg, gw, gh, bpr, gx, rowY + glyphYOff, scale, scale)
   }
 
 
