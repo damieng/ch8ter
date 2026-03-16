@@ -2,7 +2,6 @@ import { signal, type Signal, effect } from '@preact/signals'
 import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
-import { parseCh8, writeCh8 } from './fileFormats/ch8Format'
 import { baseName } from './fontLoad'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, type GlyphLookup } from './charMetrics'
 import {
@@ -769,18 +768,6 @@ export function selectSymbols(font: FontInstance) {
   }
 }
 
-// File I/O
-export function loadFont(font: FontInstance, buffer: ArrayBuffer) {
-  const data = parseCh8(buffer, bytesPerGlyph(font))
-  font.fontData.value = data
-  font.savedSnapshot.value = new Uint8Array(data)
-  font.dirty.value = false
-  font.selectedGlyphs.value = new Set([0])
-  font.lastClickedGlyph.value = 0
-  font.undoHistory.clear()
-  recalcMetrics(font)
-}
-
 // Resize all glyphs in a font to new dimensions
 export function resizeFont(
   font: FontInstance,
@@ -835,7 +822,7 @@ export function resizeFont(
 }
 
 export function saveFont(font: FontInstance): Uint8Array {
-  const data = writeCh8(font.fontData.value)
+  const data = new Uint8Array(font.fontData.value)
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   return data
