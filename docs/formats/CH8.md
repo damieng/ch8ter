@@ -1,4 +1,4 @@
-# CH8 / UDG / BIN Raw Bitmap Font Format
+# CH8 Raw Font Format
 
 The simplest possible bitmap font format — raw sequential glyph pixel data with no header or metadata.
 

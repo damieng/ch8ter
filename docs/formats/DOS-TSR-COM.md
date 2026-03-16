@@ -122,21 +122,6 @@ All characters use **CP437** (IBM PC/DOS code page), which includes box-drawing 
 - Font offsets vary between programs — heuristic scanning is required
 - Some programs contain only a subset of heights
 - The embedded code makes these files larger than raw font data
-
-## Known Programs
-
-| Program | Size | Heights | Author |
-|---------|------|---------|--------|
-| BOLDPLOT.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| DIDDY.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| FUTUREX.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| MEGABOLD.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| OCRSTYLE.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| SHOWTIME.COM | 8291 | 8, 14, 16 | Michael J. Mefford |
-| PLOTTER.COM | 2669 | 8 (compressed) | Michael J. Mefford |
-| SCRIPT.COM | 2667 | 8 | Michael J. Mefford |
-| SMART.COM | 2138 | 8 | Michael J. Mefford |
-
 ## References
 
 - *PC Magazine* DOS utilities collection
