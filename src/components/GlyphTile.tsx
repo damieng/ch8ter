@@ -63,7 +63,10 @@ export function GlyphTile({ font, index, size, selected, active, muted, onClick 
       title={`${charCode} (0x${charCode.toString(16).toUpperCase()})${label ? ' ' + label : ''}`}
     >
       <canvas ref={canvasRef} width={canvasW} height={canvasH} class="block" />
-      <span class={`text-sm leading-tight mt-0.5${muted ? ' text-gray-300' : ''}`}>
+      <span
+        class={`leading-tight mt-0.5 text-center overflow-hidden${muted ? ' text-gray-300' : ''}`}
+        style={{ maxWidth: canvasW + 4, fontSize: `min(0.875rem, ${canvasW + 4}px / ${label.length * 0.65})` }}
+      >
         {label}
       </span>
     </div>
