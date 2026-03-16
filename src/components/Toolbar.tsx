@@ -1,4 +1,4 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
@@ -31,9 +31,9 @@ import { writeAmigaFont } from '../fileFormats/amigaFontWriter'
 import { writeAtari8Bit } from '../fileFormats/atari8BitWriter'
 import { writeBbc } from '../fileFormats/bbcWriter'
 import { writeEgaCom } from '../fileFormats/egaComWriter'
-import { useClickOutside } from '../hooks/useClickOutside'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 import { PngExportDialog } from '../dialogs/PngExportDialog'
+import { Dropdown } from './Dropdown'
 
 const ICON = 18
 
@@ -51,15 +51,11 @@ function baseName(filename: string): string {
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useClickOutside(ref, () => setOpen(false))
   const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
   function saveCh8() {
     const data = saveFont(font)
     download(new Blob([data.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.ch8')
-    setOpen(false)
   }
 
   function saveBdf() {
@@ -77,7 +73,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       fontName: font.fontName.value,
     })
     download(new Blob([bdf], { type: 'text/plain' }), baseName(font.fileName.value) + '.bdf')
-    setOpen(false)
   }
 
   function savePsf() {
@@ -91,7 +86,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphCount: count,
     })
     download(new Blob([psf.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.psf')
-    setOpen(false)
   }
 
   function saveYaff() {
@@ -106,7 +100,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       name: font.fontName.value || baseName(font.fileName.value),
     })
     download(new Blob([yaff], { type: 'text/plain' }), baseName(font.fileName.value) + '.yaff')
-    setOpen(false)
   }
 
   function saveDraw() {
@@ -120,7 +113,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphCount: count,
     })
     download(new Blob([draw], { type: 'text/plain' }), baseName(font.fileName.value) + '.draw')
-    setOpen(false)
   }
 
   function saveFzx() {
@@ -135,7 +127,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       glyphMeta: font.glyphMeta.value,
     })
     download(new Blob([fzx.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fzx')
-    setOpen(false)
   }
 
   function saveFnt() {
@@ -156,7 +147,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       meta: font.meta.value,
     })
     download(new Blob([fnt.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
-    setOpen(false)
   }
 
   function savePcf() {
@@ -174,7 +164,6 @@ export function SaveBar({ font }: { font: FontInstance }) {
       fontName: font.fontName.value,
     })
     download(new Blob([pcf.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.pcf')
-    setOpen(false)
   }
 
   function savePdb() {
@@ -192,14 +181,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
       fontName: font.fontName.value,
     })
     download(new Blob([pdb.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.pdb')
-    setOpen(false)
   }
 
   function saveAtari8Bit() {
     const data = saveFont(font)
     const a8 = writeAtari8Bit(data, font.startChar.value)
     download(new Blob([a8.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.fnt')
-    setOpen(false)
   }
 
   function saveAmiga() {
@@ -218,14 +205,12 @@ export function SaveBar({ font }: { font: FontInstance }) {
     })
     const height = font.glyphHeight.value
     download(new Blob([amiga.buffer as ArrayBuffer]), baseName(font.fileName.value) + '-' + height)
-    setOpen(false)
   }
 
   function saveEgaCom() {
     const data = saveFont(font)
     const ega = writeEgaCom(data, font.glyphHeight.value)
     download(new Blob([ega.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
-    setOpen(false)
   }
 
   function saveBbc() {
@@ -233,88 +218,57 @@ export function SaveBar({ font }: { font: FontInstance }) {
     const count = glyphCount(font)
     const bbc = writeBbc(data, font.startChar.value, count)
     download(new Blob([bbc.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.bbc')
-    setOpen(false)
   }
 
   function saveCpm() {
     const data = saveFont(font)
     const com = exportCpm(font.glyphHeight.value, data)
     download(new Blob([com.buffer as ArrayBuffer]), baseName(font.fileName.value) + '.com')
-    setOpen(false)
   }
 
+  const btn = (label: string, fn: () => void, close: () => void) => (
+    <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { fn(); close() }}>
+      {label}
+    </button>
+  )
+
   return (
-    <div class="relative" ref={ref}>
-      <button
-        class="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
-        onClick={() => setOpen(!open)}
-        title="Save"
-      >
-        <Save size={ICON} />
-        <ChevronDown size={12} />
-      </button>
-      {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
-          {is8x8 && <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCh8}>
-            Save as .ch8
-          </button>}
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBdf}>
-            Save as .bdf
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePsf}>
-            Save as .psf
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveYaff}>
-            Save as .yaff
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveDraw}>
-            Save as .draw
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFzx}>
-            Save as .fzx
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveFnt}>
-            Save as Atari ST .fnt
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePcf}>
-            Save as X11 .pcf
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={savePdb}>
-            Save as Palm .pdb
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveAtari8Bit}>
-            Save as Atari 8-bit .fnt
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveAmiga}>
-            Save as Amiga font
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveEgaCom}>
-            Save as EGA/VGA .com
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveBbc}>
-            Save as BBC Micro .bbc
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={saveCpm}>
-            Save as CP/M Plus .com
-          </button>
-        </div>
+    <Dropdown
+      button={<><Save size={ICON} /><ChevronDown size={12} /></>}
+      buttonClass="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
+      title="Save"
+      popupClass="w-auto whitespace-nowrap"
+    >
+      {(close) => (
+        <>
+          {is8x8 && btn('Save as .ch8', saveCh8, close)}
+          {btn('Save as .bdf', saveBdf, close)}
+          {btn('Save as .psf', savePsf, close)}
+          {btn('Save as .yaff', saveYaff, close)}
+          {btn('Save as .draw', saveDraw, close)}
+          {btn('Save as .fzx', saveFzx, close)}
+          {btn('Save as Atari ST .fnt', saveFnt, close)}
+          {btn('Save as X11 .pcf', savePcf, close)}
+          {btn('Save as Palm .pdb', savePdb, close)}
+          {btn('Save as Atari 8-bit .fnt', saveAtari8Bit, close)}
+          {btn('Save as Amiga font', saveAmiga, close)}
+          {btn('Save as EGA/VGA .com', saveEgaCom, close)}
+          {btn('Save as BBC Micro .bbc', saveBbc, close)}
+          {btn('Save as CP/M Plus .com', saveCpm, close)}
+        </>
       )}
-    </div>
+    </Dropdown>
   )
 }
 
 export function ExportBar({ font }: { font: FontInstance }) {
-  const [open, setOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const [pngOpen, setPngOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useClickOutside(ref, () => setOpen(false))
 
   function exportTtfFile() {
     saveFont(font)
     const buf = exportTtf(font)
     download(new Blob([buf]), baseName(font.fileName.value) + '.ttf')
-    setOpen(false)
   }
 
   async function exportWoff() {
@@ -322,14 +276,12 @@ export function ExportBar({ font }: { font: FontInstance }) {
     const ttf = exportTtf(font)
     const woff = await ttfToWoff(ttf)
     download(new Blob([woff]), baseName(font.fileName.value) + '.woff')
-    setOpen(false)
   }
 
   function exportVarTtfFile() {
     saveFont(font)
     const buf = exportVarTtf(font)
     download(new Blob([buf]), baseName(font.fileName.value) + '-variable.ttf')
-    setOpen(false)
   }
 
   async function exportVarWoff() {
@@ -337,45 +289,37 @@ export function ExportBar({ font }: { font: FontInstance }) {
     const ttf = exportVarTtf(font)
     const woff = await ttfToWoff(ttf)
     download(new Blob([woff]), baseName(font.fileName.value) + '-variable.woff')
-    setOpen(false)
   }
 
+  const btn = (label: string, fn: () => void, close: () => void) => (
+    <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { fn(); close() }}>
+      {label}
+    </button>
+  )
+
   return (
-    <div class="relative" ref={ref}>
-      <button
-        class="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
-        onClick={() => setOpen(!open)}
-        title="Export"
-      >
-        <TypeOutline size={ICON} />
-        <ChevronDown size={12} />
-      </button>
-      {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto whitespace-nowrap">
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportTtfFile}>
-            Export as .ttf
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportWoff}>
-            Export as .woff
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportVarTtfFile}>
-            Export as .ttf (variable)
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={exportVarWoff}>
-            Export as .woff (variable)
-          </button>
+    <Dropdown
+      button={<><TypeOutline size={ICON} /><ChevronDown size={12} /></>}
+      buttonClass="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
+      title="Export"
+      popupClass="w-auto whitespace-nowrap"
+      extra={<>
+        {pngOpen && <PngExportDialog font={font} onClose={() => setPngOpen(false)} />}
+        {sourceOpen && <SourceExportDialog font={font} onClose={() => setSourceOpen(false)} />}
+      </>}
+    >
+      {(close) => (
+        <>
+          {btn('Export as .ttf', exportTtfFile, close)}
+          {btn('Export as .woff', exportWoff, close)}
+          {btn('Export as .ttf (variable)', exportVarTtfFile, close)}
+          {btn('Export as .woff (variable)', exportVarWoff, close)}
           <div class="border-t border-gray-200 my-1" />
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { setPngOpen(true); setOpen(false) }}>
-            Export PNG...
-          </button>
-          <button class="flex items-center w-full px-3 py-1.5 text-left hover:bg-blue-50 text-sm" onClick={() => { setSourceOpen(true); setOpen(false) }}>
-            Export Source...
-          </button>
-        </div>
+          {btn('Export PNG...', () => setPngOpen(true), close)}
+          {btn('Export Source...', () => setSourceOpen(true), close)}
+        </>
       )}
-      {pngOpen && <PngExportDialog font={font} onClose={() => setPngOpen(false)} />}
-      {sourceOpen && <SourceExportDialog font={font} onClose={() => setSourceOpen(false)} />}
-    </div>
+    </Dropdown>
   )
 }
 

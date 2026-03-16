@@ -1,4 +1,4 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
@@ -14,23 +14,19 @@ import {
 import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from '../dialogs/ObliqueDialog'
 import { MonospaceDialog } from '../dialogs/MonospaceDialog'
-import { useClickOutside } from '../hooks/useClickOutside'
+import { Dropdown } from './Dropdown'
 
 const ICON = 16
 
 export function ToolsDropdown({ font }: { font: FontInstance }) {
-  const [open, setOpen] = useState(false)
   const [obliqueOpen, setObliqueOpen] = useState(false)
   const [monospaceOpen, setMonospaceOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
-  useClickOutside(ref, () => setOpen(false))
-
-  function iconBtn(icon: any, title: string, fn: () => void) {
+  function iconBtn(icon: any, title: string, fn: () => void, close: () => void) {
     return (
       <button
         class="p-1.5 hover:bg-blue-50 rounded flex items-center justify-center"
-        onClick={() => { fn(); setOpen(false) }}
+        onClick={() => { fn(); close() }}
         title={title}
       >
         {icon}
@@ -38,11 +34,11 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
     )
   }
 
-  function menuItem(label: string, fn: () => void) {
+  function menuItem(label: string, fn: () => void, close: () => void) {
     return (
       <button
         class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
-        onClick={() => { fn(); setOpen(false) }}
+        onClick={() => { fn(); close() }}
       >
         {label}
       </button>
@@ -50,49 +46,46 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
   }
 
   return (
-    <div class="relative" ref={ref}>
-      <button
-        class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
-        onClick={() => setOpen(!open)}
-      >
-        <Wrench size={ICON} />
-        Tools
-        <ChevronDown size={14} />
-      </button>
-      {open && (
-        <div class="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 w-auto">
+    <Dropdown
+      button={<><Wrench size={ICON} />Tools<ChevronDown size={14} /></>}
+      popupClass="w-auto"
+      extra={<>
+        {obliqueOpen && createPortal(
+          <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />,
+          document.body,
+        )}
+        {monospaceOpen && (
+          <MonospaceDialog font={font} onClose={() => setMonospaceOpen(false)} />
+        )}
+      </>}
+    >
+      {(close) => (
+        <>
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', () => execTransformSelection(font, flipXBytes, 'Flip X'))}
-            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', () => execTransformSelection(font, flipYBytes, 'Flip Y'))}
-            {iconBtn(<Contrast size={ICON} />, 'Invert', () => execTransformSelection(font, invertBytes, 'Invert'))}
-            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', () => execTransformSelection(font, rotateCWBytes, 'Rotate CW'))}
-            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => execTransformSelection(font, rotateCCWBytes, 'Rotate CCW'))}
+            {iconBtn(<FlipHorizontal size={ICON} />, 'Flip X', () => execTransformSelection(font, flipXBytes, 'Flip X'), close)}
+            {iconBtn(<FlipVertical size={ICON} />, 'Flip Y', () => execTransformSelection(font, flipYBytes, 'Flip Y'), close)}
+            {iconBtn(<Contrast size={ICON} />, 'Invert', () => execTransformSelection(font, invertBytes, 'Invert'), close)}
+            {iconBtn(<RotateCw size={ICON} />, 'Rotate CW', () => execTransformSelection(font, rotateCWBytes, 'Rotate CW'), close)}
+            {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => execTransformSelection(font, rotateCCWBytes, 'Rotate CCW'), close)}
           </div>
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => execTransformSelection(font, shiftUp, 'Shift Up'))}
-            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => execTransformSelection(font, shiftDown, 'Shift Down'))}
-            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => execTransformSelection(font, shiftLeft, 'Shift Left'))}
-            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => execTransformSelection(font, shiftRight, 'Shift Right'))}
-            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => execTransformSelection(font, centerHorizontalBytes, 'Center H'))}
+            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => execTransformSelection(font, shiftUp, 'Shift Up'), close)}
+            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => execTransformSelection(font, shiftDown, 'Shift Down'), close)}
+            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => execTransformSelection(font, shiftLeft, 'Shift Left'), close)}
+            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => execTransformSelection(font, shiftRight, 'Shift Right'), close)}
+            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => execTransformSelection(font, centerHorizontalBytes, 'Center H'), close)}
           </div>
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Copy Upper to Lower', () => execCopyRange(font, 65, 90, 97, 'Copy Upper→Lower'))}
-          {menuItem('Copy Lower to Upper', () => execCopyRange(font, 97, 122, 65, 'Copy Lower→Upper'))}
+          {menuItem('Copy Upper to Lower', () => execCopyRange(font, 65, 90, 97, 'Copy Upper→Lower'), close)}
+          {menuItem('Copy Lower to Upper', () => execCopyRange(font, 97, 122, 65, 'Copy Lower→Upper'), close)}
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Create Bold', () => createBoldVariant(font))}
-          {menuItem('Create Outline', () => createOutlineVariant(font))}
-          {menuItem('Create Oblique...', () => setObliqueOpen(true))}
-          {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font))}
-          {font.spacing.value === 'proportional' && menuItem('Create Monospace...', () => setMonospaceOpen(true))}
-        </div>
+          {menuItem('Create Bold', () => createBoldVariant(font), close)}
+          {menuItem('Create Outline', () => createOutlineVariant(font), close)}
+          {menuItem('Create Oblique...', () => setObliqueOpen(true), close)}
+          {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font), close)}
+          {font.spacing.value === 'proportional' && menuItem('Create Monospace...', () => setMonospaceOpen(true), close)}
+        </>
       )}
-      {obliqueOpen && createPortal(
-        <ObliqueDialog font={font} onClose={() => setObliqueOpen(false)} />,
-        document.body,
-      )}
-      {monospaceOpen && (
-        <MonospaceDialog font={font} onClose={() => setMonospaceOpen(false)} />
-      )}
-    </div>
+    </Dropdown>
   )
 }
