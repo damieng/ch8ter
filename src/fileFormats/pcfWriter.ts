@@ -1,6 +1,7 @@
 // Write PCF (Portable Compiled Format) font files.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { isGlyphEmpty } from './glyphUtils'
 
 interface PcfWriteParams {
   fontData: Uint8Array
@@ -45,12 +46,7 @@ export function writePcf(params: PcfWriteParams): Uint8Array {
     if (cp === 0x20) { included.push({ srcIdx: i, cp }); continue }
     const gm = glyphMeta?.[i]
     if (gm) { included.push({ srcIdx: i, cp }); continue }
-    const offset = i * bpg
-    let hasPixels = false
-    for (let b = 0; b < bpg; b++) {
-      if (fontData[offset + b]) { hasPixels = true; break }
-    }
-    if (hasPixels) included.push({ srcIdx: i, cp })
+    if (!isGlyphEmpty(fontData, i * bpg, bpg)) included.push({ srcIdx: i, cp })
   }
 
   const numGlyphs = included.length

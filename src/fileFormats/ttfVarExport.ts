@@ -1,5 +1,6 @@
 import type { FontInstance } from '../store'
 import { glyphCount, bytesPerRow, bytesPerGlyph } from '../store'
+import { getBit } from '../bitUtils'
 import { BinaryWriter, buildCmap, buildName, buildPost, assembleTtf } from './ttfUtils'
 
 // --- Pixel component shape ---
@@ -431,8 +432,7 @@ export function exportVarTtf(font: FontInstance): ArrayBuffer {
 
     for (let py = 0; py < glyphH; py++) {
       for (let px = 0; px < glyphW; px++) {
-        const byteIdx = i * bpg + py * bpr + (px >> 3)
-        if (data[byteIdx] & (0x80 >> (px & 7))) {
+        if (getBit(data, i * bpg + py * bpr, px)) {
           // Component center position
           const cx = px * scale + half
           const cy = (baseline - py - 1) * scale + half

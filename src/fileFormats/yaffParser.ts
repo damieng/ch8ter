@@ -2,6 +2,8 @@
 // Format: key:value metadata, then glyph labels (0xNN: or u+NNNN: or named)
 // followed by indented rows of '@' (set) and '.' (unset) pixels.
 
+import { setBit } from '../bitUtils'
+
 export interface YaffParseResult {
   fontData: Uint8Array
   startChar: number
@@ -89,7 +91,7 @@ export function parseYaff(text: string): YaffParseResult {
       const row = g.rows[y]
       for (let x = 0; x < glyphWidth && x < row.length; x++) {
         if (row[x] === '@') {
-          fontData[offset + y * bpr + Math.floor(x / 8)] |= (0x80 >> (x % 8))
+          setBit(fontData, offset + y * bpr, x)
         }
       }
     }

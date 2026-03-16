@@ -1,5 +1,7 @@
 // PNG bitmap font import — detection and glyph extraction
 
+import { setBit } from '../bitUtils'
+
 export interface PngImportSettings {
   scale: number
   glyphWidth: number
@@ -367,8 +369,7 @@ export function extractGlyphs(data: ImageData, settings: PngImportSettings): Png
           const foreground = isForeground(data, sx, sy, transparentBg, bg)
 
           if (foreground) {
-            const byteIdx = idx * bpg + y * bpr + Math.floor(x / 8)
-            fontData[byteIdx] |= 0x80 >> (x % 8)
+            setBit(fontData, idx * bpg + y * bpr, x)
             hasPixels = true
           }
         }

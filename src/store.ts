@@ -1182,8 +1182,8 @@ export function glyphCount(font: FontInstance): number {
 export function getPixel(font: FontInstance, glyphIndex: number, x: number, y: number): boolean {
   const bpr = bytesPerRow(font)
   const bpg = bytesPerGlyph(font)
-  const offset = glyphIndex * bpg + y * bpr + Math.floor(x / 8)
-  return (font.fontData.value[offset] & (0x80 >> (x % 8))) !== 0
+  const rowOffset = glyphIndex * bpg + y * bpr
+  return getBit(font.fontData.value, rowOffset, x)
 }
 
 export function glyphToText(font: FontInstance, glyphIndex: number): string {
@@ -1197,8 +1197,7 @@ export function glyphToText(font: FontInstance, glyphIndex: number): string {
   for (let y = 0; y < h; y++) {
     let row = ''
     for (let x = 0; x < w; x++) {
-      const byteIdx = base + y * bpr + Math.floor(x / 8)
-      row += (data[byteIdx] & (0x80 >> (x % 8))) ? '*' : ' '
+      row += getBit(data, base + y * bpr, x) ? '*' : ' '
     }
     rows.push(row)
   }
@@ -1340,12 +1339,12 @@ export function selectSymbols(font: FontInstance) {
 // --- Generic pixel helpers for transform functions ---
 // These work on raw glyph byte arrays with given dimensions.
 
-function getBit(bytes: Uint8Array, bpr: number, x: number, y: number): boolean {
-  return (bytes[y * bpr + Math.floor(x / 8)] & (0x80 >> (x % 8))) !== 0
+function getPixelBit(bytes: Uint8Array, bpr: number, x: number, y: number): boolean {
+  return getBit(bytes, y * bpr, x)
 }
 
-function setBit(bytes: Uint8Array, bpr: number, x: number, y: number) {
-  bytes[y * bpr + Math.floor(x / 8)] |= (0x80 >> (x % 8))
+function setPixelBit(bytes: Uint8Array, bpr: number, x: number, y: number) {
+  setBit(bytes, y * bpr, x)
 }
 
 export function flipXBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
@@ -1353,7 +1352,7 @@ export function flipXBytes(bytes: Uint8Array, w: number, h: number): Uint8Array 
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, w - 1 - x, y)
+      if (getPixelBit(bytes, bpr, x, y)) setPixelBit(out, bpr, w - 1 - x, y)
   return out
 }
 
@@ -1362,7 +1361,7 @@ export function flipYBytes(bytes: Uint8Array, w: number, h: number): Uint8Array 
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, x, h - 1 - y)
+      if (getPixelBit(bytes, bpr, x, y)) setPixelBit(out, bpr, x, h - 1 - y)
   return out
 }
 
@@ -1371,7 +1370,7 @@ export function invertBytes(bytes: Uint8Array, w: number, h: number): Uint8Array
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (!getBit(bytes, bpr, x, y)) setBit(out, bpr, x, y)
+      if (!getPixelBit(bytes, bpr, x, y)) setPixelBit(out, bpr, x, y)
   return out
 }
 
@@ -1383,9 +1382,9 @@ export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Arr
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) {
+      if (getPixelBit(bytes, bpr, x, y)) {
         const nx = h - 1 - y, ny = x
-        if (nx < w && ny < h) setBit(out, bpr, nx, ny)
+        if (nx < w && ny < h) setPixelBit(out, bpr, nx, ny)
       }
   return out
 }
@@ -1395,9 +1394,9 @@ export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Ar
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) {
+      if (getPixelBit(bytes, bpr, x, y)) {
         const nx = y, ny = w - 1 - x
-        if (nx < w && ny < h) setBit(out, bpr, nx, ny)
+        if (nx < w && ny < h) setPixelBit(out, bpr, nx, ny)
       }
   return out
 }
@@ -1427,7 +1426,7 @@ export function shiftLeft(bytes: Uint8Array, w: number, h: number): Uint8Array {
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, (x - 1 + w) % w, y)
+      if (getPixelBit(bytes, bpr, x, y)) setPixelBit(out, bpr, (x - 1 + w) % w, y)
   return out
 }
 
@@ -1436,7 +1435,7 @@ export function shiftRight(bytes: Uint8Array, w: number, h: number): Uint8Array 
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) setBit(out, bpr, (x + 1) % w, y)
+      if (getPixelBit(bytes, bpr, x, y)) setPixelBit(out, bpr, (x + 1) % w, y)
   return out
 }
 
@@ -1445,14 +1444,14 @@ export function centerHorizontalBytes(bytes: Uint8Array, w: number, h: number): 
   let leftBlank = 0
   for (let x = 0; x < w; x++) {
     let used = false
-    for (let y = 0; y < h; y++) if (getBit(bytes, bpr, x, y)) { used = true; break }
+    for (let y = 0; y < h; y++) if (getPixelBit(bytes, bpr, x, y)) { used = true; break }
     if (used) break
     leftBlank++
   }
   let rightBlank = 0
   for (let x = w - 1; x >= 0; x--) {
     let used = false
-    for (let y = 0; y < h; y++) if (getBit(bytes, bpr, x, y)) { used = true; break }
+    for (let y = 0; y < h; y++) if (getPixelBit(bytes, bpr, x, y)) { used = true; break }
     if (used) break
     rightBlank++
   }
@@ -1465,9 +1464,9 @@ export function centerHorizontalBytes(bytes: Uint8Array, w: number, h: number): 
   const out = new Uint8Array(h * bpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getBit(bytes, bpr, x, y)) {
+      if (getPixelBit(bytes, bpr, x, y)) {
         const nx = x - shift
-        if (nx >= 0 && nx < w) setBit(out, bpr, nx, y)
+        if (nx >= 0 && nx < w) setPixelBit(out, bpr, nx, y)
       }
   return out
 }
@@ -1486,17 +1485,17 @@ export function createBoldVariant(font: FontInstance) {
     const bytes = src.slice(offset, offset + bpg)
     let rightUsed = false, leftFree = true
     for (let y = 0; y < h; y++) {
-      if (getBit(bytes, bpr, w - 1, y)) rightUsed = true
-      if (getBit(bytes, bpr, 0, y)) leftFree = false
+      if (getPixelBit(bytes, bpr, w - 1, y)) rightUsed = true
+      if (getPixelBit(bytes, bpr, 0, y)) leftFree = false
     }
     const glyphBold = new Uint8Array(bpg)
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         let srcX = x
         if (rightUsed && leftFree) srcX = x + 1
-        const on = (srcX < w && getBit(bytes, bpr, srcX, y)) ||
-                   (srcX > 0 && srcX - 1 < w && getBit(bytes, bpr, srcX - 1, y))
-        if (on) setBit(glyphBold, bpr, x, y)
+        const on = (srcX < w && getPixelBit(bytes, bpr, srcX, y)) ||
+                   (srcX > 0 && srcX - 1 < w && getPixelBit(bytes, bpr, srcX - 1, y))
+        if (on) setPixelBit(glyphBold, bpr, x, y)
       }
     bold.set(glyphBold, offset)
   }
@@ -1521,15 +1520,15 @@ export function createOutlineVariant(font: FontInstance) {
     const glyphOut = new Uint8Array(bpg)
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
-        const orig = getBit(bytes, bpr, x, y)
+        const orig = getPixelBit(bytes, bpr, x, y)
         if (orig) continue // outline = only border pixels
         // Check if any neighbour is set
         const hasNeighbour =
-          (x > 0 && getBit(bytes, bpr, x - 1, y)) ||
-          (x < w - 1 && getBit(bytes, bpr, x + 1, y)) ||
-          (y > 0 && getBit(bytes, bpr, x, y - 1)) ||
-          (y < h - 1 && getBit(bytes, bpr, x, y + 1))
-        if (hasNeighbour) setBit(glyphOut, bpr, x, y)
+          (x > 0 && getPixelBit(bytes, bpr, x - 1, y)) ||
+          (x < w - 1 && getPixelBit(bytes, bpr, x + 1, y)) ||
+          (y > 0 && getPixelBit(bytes, bpr, x, y - 1)) ||
+          (y < h - 1 && getPixelBit(bytes, bpr, x, y + 1))
+        if (hasNeighbour) setPixelBit(glyphOut, bpr, x, y)
       }
     outline.set(glyphOut, offset)
   }
@@ -1548,7 +1547,7 @@ export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number, w: numb
 
   const orig: { x: number; y: number }[] = []
   const isSet = (x: number, y: number) =>
-    x >= 0 && x < w && y >= 0 && y < h && getBit(bytes, bpr, x, y)
+    x >= 0 && x < w && y >= 0 && y < h && getPixelBit(bytes, bpr, x, y)
 
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
@@ -1584,7 +1583,7 @@ export function shearGlyphBytes(bytes: Uint8Array, angleDegrees: number, w: numb
 
   const out = new Uint8Array(h * bpr)
   function plot(x: number, y: number) {
-    if (x >= 0 && x < w && y >= 0 && y < h) setBit(out, bpr, x, y)
+    if (x >= 0 && x < w && y >= 0 && y < h) setPixelBit(out, bpr, x, y)
   }
 
   for (const p of rounded) plot(p.x, p.y)
@@ -1664,7 +1663,7 @@ export function createProportionalVariant(font: FontInstance) {
     let left = w, right = -1
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++)
-        if (getBit(bytes, bpr, x, y)) {
+        if (getPixelBit(bytes, bpr, x, y)) {
           if (x < left) left = x
           if (x > right) right = x
         }
@@ -1680,8 +1679,8 @@ export function createProportionalVariant(font: FontInstance) {
     const shifted = new Uint8Array(bpg)
     for (let y = 0; y < h; y++)
       for (let x = left; x < w; x++)
-        if (getBit(bytes, bpr, x, y))
-          setBit(shifted, bpr, x - left, y)
+        if (getPixelBit(bytes, bpr, x, y))
+          setPixelBit(shifted, bpr, x - left, y)
     out.set(shifted, offset)
 
     // Advance = tight width + 1px gap
@@ -1720,7 +1719,7 @@ export function createMonospaceVariant(
     let left = w, right = -1
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++)
-        if (getBit(bytes, bpr, x, y)) {
+        if (getPixelBit(bytes, bpr, x, y)) {
           if (x < left) left = x
           if (x > right) right = x
         }
@@ -1739,8 +1738,8 @@ export function createMonospaceVariant(
     for (let y = 0; y < h; y++)
       for (let x = left; x <= right; x++) {
         const nx = x - left + dx
-        if (getBit(bytes, bpr, x, y) && nx >= 0 && nx < newW)
-          setBit(dstBytes, newBpr, nx, y)
+        if (getPixelBit(bytes, bpr, x, y) && nx >= 0 && nx < newW)
+          setPixelBit(dstBytes, newBpr, nx, y)
       }
 
     out.set(dstBytes, g * newBpg)
@@ -1799,8 +1798,8 @@ export function resizeFont(
       for (let x = 0; x < oldW; x++) {
         const nx = x + dx
         if (nx < 0 || nx >= newW) continue
-        if (getBit(srcBytes, oldBpr, x, y)) {
-          setBit(dstBytes, newBpr, nx, ny)
+        if (getPixelBit(srcBytes, oldBpr, x, y)) {
+          setPixelBit(dstBytes, newBpr, nx, ny)
         }
       }
     }

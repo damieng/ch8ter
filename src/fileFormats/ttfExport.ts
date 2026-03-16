@@ -1,5 +1,6 @@
 import type { FontInstance } from '../store'
 import { glyphCount, bytesPerRow, bytesPerGlyph } from '../store'
+import { getBit } from '../bitUtils'
 import { BinaryWriter, buildCmap, buildName, buildPost, assembleTtf } from './ttfUtils'
 
 // --- Pixel contour tracing ---
@@ -7,7 +8,7 @@ import { BinaryWriter, buildCmap, buildName, buildPost, assembleTtf } from './tt
 interface Pt { x: number; y: number }
 
 function getPixelBit(data: Uint8Array, gi: number, bpr: number, bpg: number, x: number, y: number): boolean {
-  return (data[gi * bpg + y * bpr + (x >> 3)] & (0x80 >> (x & 7))) !== 0
+  return getBit(data, gi * bpg + y * bpr, x)
 }
 
 function traceGlyphContours(

@@ -1,5 +1,7 @@
 // Parse BDF (Bitmap Distribution Format) font files into our internal format.
 
+import { setBit } from '../bitUtils'
+
 export interface FontMeta {
   format?: string       // e.g. 'BDF 2.1'
   fontName?: string     // FONT line
@@ -187,7 +189,7 @@ export function parseBdf(text: string): BdfParseResult {
               if (byte & (1 << bit)) {
                 const destX = px + srcBit
                 if (destX >= 0 && destX < cellW) {
-                  fontData[base + destY * bpr + (destX >> 3)] |= (0x80 >> (destX & 7))
+                  setBit(fontData, base + destY * bpr, destX)
                 }
               }
               srcBit++

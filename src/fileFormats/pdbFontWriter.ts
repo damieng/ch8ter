@@ -4,6 +4,8 @@
 // NFNT font record. See pdbFontParser.ts for format details.
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
+import { getBit, setBit } from '../bitUtils'
+import { isGlyphEmpty } from './glyphUtils'
 
 export interface PdbFontWriteParams {
   fontData: Uint8Array
@@ -39,12 +41,7 @@ export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
     const gm = glyphMeta?.[i]
     const advW = gm?.dwidth?.[0] ?? gm?.bbx?.[0] ?? glyphWidth
 
-    // Check if glyph has any pixels
-    let hasPixels = false
-    const glyphBase = i * bpg
-    for (let b = 0; b < bpg; b++) {
-      if (fontData[glyphBase + b]) { hasPixels = true; break }
-    }
+    const hasPixels = !isGlyphEmpty(fontData, i * bpg, bpg)
 
     // A glyph is present if it has pixels OR has valid glyphMeta (blank glyphs
     // like tab, space, and PalmOS special chars are valid even without pixels)
@@ -94,10 +91,10 @@ export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
       const dstRowBase = y * rowBytes
       for (let px = 0; px < pixW; px++) {
         // Read from per-glyph format
-        if (fontData[srcRow + (px >> 3)] & (0x80 >> (px & 7))) {
+        if (getBit(fontData, srcRow, px)) {
           // Write to raster
           const dx = xStart + px
-          bitmap[dstRowBase + (dx >> 3)] |= (0x80 >> (dx & 7))
+          setBit(bitmap, dstRowBase, dx)
         }
       }
     }

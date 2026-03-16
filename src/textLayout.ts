@@ -1,5 +1,7 @@
 // Text wrapping, cursor mapping, and glyph measurement for the preview renderer.
 
+import { getBit } from './bitUtils'
+
 export const INVERSE_CHAR = '\x01'
 
 export interface WrapResult {
@@ -179,8 +181,7 @@ export function glyphBounds(data: Uint8Array, glyphIdx: number, w = 8, h = 8): {
   let minX = w, maxX = -1
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const byteIdx = offset + y * bpr + Math.floor(x / 8)
-      if (data[byteIdx] & (0x80 >> (x % 8))) {
+      if (getBit(data, offset + y * bpr, x)) {
         if (x < minX) minX = x
         if (x > maxX) maxX = x
       }

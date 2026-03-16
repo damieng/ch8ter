@@ -34,6 +34,7 @@
 //   [+48..+51]: tf_CharKern (offset to kerning table, or 0)
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
+import { setBit } from '../bitUtils'
 
 export interface AmigaFontParseResult {
   fontData: Uint8Array
@@ -171,7 +172,7 @@ export function parseAmigaFont(buf: ArrayBuffer): AmigaFontParseResult {
         const srcBit = bitOffset + px
         const srcByte = charDataOff + row * modulo + (srcBit >> 3)
         if (srcByte < d.length && (d[srcByte] & (0x80 >> (srcBit & 7)))) {
-          fontData[dstRow + (px >> 3)] |= (0x80 >> (px & 7))
+          setBit(fontData, dstRow, px)
           hasPixels = true
         }
       }

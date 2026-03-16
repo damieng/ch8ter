@@ -1,5 +1,7 @@
 // Write PSF2 font files from our internal format.
 
+import { isGlyphEmpty } from './glyphUtils'
+
 const PSF2_MAGIC = 0x864AB572
 const PSF2_HAS_UNICODE = 1
 
@@ -22,12 +24,7 @@ export function writePsf(params: PsfWriteParams): Uint8Array {
   for (let i = 0; i < glyphCount; i++) {
     const cp = startChar + i
     if (cp === 0x20) { included.push({ srcIdx: i, cp }); continue }
-    const offset = i * bpg
-    let hasPixels = false
-    for (let b = 0; b < bpg; b++) {
-      if (fontData[offset + b]) { hasPixels = true; break }
-    }
-    if (hasPixels) included.push({ srcIdx: i, cp })
+    if (!isGlyphEmpty(fontData, i * bpg, bpg)) included.push({ srcIdx: i, cp })
   }
 
   const outCount = included.length

@@ -1,6 +1,7 @@
 // Parse PCF (Portable Compiled Format) font files used by X11.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { setBit } from '../bitUtils'
 
 export interface PcfParseResult {
   glyphWidth: number
@@ -217,7 +218,7 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
         if (destX < 0 || destX >= cellW) continue
         const srcByte = bd[y * srcBpr + (x >> 3)]
         if (srcByte & (0x80 >> (x & 7))) {
-          fontData[base + destY * outBpr + (destX >> 3)] |= (0x80 >> (destX & 7))
+          setBit(fontData, base + destY * outBpr, destX)
         }
       }
     }

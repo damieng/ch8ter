@@ -3,6 +3,8 @@
 // Each offset in the character table is relative to the position of that offset word itself.
 
 import type { GlyphMeta } from './bdfParser'
+import { getBit, setBit } from '../bitUtils'
+import { isGlyphEmpty } from './glyphUtils'
 
 interface FzxWriteParams {
   fontData: Uint8Array
@@ -22,7 +24,7 @@ function countTopAndBottomBlankRows(
   for (let y = 0; y < glyphHeight; y++) {
     let blank = true
     for (let x = 0; x < glyphWidth; x++) {
-      if (fontData[glyphOffset + y * bpr + (x >> 3)] & (0x80 >> (x & 7))) {
+      if (getBit(fontData, glyphOffset + y * bpr, x)) {
         blank = false
         break
       }
@@ -35,7 +37,7 @@ function countTopAndBottomBlankRows(
   for (let y = glyphHeight - 1; y > top; y--) {
     let blank = true
     for (let x = 0; x < glyphWidth; x++) {
-      if (fontData[glyphOffset + y * bpr + (x >> 3)] & (0x80 >> (x & 7))) {
+      if (getBit(fontData, glyphOffset + y * bpr, x)) {
         blank = false
         break
       }
@@ -60,11 +62,7 @@ export function writeFzx(params: FzxWriteParams): Uint8Array {
   let lastSlot = firstSlot
   for (let i = lastPossible; i >= firstSlot; i--) {
     const offset = i * bpg
-    let hasPixels = false
-    for (let b = 0; b < bpg; b++) {
-      if (fontData[offset + b]) { hasPixels = true; break }
-    }
-    if (hasPixels || (startChar + i) === 32) {
+    if (!isGlyphEmpty(fontData, offset, bpg) || (startChar + i) === 32) {
       lastSlot = i
       break
     }
@@ -124,8 +122,8 @@ export function writeFzx(params: FzxWriteParams): Uint8Array {
       for (let px = 0; px < width; px++) {
         const srcX = srcXStart + px
         if (srcX >= glyphWidth) break
-        if (fontData[glyphOffset + y * bpr + (srcX >> 3)] & (0x80 >> (srcX & 7))) {
-          data[row * charBytesPerRow + (px >> 3)] |= (0x80 >> (px & 7))
+        if (getBit(fontData, glyphOffset + y * bpr, srcX)) {
+          setBit(data, row * charBytesPerRow, px)
         }
       }
     }

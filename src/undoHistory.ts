@@ -1,4 +1,5 @@
 import { type FontInstance, bytesPerGlyph, bytesPerRow } from './store'
+import { setBit } from './bitUtils'
 
 export interface UndoCommand {
   name: string
@@ -139,7 +140,7 @@ export function execPasteGlyph(font: FontInstance, index: number, text: string):
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (rows[y][x] === '*') {
-        after[y * bpr + Math.floor(x / 8)] |= (0x80 >> (x % 8))
+        setBit(after, y * bpr, x)
       }
     }
   }

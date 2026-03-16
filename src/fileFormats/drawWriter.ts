@@ -1,5 +1,8 @@
 // Write .draw bitmap font files.
 
+import { getBit } from '../bitUtils'
+import { isGlyphEmpty } from './glyphUtils'
+
 interface DrawWriteParams {
   fontData: Uint8Array
   glyphWidth: number
@@ -19,21 +22,14 @@ export function writeDraw(params: DrawWriteParams): string {
     const offset = i * bpg
 
     // Skip empty glyphs (except space)
-    if (charCode !== 0x20) {
-      let hasPixels = false
-      for (let b = 0; b < bpg; b++) {
-        if (fontData[offset + b]) { hasPixels = true; break }
-      }
-      if (!hasPixels) continue
-    }
+    if (charCode !== 0x20 && isGlyphEmpty(fontData, offset, bpg)) continue
 
     const hex = charCode.toString(16).padStart(2, '0').toUpperCase()
     let first = true
     for (let y = 0; y < h; y++) {
       let row = ''
       for (let x = 0; x < w; x++) {
-        const byteIdx = offset + y * bpr + Math.floor(x / 8)
-        row += (fontData[byteIdx] & (0x80 >> (x % 8))) ? '#' : '-'
+        row += getBit(fontData, offset + y * bpr, x) ? '#' : '-'
       }
       if (first) {
         lines.push(`${hex}:\t${row}`)

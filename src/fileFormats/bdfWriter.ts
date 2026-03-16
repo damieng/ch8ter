@@ -1,6 +1,7 @@
 // Write BDF (Bitmap Distribution Format) font files from our internal format.
 
 import type { FontMeta, GlyphMeta } from './bdfParser'
+import { isGlyphEmpty } from './glyphUtils'
 
 interface BdfWriteParams {
   fontData: Uint8Array
@@ -65,12 +66,7 @@ export function writeBdf(params: BdfWriteParams): string {
     const charCode = startChar + i
     const gm = glyphMeta?.[i]
     if (charCode === 0x20 || gm) { includeIdx.push(i); continue }
-    const offset = i * bpg
-    let hasPixels = false
-    for (let b = 0; b < bpg; b++) {
-      if (fontData[offset + b]) { hasPixels = true; break }
-    }
-    if (hasPixels) includeIdx.push(i)
+    if (!isGlyphEmpty(fontData, i * bpg, bpg)) includeIdx.push(i)
   }
 
   lines.push(`CHARS ${includeIdx.length}`)

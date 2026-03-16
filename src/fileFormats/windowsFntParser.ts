@@ -9,6 +9,7 @@
 // v3 header: 148 bytes, 6-byte char table entries (offsets are UInt32)
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
+import { setBit } from '../bitUtils'
 
 export interface WindowsFntParseResult {
   fontData: Uint8Array
@@ -144,7 +145,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
           if (srcOff >= bytes.length) continue
           if (bytes[srcOff] & (0x80 >> (x & 7))) {
             hasPixels = true
-            fontData[base + y * outBpr + (x >> 3)] |= (0x80 >> (x & 7))
+            setBit(fontData, base + y * outBpr, x)
           }
         }
       }
@@ -158,7 +159,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
           if (srcOff >= bytes.length) continue
           if (bytes[srcOff] & (0x80 >> (y & 7))) {
             hasPixels = true
-            fontData[base + y * outBpr + (x >> 3)] |= (0x80 >> (x & 7))
+            setBit(fontData, base + y * outBpr, x)
           }
         }
       }

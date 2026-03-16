@@ -8,6 +8,7 @@
 // No horizontal offset table is written.
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
+import { getBit, setBit } from '../bitUtils'
 
 interface GdosFontWriteParams {
   fontData: Uint8Array
@@ -32,7 +33,7 @@ function rightmostPixel(
   for (let y = 0; y < glyphHeight; y++) {
     const rowBase = glyphOffset + y * bpr
     for (let x = glyphWidth - 1; x >= rightmost; x--) {
-      if (fontData[rowBase + (x >> 3)] & (0x80 >> (x & 7))) {
+      if (getBit(fontData, rowBase, x)) {
         rightmost = x + 1
         break
       }
@@ -88,9 +89,9 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
       const dstRow = y * formWidth
       const srcRow = glyphBase + y * bpr
       for (let px = 0; px < charWidth; px++) {
-        if (fontData[srcRow + (px >> 3)] & (0x80 >> (px & 7))) {
+        if (getBit(fontData, srcRow, px)) {
           const x = xStart + px
-          raster[dstRow + (x >> 3)] |= (0x80 >> (x & 7))
+          setBit(raster, dstRow, x)
         }
       }
     }
