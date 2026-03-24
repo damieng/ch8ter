@@ -14,6 +14,7 @@ import { openCom } from "../fileFormats/comOpener"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
+import { RawImportDialog } from "../dialogs/RawImportDialog"
 import CHANGELOG from "../change-log.json"
 
 const ICON = 18
@@ -55,6 +56,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.pdb',          name: 'PalmOS' },
   { exts: '.com',          name: 'PC DOS EGA/VGA' },
   { exts: '.png',          name: 'PNG tile sheet' },
+  { exts: '.bin .raw',     name: 'RAW binary' },
   { exts: '.fnt',          name: 'Windows FNT' },
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
@@ -107,6 +109,7 @@ export function AppTitle() {
 export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [pngFile, setPngFile] = useState<File | null>(null)
+  const [rawFile, setRawFile] = useState<File | null>(null)
 
   function applyLoadResult(name: string, result: FontConversionData) {
     const font = createFont(
@@ -164,7 +167,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -172,6 +175,11 @@ export function AppPane() {
 
       if (lower.endsWith(".png")) {
         setPngFile(file)
+        return
+      }
+
+      if (lower.endsWith(".bin") || lower.endsWith(".raw")) {
+        setRawFile(file)
         return
       }
 
@@ -204,6 +212,9 @@ export function AppPane() {
         )}
         {pngFile && (
           <PngImportDialog file={pngFile} onClose={() => setPngFile(null)} />
+        )}
+        {rawFile && (
+          <RawImportDialog file={rawFile} onClose={() => setRawFile(null)} />
         )}
         <IconBtn onClick={handleOpen} title="Open font file">
           <FolderOpen size={ICON} />

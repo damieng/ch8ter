@@ -70,4 +70,4 @@ Fonts and window layouts auto-save to localStorage. The active charset persists 
 
 ## Format documentation
 
-`docs/formats/` contains detailed specifications for each supported format — consult these when implementing parsers/writers. `todo.md` tracks known bugs and refactoring tasks.
+`docs/formats/` contains detailed specifications for each supported format — consult these when implementing parsers/writers.
