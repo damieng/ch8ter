@@ -1,3 +1,5 @@
+// Root component — manages the MDI window layout for font panes, editors, and previews.
+
 import './app.css'
 import { Fragment } from 'preact'
 import { useState } from 'preact/hooks'
