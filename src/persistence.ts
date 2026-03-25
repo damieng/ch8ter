@@ -30,6 +30,8 @@ interface StoredFont {
   hideEmpty?: boolean
   spacing?: SpacingMode
   sourceContainerId?: string
+  sourceCodepage?: number
+  charIndex?: (number | undefined)[]
 }
 
 export interface WindowRect {
@@ -120,6 +122,8 @@ export function loadFontsFromStorage(): FontInstance[] | null {
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
       if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
       if (s.sourceContainerId) font.sourceContainerId = s.sourceContainerId
+      if (s.sourceCodepage != null) font.sourceCodepage = s.sourceCodepage
+      if (s.charIndex) font.charIndex!.value = s.charIndex
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       if (s.ascender != null) font.ascender.value = s.ascender
@@ -169,6 +173,8 @@ export function saveFontsToStorage(fontList: FontInstance[]) {
     hideEmpty: f.hideEmpty.value,
     spacing: f.spacing.value,
     sourceContainerId: f.sourceContainerId,
+    sourceCodepage: f.sourceCodepage,
+    charIndex: f.charIndex?.value,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }

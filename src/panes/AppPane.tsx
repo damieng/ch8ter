@@ -25,6 +25,27 @@ import CHANGELOG from "../change-log.json"
 
 const ICON = 18
 
+/** Map Windows dfCharSet value to a codepage number for display. */
+function winCharsetToCodepage(cs: number): number {
+  switch (cs) {
+    case 0: return 1252    // ANSI
+    case 177: return 1255  // HEBREW
+    case 178: return 1256  // ARABIC
+    case 161: return 1253  // GREEK
+    case 162: return 1254  // TURKISH
+    case 186: return 1257  // BALTIC
+    case 204: return 1251  // RUSSIAN
+    case 238: return 1250  // EASTEUROPE
+    case 222: return 874   // THAI
+    case 128: return 932   // SHIFTJIS
+    case 129: return 949   // HANGUL
+    case 134: return 936   // GB2312
+    case 136: return 950   // CHINESEBIG5
+    case 255: return 437   // OEM
+    default: return 0      // DEFAULT/SYMBOL/unknown
+  }
+}
+
 const APP_VERSION = __APP_VERSION__
 
 
@@ -149,7 +170,7 @@ export function AppPane() {
         const result = parseFon(buf)
         const fonts: ContainerFont[] = result.fonts.map(f => ({
           label: `${f.fnt.glyphWidth}x${f.fnt.glyphHeight}`,
-          codepage: 0,
+          codepage: winCharsetToCodepage(parseInt(f.fnt.meta?.properties?.CHARSET ?? '1')),
           deviceName: f.fnt.meta?.family ?? 'Unknown',
           deviceType: 1,
           startChar: f.fnt.startChar,

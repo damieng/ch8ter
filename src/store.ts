@@ -45,6 +45,10 @@ export interface FontInstance {
   undoHistory: UndoHistory
   /** If opened from a container pane, the container's id. */
   sourceContainerId?: string
+  /** Original codepage/charset the font was loaded with (e.g. 437, 1252). */
+  sourceCodepage?: number
+  /** Original byte index for each glyph slot, if known. Sparse — only set for glyphs loaded from file. */
+  charIndex?: Signal<(number | undefined)[]>
 }
 
 export function bytesPerRow(font: FontInstance): number {
@@ -124,6 +128,9 @@ export function createFont(
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     paintVersion: signal(0),
+    charIndex: data != null
+      ? signal<(number | undefined)[]>(Array.from({ length: numGlyphs }, (_, i) => (start ?? 32) + i))
+      : signal<(number | undefined)[]>([]),
     undoHistory: new UndoHistory(),
   }
 }

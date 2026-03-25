@@ -13,12 +13,31 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
   const charCode = font.startChar.value + glyphIdx
   const existing = font.glyphMeta.value?.[glyphIdx] ?? null
 
+  const existingCharIdx = font.charIndex?.value?.[glyphIdx]
   const [name, setName] = useState(existing?.name ?? '')
   const [swidth, setSwidth] = useState(existing?.swidth ? existing.swidth.join(' ') : '')
   const [dwidth, setDwidth] = useState(existing?.dwidth ? existing.dwidth.join(' ') : '')
   const [bbx, setBbx] = useState(existing?.bbx ? existing.bbx.join(' ') : '')
+  const [charIdx, setCharIdx] = useState(existingCharIdx != null ? String(existingCharIdx) : '')
+  const [charIdxError, setCharIdxError] = useState('')
 
   function handleSave() {
+    // Validate charIndex uniqueness
+    if (charIdx.trim() !== '' && font.charIndex) {
+      const newVal = parseInt(charIdx.trim())
+      if (isNaN(newVal) || newVal < 0) {
+        setCharIdxError('Must be a non-negative integer')
+        return
+      }
+      const existing = font.charIndex.value
+      for (let i = 0; i < existing.length; i++) {
+        if (i !== glyphIdx && existing[i] === newVal) {
+          setCharIdxError(`Already used by glyph ${i + font.startChar.value}`)
+          return
+        }
+      }
+    }
+
     const gm: GlyphMeta = {}
     if (name.trim()) gm.name = name.trim()
     if (swidth.trim()) {
@@ -38,6 +57,15 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
     while (arr.length < gc) arr.push(null)
     arr[glyphIdx] = Object.keys(gm).length > 0 ? gm : null
     font.glyphMeta.value = arr
+
+    // Save charIndex
+    if (font.charIndex) {
+      const idxArr = [...font.charIndex.value]
+      while (idxArr.length <= glyphIdx) idxArr.push(undefined)
+      idxArr[glyphIdx] = charIdx.trim() !== '' ? parseInt(charIdx.trim()) : undefined
+      font.charIndex.value = idxArr
+    }
+
     onClose()
   }
 
@@ -89,6 +117,16 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
               onInput={(e) => setBbx((e.target as HTMLInputElement).value)}
             />
           </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">INDEX</span>
+            <input
+              class={`flex-1 px-2 py-0.5 border rounded text-sm font-mono min-w-0 ${charIdxError ? 'border-red-400' : 'border-gray-300'}`}
+              value={charIdx}
+              placeholder="Original byte index"
+              onInput={(e) => { setCharIdx((e.target as HTMLInputElement).value); setCharIdxError('') }}
+            />
+          </div>
+          {charIdxError && <p class="text-xs text-red-500">{charIdxError}</p>}
         </div>
         <div class="flex justify-end gap-2">
           <button
