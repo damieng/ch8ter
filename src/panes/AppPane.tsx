@@ -17,6 +17,7 @@ import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
 import { RawImportDialog } from "../dialogs/RawImportDialog"
+import { ErrorDialog } from "../dialogs/ErrorDialog"
 import CHANGELOG from "../change-log.json"
 
 const ICON = 18
@@ -113,6 +114,7 @@ export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [pngFile, setPngFile] = useState<File | null>(null)
   const [rawFile, setRawFile] = useState<File | null>(null)
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
 
   function applyLoadResult(name: string, result: FontConversionData) {
     const font = createFont(
@@ -142,6 +144,10 @@ export function AppPane() {
     if (lower.endsWith(".cpi")) {
       try {
         const result = parseCpi(buf)
+        if (result.fonts.length === 0) {
+          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts — there are no downloadable character bitmaps to edit.` })
+          return
+        }
         const fonts: ContainerFont[] = result.fonts.map(f => ({
           label: `CP${f.codepage} ${f.width}x${f.height} (${f.deviceName})`,
           codepage: f.codepage,
@@ -160,7 +166,7 @@ export function AppPane() {
           fonts,
         })
       } catch (e) {
-        alert(`Failed to parse CPI file: ${(e as Error).message}`)
+        setError({ title: 'Failed to open CPI', message: (e as Error).message })
       }
       return
     }
@@ -180,7 +186,7 @@ export function AppPane() {
         }
         charset.value = (results[0].source === "ega" ? "cp437" : "cpm") as Charset
       } catch (e) {
-        alert(`Failed to parse .com font: ${(e as Error).message}`)
+        setError({ title: 'Failed to open font', message: (e as Error).message })
       }
       return
     }
@@ -189,7 +195,7 @@ export function AppPane() {
       const result = loadFontFile(name, buf)
       applyLoadResult(name, result)
     } catch (e) {
-      alert(`Failed to open font: ${(e as Error).message}`)
+      setError({ title: 'Failed to open font', message: (e as Error).message })
     }
   }
 
@@ -220,7 +226,7 @@ export function AppPane() {
             const decompressed = await decompressGz(buf)
             openFontBuffer(innerName, decompressed)
           } catch (e) {
-            alert(`Failed to decompress .gz: ${(e as Error).message}`)
+            setError({ title: 'Failed to decompress', message: (e as Error).message })
           }
         })
         return
@@ -245,6 +251,9 @@ export function AppPane() {
         )}
         {rawFile && (
           <RawImportDialog file={rawFile} onClose={() => setRawFile(null)} />
+        )}
+        {error && (
+          <ErrorDialog title={error.title} message={error.message} onClose={() => setError(null)} />
         )}
         <IconBtn onClick={handleOpen} title="Open font file">
           <FolderOpen size={ICON} />
