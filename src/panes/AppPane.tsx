@@ -171,7 +171,7 @@ export function AppPane() {
         const fonts: ContainerFont[] = result.fonts.map(f => ({
           label: `${f.fnt.glyphWidth}x${f.fnt.glyphHeight}`,
           codepage: winCharsetToCodepage(parseInt(f.fnt.meta?.properties?.CHARSET ?? '1')),
-          deviceName: f.fnt.meta?.family ?? 'Unknown',
+          deviceName: '',
           deviceType: 1,
           startChar: f.fnt.startChar,
           width: f.fnt.glyphWidth,

@@ -1,20 +1,56 @@
-import { useState } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
   createFont, addFont, recalcMetrics, charset, CHARSETS, containers,
   type FontContainer, type ContainerFont, type ContainerMeta, type Charset,
 } from '../store'
 import { ContainerPropertiesDialog } from '../dialogs/ContainerPropertiesDialog'
+import { bpr } from '../bitUtils'
+import { drawGlyphToCtx } from '../drawGlyph'
+
+function FontPreview({ cf }: { cf: ContainerFont }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const { fontData, width: gw, height: gh, startChar } = cf
+    const rowBytes = bpr(gw)
+    const bpg = gh * rowBytes
+    const gc = bpg > 0 ? Math.floor(fontData.length / bpg) : 0
+    const text = 'ABCabc'
+    canvas.width = text.length * gw
+    canvas.height = gh
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#374151'
+    for (let i = 0; i < text.length; i++) {
+      const gi = text.charCodeAt(i) - startChar
+      if (gi < 0 || gi >= gc) continue
+      drawGlyphToCtx(ctx, fontData, gi * bpg, gw, gh, rowBytes, i * gw, 0, 1, 1)
+    }
+  }, [cf])
+  return <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />
+}
 
 export function ContainerPaneTitle({ container }: { container: FontContainer }) {
   return <span>Container — {container.fileName}</span>
 }
 
-type SortKey = 'codepage' | 'size' | 'device' | 'chars'
+type SortKey = 'name' | 'weight' | 'codepage' | 'size' | 'device' | 'chars'
 type SortDir = 'asc' | 'desc'
+
+function fontName(cf: ContainerFont): string {
+  return cf.meta?.family || cf.meta?.fontName || ''
+}
+
+function fontWeight(cf: ContainerFont): string {
+  return cf.meta?.weight || ''
+}
 
 function compareFonts(a: ContainerFont, b: ContainerFont, key: SortKey): number {
   switch (key) {
+    case 'name': return fontName(a).localeCompare(fontName(b))
+    case 'weight': return fontWeight(a).localeCompare(fontWeight(b))
     case 'codepage': return a.codepage - b.codepage
     case 'size': return (a.width * a.height) - (b.width * b.height)
     case 'device': return a.deviceName.localeCompare(b.deviceName)
@@ -58,13 +94,17 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     )
     if (cf.populated) font.populatedGlyphs.value = cf.populated
     font.sourceContainerId = container.id
-    if (cf.codepage > 0) font.sourceCodepage = cf.codepage
+
     recalcMetrics(font)
     addFont(font)
     const cpKey = `cp${cf.codepage}` as Charset
     charset.value = cpKey in CHARSETS ? cpKey : 'cp437' as Charset
   }
 
+  const hasName = container.fonts.some(f => fontName(f) !== '')
+  const hasWeight = container.fonts.some(f => fontWeight(f) !== '')
+  const hasCodepage = container.fonts.some(f => f.codepage > 0)
+  const hasDevice = container.fonts.some(f => f.deviceType === 2 || (f.deviceName && f.deviceName !== 'Unknown'))
   const arrow = sortDir === 'asc' ? ' \u25B4' : ' \u25BE'
 
   function SortHeader({ label, col }: { label: string; col: SortKey }) {
@@ -83,23 +123,31 @@ export function ContainerPane({ container }: { container: FontContainer }) {
       <table class="w-full text-xs">
         <thead>
           <tr class="text-gray-400 border-b border-gray-100">
-            <SortHeader label="Codepage" col="codepage" />
+            {hasName && <SortHeader label="Name" col="name" />}
+            {hasCodepage && <SortHeader label="Codepage" col="codepage" />}
             <SortHeader label="Size" col="size" />
-            <SortHeader label="Device" col="device" />
+            {hasWeight && <SortHeader label="Weight" col="weight" />}
+            {hasDevice && <SortHeader label="Device" col="device" />}
             <SortHeader label="Chars" col="chars" />
+            <th class="py-1 font-medium">Preview</th>
             <th class="text-right py-1 font-medium" />
           </tr>
         </thead>
         <tbody>
           {sorted.map((cf, i) => (
             <tr key={i} class="hover:bg-blue-50 border-b border-gray-50">
-              <td class="py-1.5">{cf.codepage}</td>
+              {hasName && <td class="py-1.5">{fontName(cf)}</td>}
+              {hasCodepage && <td class="py-1.5">{cf.codepage}</td>}
               <td class="py-1.5 font-mono">{cf.width}x{cf.height}</td>
-              <td class="py-1.5">
-                {cf.deviceName}
-                {cf.deviceType === 2 && <span class="ml-1 text-gray-400">(printer)</span>}
-              </td>
+              {hasWeight && <td class="py-1.5">{fontWeight(cf)}</td>}
+              {hasDevice && (
+                <td class="py-1.5">
+                  {cf.deviceName}
+                  {cf.deviceType === 2 && <span class="ml-1 text-gray-400">(printer)</span>}
+                </td>
+              )}
               <td class="py-1.5">{cf.numChars}</td>
+              <td class="py-1.5"><FontPreview cf={cf} /></td>
               <td class="py-1.5 text-right">
                 <button
                   class="px-2 py-0.5 bg-gray-100 hover:bg-blue-100 rounded border border-gray-200 text-gray-700"

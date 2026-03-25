@@ -72,8 +72,16 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     properties: {},
   }
 
+  if (faceName) meta.properties.FACE_NAME = faceName
+  if (copyright) meta.properties.COPYRIGHT = copyright
+  if (dfPoints) meta.properties.POINT_SIZE = String(dfPoints)
+  if (dfHorizRes) meta.properties.RESOLUTION_X = String(dfHorizRes)
+  if (dfVertRes) meta.properties.RESOLUTION_Y = String(dfVertRes)
+  if (dfWeight > 0) meta.properties.WEIGHT = String(dfWeight)
   if (dfCharSet !== undefined) meta.properties.CHARSET = String(dfCharSet)
   if (dfPitchAndFamily) meta.properties.PITCH_AND_FAMILY = String(dfPitchAndFamily)
+  meta.properties.FONT_ASCENT = String(dfAscent)
+  meta.properties.FONT_DESCENT = String(dfPixHeight - dfAscent)
 
   // Determine header size and char table entry size
   let headerSize: number

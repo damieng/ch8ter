@@ -75,12 +75,6 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
               placeholder="Font name"
             />
           </div>
-          {font.sourceCodepage != null && (
-            <div class="flex items-center gap-1">
-              <span class="text-xs font-mono text-gray-600 w-28 shrink-0">CHARSET</span>
-              <span class="text-sm font-mono text-gray-600">CP{font.sourceCodepage}</span>
-            </div>
-          )}
         </div>
         <div class="overflow-y-auto flex flex-col gap-1 min-h-0 px-5 pb-2">
           {keys.length === 0 && (

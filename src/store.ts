@@ -45,8 +45,6 @@ export interface FontInstance {
   undoHistory: UndoHistory
   /** If opened from a container pane, the container's id. */
   sourceContainerId?: string
-  /** Original codepage/charset the font was loaded with (e.g. 437, 1252). */
-  sourceCodepage?: number
   /** Original byte index for each glyph slot, if known. Sparse — only set for glyphs loaded from file. */
   charIndex?: Signal<(number | undefined)[]>
 }
