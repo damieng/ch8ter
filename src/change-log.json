@@ -6,7 +6,8 @@
       "Font container support for multi-font files",
       "CPI (Code Page Information) font format support",
       "CPX (UPX-compressed CPI) font format support",
-      "Codepage 860 (Portuguese), 863 (Canadian French), and 865 (Nordic) character sets"
+      "Codepage 860 (Portuguese), 863 (Canadian French), and 865 (Nordic) character sets",
+      "Codepage 866 (Cyrillic), 848/1125 (Ukrainian), and 849/1131 (Belarusian) character sets"
     ]
   },
   {
