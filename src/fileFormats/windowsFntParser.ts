@@ -1,9 +1,9 @@
 // Parse Windows .fnt raster bitmap font files (v1, v2, v3).
 //
-// v1/v2 store bitmaps column-major at the byte level: for each glyph, the first
-// `height` bytes are the leftmost byte-column, the next `height` bytes are the second
-// byte-column, etc. This only matters for glyphs wider than 8 pixels.
-// v3 stores bitmaps row-major (each row is ceil(w/8) bytes, top to bottom).
+// All versions store bitmaps byte-column-major: for each glyph, the first `height`
+// bytes are the leftmost byte-column, the next `height` bytes are the second, etc.
+// For v3, the `dfWidthBytes` header field gives the byte-column count.
+// For v1/v2, it's ceil(charWidth/8). This layout only matters for glyphs > 8px wide.
 // All multi-byte values are little-endian.
 //
 // v1 header: 117 bytes, 4-byte char table entries
@@ -11,7 +11,7 @@
 // v3 header: 148 bytes, 6-byte char table entries (offsets are UInt32)
 
 import type { GlyphMeta, FontMeta } from './bdfParser'
-import { bpr, getBit, setBit } from '../bitUtils'
+import { bpr, setBit } from '../bitUtils'
 
 export interface WindowsFntParseResult {
   fontData: Uint8Array
@@ -43,6 +43,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
   const dfAscent = view.getUint16(74, true)
   const dfFirstChar = bytes[95]
   const dfLastChar = bytes[96]
+  const dfWidthBytes = dfVersion === 0x0300 && bytes.length > 100 ? view.getUint16(99, true) : 0
 
 
   // Read metadata
@@ -72,6 +73,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     properties: {},
   }
 
+  meta.properties.FNT_VERSION = String(dfVersion >> 8)
   if (faceName) meta.properties.FACE_NAME = faceName
   if (copyright) meta.properties.COPYRIGHT = copyright
   if (dfPoints) meta.properties.POINT_SIZE = String(dfPoints)
@@ -146,22 +148,10 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     const base = i * outBpg
     let hasPixels = false
 
-    if (dfVersion === 0x0300) {
-      // v3: row-major, MSBit-first
-      const srcBpr = bpr(w)
-      for (let y = 0; y < cellH; y++) {
-        const srcRow = bitmapOff + y * srcBpr
-        if (srcRow + srcBpr > bytes.length) continue
-        for (let x = 0; x < w; x++) {
-          if (getBit(bytes, srcRow, x)) {
-            hasPixels = true
-            setBit(fontData, base + y * outBpr, x)
-          }
-        }
-      }
-    } else {
-      // v1/v2: byte-column-major — each byte-column is `height` bytes tall
-      const widthBytes = bpr(w)
+    {
+      // All versions: byte-column-major — each byte-column is `height` bytes tall
+      // For v3, dfWidthBytes gives the byte-column count; for v1/v2, use ceil(w/8)
+      const widthBytes = (dfVersion === 0x0300 && dfWidthBytes > 0) ? dfWidthBytes : bpr(w)
       for (let y = 0; y < cellH; y++) {
         for (let k = 0; k < widthBytes; k++) {
           const srcByte = bitmapOff + k * cellH + y

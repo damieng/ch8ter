@@ -77,9 +77,12 @@ export function ContainerPane({ container }: { container: FontContainer }) {
   })
 
   function openFont(cf: ContainerFont) {
-    const suffix = cf.codepage > 0
-      ? ` (CP${cf.codepage} ${cf.width}x${cf.height})`
-      : ` (${cf.width}x${cf.height})`
+    const parts: string[] = []
+    if (cf.codepage > 0) parts.push(String(cf.codepage))
+    parts.push(`${cf.width}x${cf.height}`)
+    const w = fontWeight(cf).toLowerCase()
+    if (w && w !== 'medium') parts.push(w)
+    const suffix = ` (${parts.join('-')})`
     const meta = cf.meta ? { ...cf.meta } : { properties: {} as Record<string, string> }
     if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
     if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
@@ -124,7 +127,7 @@ export function ContainerPane({ container }: { container: FontContainer }) {
         <thead>
           <tr class="text-gray-400 border-b border-gray-100">
             {hasName && <SortHeader label="Name" col="name" />}
-            {hasCodepage && <SortHeader label="Codepage" col="codepage" />}
+            {hasCodepage && <SortHeader label="CP" col="codepage" />}
             <SortHeader label="Size" col="size" />
             {hasWeight && <SortHeader label="Weight" col="weight" />}
             {hasDevice && <SortHeader label="Device" col="device" />}

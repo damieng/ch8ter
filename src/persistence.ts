@@ -245,6 +245,11 @@ interface StoredContainerFont {
   height: number
   numChars: number
   fontData: string // base64
+  baseline?: number
+  meta?: FontMeta | null
+  glyphMeta?: (GlyphMeta | null)[] | null
+  populated?: number[] | null
+  spacingMode?: SpacingMode
 }
 
 interface StoredContainer {
@@ -276,6 +281,11 @@ export function loadContainersFromStorage(): FontContainer[] | null {
         height: sf.height,
         numChars: sf.numChars,
         fontData: fromBase64(sf.fontData),
+        baseline: sf.baseline,
+        meta: sf.meta,
+        glyphMeta: sf.glyphMeta,
+        populated: sf.populated ? new Set(sf.populated) : null,
+        spacingMode: sf.spacingMode,
       })),
     }))
   } catch {
@@ -299,6 +309,11 @@ function saveContainersToStorage(containerList: FontContainer[]) {
       height: f.height,
       numChars: f.numChars,
       fontData: toBase64(f.fontData),
+      baseline: f.baseline,
+      meta: f.meta,
+      glyphMeta: f.glyphMeta,
+      populated: f.populated ? [...f.populated] : null,
+      spacingMode: f.spacingMode,
     })),
   }))
   localStorage.setItem(CONTAINER_KEY, JSON.stringify(stored))
