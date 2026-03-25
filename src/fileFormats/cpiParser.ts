@@ -24,6 +24,7 @@ export interface CpiScreenFont {
 
 export interface CpiParseResult {
   variant: 'FONT' | 'FONT.NT' | 'DRFONT'
+  properties: Record<string, string>
   fonts: CpiScreenFont[]
 }
 
@@ -154,7 +155,15 @@ export function parseCpi(buffer: ArrayBuffer): CpiParseResult {
     cpehOffset = variant === 'FONT.NT' ? cpehOffset + nextOffset : nextOffset
   }
 
-  return { variant, fonts }
+  // Extract trailing copyright notice (text after the last codepage data)
+  const copyright = extractCopyright(bytes)
+
+  const properties: Record<string, string> = {
+    FORMAT: variant,
+  }
+  if (copyright) properties.COPYRIGHT = copyright
+
+  return { variant, properties, fonts }
 }
 
 /** Extract a DRFONT font by resolving the character index table. */
@@ -253,6 +262,31 @@ function columnToRowMajor(
   }
 
   return fontData
+}
+
+/** Extract trailing copyright/description text from end of CPI file. */
+function extractCopyright(bytes: Uint8Array): string {
+  // Scan backwards from end to find printable ASCII text block
+  let end = bytes.length
+  // Skip trailing zeros
+  while (end > 0 && bytes[end - 1] === 0) end--
+  if (end === 0) return ''
+
+  // Check for 0x1A (EOF marker) terminator
+  if (bytes[end - 1] === 0x1A) end--
+
+  // Scan backwards to find start of text (printable ASCII + newlines)
+  let start = end
+  while (start > 0) {
+    const b = bytes[start - 1]
+    if (b >= 0x20 && b < 0x7F || b === 0x0A || b === 0x0D) {
+      start--
+    } else break
+  }
+
+  if (end - start < 4) return '' // too short to be meaningful
+
+  return readAscii(bytes, start, end - start).trim()
 }
 
 function readAscii(bytes: Uint8Array, offset: number, length: number): string {

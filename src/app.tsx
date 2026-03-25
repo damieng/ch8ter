@@ -12,7 +12,7 @@ import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer } from './store'
 import { PreviewPane } from './panes/PreviewPane'
-import { ContainerPane, ContainerPaneTitle } from './panes/ContainerPane'
+import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/ContainerPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
@@ -116,6 +116,7 @@ export function App() {
           initialW={420}
           initialH={300}
           resizable
+          statusBar={<ContainerStatusBar container={c} />}
           zIndex={getZIndex(`container-${c.id}`)}
           onFocus={() => setFocus(`container-${c.id}`)}
           onClose={() => removeContainer(c.id)}

@@ -2,7 +2,7 @@
 
 import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
-import type { FontInstance, SpacingMode, FontContainer } from './store'
+import type { FontInstance, SpacingMode, FontContainer, ContainerMeta } from './store'
 import { createFont } from './store'
 import { bpr } from './bitUtils'
 import { calcAllMetrics, type GlyphLookup } from './charMetrics'
@@ -247,6 +247,7 @@ interface StoredContainer {
   id: string
   fileName: string
   format: string
+  meta: ContainerMeta | null
   fonts: StoredContainerFont[]
 }
 
@@ -260,6 +261,7 @@ export function loadContainersFromStorage(): FontContainer[] | null {
       id: sc.id,
       fileName: sc.fileName,
       format: sc.format,
+      meta: sc.meta ?? null,
       fonts: sc.fonts.map(sf => ({
         label: sf.label,
         codepage: sf.codepage,
@@ -281,6 +283,7 @@ function saveContainersToStorage(containerList: FontContainer[]) {
     id: c.id,
     fileName: c.fileName,
     format: c.format,
+    meta: c.meta,
     fonts: c.fonts.map(f => ({
       label: f.label,
       codepage: f.codepage,

@@ -264,10 +264,15 @@ export interface ContainerFont {
   fontData: Uint8Array
 }
 
+export interface ContainerMeta {
+  properties: Record<string, string>
+}
+
 export interface FontContainer {
   id: string
   fileName: string
   format: string
+  meta: ContainerMeta | null
   fonts: ContainerFont[]
 }
 

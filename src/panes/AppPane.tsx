@@ -156,6 +156,7 @@ export function AppPane() {
           id: createContainerId(),
           fileName: name,
           format: `CPI (${result.variant})`,
+          meta: { properties: result.properties },
           fonts,
         })
       } catch (e) {
