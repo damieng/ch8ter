@@ -257,6 +257,7 @@ export interface ContainerFont {
   label: string
   codepage: number
   deviceName: string
+  deviceType: number  // 1 = screen, 2 = printer
   width: number
   height: number
   numChars: number

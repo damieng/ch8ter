@@ -76,7 +76,10 @@ export function ContainerPane({ container }: { container: FontContainer }) {
               {fonts.map((cf, i) => (
                 <tr key={i} class="hover:bg-blue-50 border-b border-gray-50">
                   <td class="py-1.5 font-mono">{cf.width}x{cf.height}</td>
-                  <td class="py-1.5">{cf.deviceName}</td>
+                  <td class="py-1.5">
+                    {cf.deviceName}
+                    {cf.deviceType === 2 && <span class="ml-1 text-gray-400">(printer)</span>}
+                  </td>
                   <td class="py-1.5">{cf.numChars}</td>
                   {!hasMultipleCps && <td class="py-1.5">{cf.codepage}</td>}
                   <td class="py-1.5 text-right">

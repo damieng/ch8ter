@@ -146,6 +146,7 @@ export function AppPane() {
           label: `CP${f.codepage} ${f.width}x${f.height} (${f.deviceName})`,
           codepage: f.codepage,
           deviceName: f.deviceName,
+          deviceType: f.deviceType,
           width: f.width,
           height: f.height,
           numChars: f.numChars,
