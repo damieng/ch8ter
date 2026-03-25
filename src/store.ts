@@ -258,10 +258,16 @@ export interface ContainerFont {
   codepage: number
   deviceName: string
   deviceType: number  // 1 = screen, 2 = printer
+  startChar: number
   width: number
   height: number
   numChars: number
   fontData: Uint8Array
+  baseline?: number
+  meta?: FontMeta | null
+  glyphMeta?: (GlyphMeta | null)[] | null
+  populated?: Set<number> | null
+  spacingMode?: SpacingMode
 }
 
 export interface ContainerMeta {

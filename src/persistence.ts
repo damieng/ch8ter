@@ -237,6 +237,7 @@ interface StoredContainerFont {
   codepage: number
   deviceName: string
   deviceType: number
+  startChar: number
   width: number
   height: number
   numChars: number
@@ -267,6 +268,7 @@ export function loadContainersFromStorage(): FontContainer[] | null {
         codepage: sf.codepage,
         deviceName: sf.deviceName,
         deviceType: sf.deviceType ?? 1,
+        startChar: sf.startChar ?? 0,
         width: sf.width,
         height: sf.height,
         numChars: sf.numChars,
@@ -289,6 +291,7 @@ function saveContainersToStorage(containerList: FontContainer[]) {
       codepage: f.codepage,
       deviceName: f.deviceName,
       deviceType: f.deviceType,
+      startChar: f.startChar,
       width: f.width,
       height: f.height,
       numChars: f.numChars,

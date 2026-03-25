@@ -41,16 +41,22 @@ export function ContainerPane({ container }: { container: FontContainer }) {
   })
 
   function openFont(cf: ContainerFont) {
-    const suffix = ` (CP${cf.codepage} ${cf.width}x${cf.height})`
-    const properties: Record<string, string> = {
-      CPI_DEVICE: cf.deviceName,
-      CPI_DEVICE_TYPE: cf.deviceType === 2 ? 'printer' : 'screen',
-    }
+    const suffix = cf.codepage > 0
+      ? ` (CP${cf.codepage} ${cf.width}x${cf.height})`
+      : ` (${cf.width}x${cf.height})`
+    const meta = cf.meta ? { ...cf.meta } : { properties: {} as Record<string, string> }
+    if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
+    if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
     const font = createFont(
-      cf.fontData, container.fileName + suffix, 0,
+      cf.fontData, container.fileName + suffix, cf.startChar,
       cf.width, cf.height,
-      { properties },
+      meta,
+      undefined,
+      cf.baseline,
+      cf.glyphMeta ?? undefined,
+      cf.spacingMode ?? 'monospace',
     )
+    if (cf.populated) font.populatedGlyphs.value = cf.populated
     font.sourceContainerId = container.id
     recalcMetrics(font)
     addFont(font)

@@ -8,7 +8,9 @@
       "CPX (UPX-compressed CPI) font format support",
       "Codepage 860 (Portuguese), 863 (Canadian French), and 865 (Nordic) character sets",
       "Codepage 866 (Cyrillic), 848/1125 (Ukrainian), and 849/1131 (Belarusian) character sets",
-      "Codepage 3012 (Latvian RusLat) and Mac OS Roman character sets"
+      "Codepage 3012 (Latvian RusLat) and Mac OS Roman character sets",
+      "Windows .FON container support (NE executable with FNT resources)",
+      "Fix Windows FNT v2 bitmap decoding for fonts wider than 8 pixels"
     ]
   },
   {

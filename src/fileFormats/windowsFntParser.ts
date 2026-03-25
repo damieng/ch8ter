@@ -1,6 +1,8 @@
 // Parse Windows .fnt raster bitmap font files (v1, v2, v3).
 //
-// v1/v2 store bitmaps column-major (each column is ceil(h/8) bytes, left to right).
+// v1/v2 store bitmaps column-major at the byte level: for each glyph, the first
+// `height` bytes are the leftmost byte-column, the next `height` bytes are the second
+// byte-column, etc. This only matters for glyphs wider than 8 pixels.
 // v3 stores bitmaps row-major (each row is ceil(w/8) bytes, top to bottom).
 // All multi-byte values are little-endian.
 //
@@ -141,7 +143,7 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
       const srcBpr = bpr(w)
       for (let y = 0; y < cellH; y++) {
         const srcRow = bitmapOff + y * srcBpr
-        if (srcRow + bpr(w) > bytes.length) continue
+        if (srcRow + srcBpr > bytes.length) continue
         for (let x = 0; x < w; x++) {
           if (getBit(bytes, srcRow, x)) {
             hasPixels = true
@@ -150,16 +152,21 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
         }
       }
     } else {
-      // v1/v2: column-major, MSBit-first
-      // Each column is ceil(height/8) bytes, columns stored left to right
-      const bytesPerCol = bpr(cellH)
-      for (let x = 0; x < w; x++) {
-        const colBase = bitmapOff + x * bytesPerCol
-        if (colBase + bytesPerCol > bytes.length) continue
-        for (let y = 0; y < cellH; y++) {
-          if (getBit(bytes, colBase, y)) {
-            hasPixels = true
-            setBit(fontData, base + y * outBpr, x)
+      // v1/v2: byte-column-major — each byte-column is `height` bytes tall
+      const widthBytes = bpr(w)
+      for (let y = 0; y < cellH; y++) {
+        for (let k = 0; k < widthBytes; k++) {
+          const srcByte = bitmapOff + k * cellH + y
+          if (srcByte >= bytes.length) continue
+          const b = bytes[srcByte]
+          if (b === 0) continue
+          for (let bit = 0; bit < 8; bit++) {
+            const x = k * 8 + (7 - bit)
+            if (x >= w) continue
+            if (b & (1 << bit)) {
+              hasPixels = true
+              setBit(fontData, base + y * outBpr, x)
+            }
           }
         }
       }

@@ -14,6 +14,7 @@ import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
 import { decompressCpx } from "../fileFormats/cpxDecoder"
+import { parseFon } from "../fileFormats/fonParser"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -63,7 +64,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.com .cpi .cpx', name: 'PC DOS' },
   { exts: '.png',          name: 'PNG tile sheet' },
   { exts: '.bin .raw',     name: 'RAW binary' },
-  { exts: '.fnt',          name: 'Windows FNT' },
+  { exts: '.fnt .fon',     name: 'Windows FNT' },
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
   { exts: '.ch8 .fzx',     name: 'ZX Spectrum' },
@@ -142,6 +143,39 @@ export function AppPane() {
   function openFontBuffer(name: string, buf: ArrayBuffer) {
     const lower = name.toLowerCase()
 
+    // .fon files are NE executables containing FNT font resources
+    if (lower.endsWith(".fon")) {
+      try {
+        const result = parseFon(buf)
+        const fonts: ContainerFont[] = result.fonts.map(f => ({
+          label: `${f.fnt.glyphWidth}x${f.fnt.glyphHeight}`,
+          codepage: 0,
+          deviceName: f.fnt.meta?.family ?? 'Unknown',
+          deviceType: 1,
+          startChar: f.fnt.startChar,
+          width: f.fnt.glyphWidth,
+          height: f.fnt.glyphHeight,
+          numChars: f.fnt.fontData.length / (f.fnt.glyphHeight * Math.ceil(f.fnt.glyphWidth / 8)),
+          fontData: f.fnt.fontData,
+          baseline: f.fnt.baseline,
+          meta: f.fnt.meta,
+          glyphMeta: f.fnt.glyphMeta,
+          populated: f.fnt.populated,
+          spacingMode: f.fnt.glyphMeta?.some(g => g?.dwidth && g.dwidth[0] > 0 && g.dwidth[0] !== f.fnt.glyphWidth) ? 'proportional' : 'monospace',
+        }))
+        addContainer({
+          id: createContainerId(),
+          fileName: name,
+          format: 'Windows FON (NE)',
+          meta: null,
+          fonts,
+        })
+      } catch (e) {
+        setError({ title: 'Failed to open FON', message: (e as Error).message })
+      }
+      return
+    }
+
     // .cpx files are UPX-compressed .cpi — decompress and handle as .cpi
     if (lower.endsWith(".cpx")) {
       try {
@@ -166,6 +200,7 @@ export function AppPane() {
           codepage: f.codepage,
           deviceName: f.deviceName,
           deviceType: f.deviceType,
+          startChar: 0,
           width: f.width,
           height: f.height,
           numChars: f.numChars,
@@ -216,7 +251,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.cpi,.cpx,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.fon,.pcf,.pdb,.png,.bin,.raw,.cpi,.cpx,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
