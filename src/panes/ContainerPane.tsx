@@ -42,19 +42,20 @@ export function ContainerPane({ container }: { container: FontContainer }) {
 
   function openFont(cf: ContainerFont) {
     const suffix = ` (CP${cf.codepage} ${cf.width}x${cf.height})`
+    const properties: Record<string, string> = {
+      CPI_DEVICE: cf.deviceName,
+      CPI_DEVICE_TYPE: cf.deviceType === 2 ? 'printer' : 'screen',
+    }
     const font = createFont(
       cf.fontData, container.fileName + suffix, 0,
       cf.width, cf.height,
+      { properties },
     )
     font.sourceContainerId = container.id
     recalcMetrics(font)
     addFont(font)
     const cpKey = `cp${cf.codepage}` as Charset
     charset.value = cpKey in CHARSETS ? cpKey : 'cp437' as Charset
-  }
-
-  function openAll() {
-    for (const cf of sorted) openFont(cf)
   }
 
   const arrow = sortDir === 'asc' ? ' \u25B4' : ' \u25BE'
@@ -72,15 +73,6 @@ export function ContainerPane({ container }: { container: FontContainer }) {
 
   return (
     <div class="p-3 text-sm">
-      <div class="flex items-center justify-end mb-2">
-        <button
-          class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-          onClick={openAll}
-        >
-          Open All
-        </button>
-      </div>
-
       <table class="w-full text-xs">
         <thead>
           <tr class="text-gray-400 border-b border-gray-100">
