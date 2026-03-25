@@ -96,7 +96,7 @@ export function createFont(
     }
     if (blank) blankCount++
   }
-  const defaultHideEmpty = numGlyphs > 0 && blankCount > numGlyphs / 2
+  const defaultHideEmpty = data != null && numGlyphs > 0 && blankCount > numGlyphs / 2
   return {
     id,
     fontData: signal(initial),
