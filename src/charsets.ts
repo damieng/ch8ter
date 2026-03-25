@@ -103,7 +103,7 @@ export interface CharsetDef {
 // --- Data Tables ---
 
 const CHARSETS_RAW = {
-  amiga: { label: 'Amiga (ISO-8859-1)', extends: 'iso8859_1', range: [32, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  amiga: { label: 'Amiga (ISO-8859-1)', extends: 'iso8859_1', range: [32, 255] as [number, number], overrides: {
     0x7F: '\u2302', // ⌂
   }},
   cpc: { label: 'Amstrad CPC', range: [0, 255] as [number, number], colorSystem: 'Amstrad CPC', overrides: {
@@ -152,7 +152,7 @@ const CHARSETS_RAW = {
     0xFB: '\uD83E\uDFC8', 0xFC: '\uD807\uDC63', 0xFD: '\uD807\uDC64',
     0xFE: '\u2B65', 0xFF: '\u2B64',
   }},
-  cp437: { label: 'DOS (CP437 US)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cp437: { label: 'DOS (CP437 US)', range: [0, 255] as [number, number], overrides: {
     0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
     0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
     0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',
@@ -195,7 +195,7 @@ const CHARSETS_RAW = {
     0xF8: '\u00B0', 0xF9: '\u2219', 0xFA: '\u00B7', 0xFB: '\u221A',
     0xFC: '\u207F', 0xFD: '\u00B2', 0xFE: '\u25A0', 0xFF: '\u00A0',
   }},
-  cp850: { label: 'DOS (CP850 Western European)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cp850: { label: 'DOS (CP850 Western European)', range: [0, 255] as [number, number], overrides: {
     0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
     0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
     0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',
@@ -306,7 +306,7 @@ const CHARSETS_RAW = {
     0xF8: '\u0406', 0xF9: '\u0456', 0xFA: '\u00B7', 0xFB: '\u00A4',
     0xFC: '\u0490', 0xFD: '\u0491', 0xFE: '\u2219',
   }},
-  cpm: { label: 'Amstrad CP/M Plus', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cpm: { label: 'Amstrad CP/M Plus', range: [0, 255] as [number, number], overrides: {
     0x00: '\u221E', 0x01: '\u2299', 0x02: '\u0393', 0x03: '\u0394',
     0x04: '\u2297', 0x05: '\u00D7', 0x06: '\u00F7', 0x07: '\u2234',
     0x08: '\u03A0', 0x09: '\u2193', 0x0A: '\u03A3', 0x0B: '\u2190',
