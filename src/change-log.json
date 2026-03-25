@@ -5,6 +5,7 @@
     "changes": [
       "Font container support for multi-font files",
       "CPI (Code Page Information) font format support",
+      "CPX (UPX-compressed CPI) font format support",
       "Codepage 860 (Portuguese), 863 (Canadian French), and 865 (Nordic) character sets"
     ]
   },

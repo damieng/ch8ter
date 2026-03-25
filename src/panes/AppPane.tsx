@@ -12,6 +12,7 @@ import {
 import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
+import { decompressCpx } from "../fileFormats/cpxDecoder"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -54,7 +55,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.bbc',          name: 'BBC Micro' },
   { exts: '.64c',          name: 'Commodore 64' },
   { exts: '',              name: 'Commodore Amiga' },
-  { exts: '.cpi',          name: 'CPI codepage' },
+  { exts: '.cpi .cpx',     name: 'CPI codepage' },
   { exts: '.com',          name: 'CP/M Plus' },
   { exts: '.psf',          name: 'Linux console' },
   { exts: '.pdb',          name: 'PalmOS' },
@@ -140,6 +141,17 @@ export function AppPane() {
   function openFontBuffer(name: string, buf: ArrayBuffer) {
     const lower = name.toLowerCase()
 
+    // .cpx files are UPX-compressed .cpi — decompress and handle as .cpi
+    if (lower.endsWith(".cpx")) {
+      try {
+        const cpiData = decompressCpx(new Uint8Array(buf))
+        openFontBuffer(name.replace(/\.cpx$/i, '.cpi'), cpiData.buffer as ArrayBuffer)
+      } catch (e) {
+        setError({ title: 'Failed to decompress CPX', message: (e as Error).message })
+      }
+      return
+    }
+
     // .cpi files are font containers — show in container pane
     if (lower.endsWith(".cpi")) {
       try {
@@ -203,7 +215,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.cpi,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.cpi,.cpx,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
