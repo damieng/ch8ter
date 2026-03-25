@@ -78,11 +78,13 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-3 min-w-[350px] max-w-[450px]">
-        <h2 class="font-bold text-lg">Glyph Properties — {label}</h2>
-        <div class="flex flex-col gap-2">
+      <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[350px] max-w-[450px]">
+        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
+          <h2 class="font-bold text-lg">Glyph Properties — {label}</h2>
+        </div>
+        <div class="flex flex-col gap-2 px-5 pt-4 pb-3">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">NAME</span>
+            <span class="text-xs font-mono text-gray-600 w-20 shrink-0">NAME</span>
             <input
               class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
               value={name}
@@ -91,7 +93,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
             />
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">SWIDTH</span>
+            <span class="text-xs font-mono text-gray-600 w-20 shrink-0">SWIDTH</span>
             <input
               class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
               value={swidth}
@@ -100,7 +102,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
             />
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">DWIDTH</span>
+            <span class="text-xs font-mono text-gray-600 w-20 shrink-0">DWIDTH</span>
             <input
               class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
               value={dwidth}
@@ -109,7 +111,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
             />
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">BBX</span>
+            <span class="text-xs font-mono text-gray-600 w-20 shrink-0">BBX</span>
             <input
               class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
               value={bbx}
@@ -118,7 +120,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
             />
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-gray-600 w-16 shrink-0">INDEX</span>
+            <span class="text-xs font-mono text-gray-600 w-20 shrink-0">INDEX</span>
             <input
               class={`flex-1 px-2 py-0.5 border rounded text-sm font-mono min-w-0 ${charIdxError ? 'border-red-400' : 'border-gray-300'}`}
               value={charIdx}
@@ -128,9 +130,9 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
           </div>
           {charIdxError && <p class="text-xs text-red-500">{charIdxError}</p>}
         </div>
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-2 px-5 py-2 bg-gray-100 border-t border-gray-300 rounded-b-lg">
           <button
-            class="px-4 py-1.5 rounded border border-gray-300 text-sm hover:bg-gray-100"
+            class="px-4 py-1.5 rounded border border-gray-300 text-sm hover:bg-gray-100 bg-white"
             onClick={onClose}
           >
             Cancel
