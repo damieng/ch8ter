@@ -43,6 +43,8 @@ export interface FontInstance {
   /** Bumped on each in-place pixel edit; lets the glyph editor re-render without copying fontData. */
   paintVersion: Signal<number>
   undoHistory: UndoHistory
+  /** If opened from a container pane, the container's id. */
+  sourceContainerId?: string
 }
 
 export function bytesPerRow(font: FontInstance): number {
@@ -131,7 +133,8 @@ export function createFont(
 import {
   type WindowRect, type StoredPreview,
   loadFontsFromStorage, loadLayoutFromStorage,
-  setupFontAutoSave, setupLayoutAutoSave,
+  loadContainersFromStorage,
+  setupFontAutoSave, setupLayoutAutoSave, setupContainerAutoSave,
 } from './persistence'
 export type { WindowRect, StoredPreview } from './persistence'
 
@@ -246,6 +249,56 @@ export function removeFont(id: string) {
   }
 }
 
+// --- Font containers ---
+
+export interface ContainerFont {
+  label: string
+  codepage: number
+  deviceName: string
+  width: number
+  height: number
+  numChars: number
+  fontData: Uint8Array
+}
+
+export interface FontContainer {
+  id: string
+  fileName: string
+  format: string
+  fonts: ContainerFont[]
+}
+
+const restoredContainers = loadContainersFromStorage()
+export const containers = signal<FontContainer[]>(restoredContainers ?? [])
+
+let nextContainerId = restoredContainers
+  ? restoredContainers.reduce((max, c) => {
+      const n = parseInt(c.id.replace('container-', ''))
+      return isNaN(n) ? max : Math.max(max, n)
+    }, 0) + 1
+  : 1
+
+export function addContainer(container: FontContainer) {
+  containers.value = [...containers.value, container]
+  storedFocusedId.value = `container-${container.id}`
+}
+
+export function removeContainer(id: string) {
+  // Close all fonts that were opened from this container
+  const childFontIds = fonts.value.filter(f => f.sourceContainerId === id).map(f => f.id)
+  if (childFontIds.length > 0) {
+    fonts.value = fonts.value.filter(f => f.sourceContainerId !== id)
+    if (childFontIds.includes(activeFontId.value)) {
+      activeFontId.value = fonts.value.length > 0 ? fonts.value[0].id : ''
+    }
+  }
+  containers.value = containers.value.filter(c => c.id !== id)
+}
+
+export function createContainerId(): string {
+  return `container-${nextContainerId++}`
+}
+
 // --- Preview windows ---
 
 export interface PreviewInstance {
@@ -298,6 +351,9 @@ setupLayoutAutoSave(
   () => storedPreviews.value,
   () => storedFocusedId.value,
 )
+
+// Auto-save containers to localStorage
+setupContainerAutoSave(() => containers.value)
 
 // --- Charset (re-exported from charsets.ts) ---
 

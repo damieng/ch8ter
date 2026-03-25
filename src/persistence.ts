@@ -1,8 +1,8 @@
-// localStorage persistence for fonts, window layout, and preview state.
+// localStorage persistence for fonts, containers, window layout, and preview state.
 
 import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
-import type { FontInstance, SpacingMode } from './store'
+import type { FontInstance, SpacingMode, FontContainer } from './store'
 import { createFont } from './store'
 import { bpr } from './bitUtils'
 import { calcAllMetrics, type GlyphLookup } from './charMetrics'
@@ -29,6 +29,7 @@ interface StoredFont {
   populatedGlyphs?: number[] | null
   hideEmpty?: boolean
   spacing?: SpacingMode
+  sourceContainerId?: string
 }
 
 export interface WindowRect {
@@ -61,6 +62,7 @@ interface StoredLayout {
 
 const STORAGE_KEY = 'ch8ter-fonts'
 const LAYOUT_KEY = 'ch8ter-layout'
+const CONTAINER_KEY = 'ch8ter-containers'
 
 // --- Base64 helpers ---
 
@@ -117,6 +119,7 @@ export function loadFontsFromStorage(): FontInstance[] | null {
       if (s.fontName) font.fontName.value = s.fontName
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
       if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
+      if (s.sourceContainerId) font.sourceContainerId = s.sourceContainerId
       font.savedSnapshot.value = new Uint8Array(data)
       font.dirty.value = false
       if (s.ascender != null) font.ascender.value = s.ascender
@@ -165,6 +168,7 @@ export function saveFontsToStorage(fontList: FontInstance[]) {
     populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
     hideEmpty: f.hideEmpty.value,
     spacing: f.spacing.value,
+    sourceContainerId: f.sourceContainerId,
   }))
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
@@ -223,6 +227,79 @@ export function setupFontAutoSave(getFonts: () => FontInstance[]) {
       f.spacing.value
     }
     saveFontsToStorage(allFonts)
+  })
+}
+
+// --- Container persistence ---
+
+interface StoredContainerFont {
+  label: string
+  codepage: number
+  deviceName: string
+  width: number
+  height: number
+  numChars: number
+  fontData: string // base64
+}
+
+interface StoredContainer {
+  id: string
+  fileName: string
+  format: string
+  fonts: StoredContainerFont[]
+}
+
+export function loadContainersFromStorage(): FontContainer[] | null {
+  try {
+    const raw = localStorage.getItem(CONTAINER_KEY)
+    if (!raw) return null
+    const stored: StoredContainer[] = JSON.parse(raw)
+    if (!Array.isArray(stored) || stored.length === 0) return null
+    return stored.map(sc => ({
+      id: sc.id,
+      fileName: sc.fileName,
+      format: sc.format,
+      fonts: sc.fonts.map(sf => ({
+        label: sf.label,
+        codepage: sf.codepage,
+        deviceName: sf.deviceName,
+        width: sf.width,
+        height: sf.height,
+        numChars: sf.numChars,
+        fontData: fromBase64(sf.fontData),
+      })),
+    }))
+  } catch {
+    return null
+  }
+}
+
+function saveContainersToStorage(containerList: FontContainer[]) {
+  const stored: StoredContainer[] = containerList.map(c => ({
+    id: c.id,
+    fileName: c.fileName,
+    format: c.format,
+    fonts: c.fonts.map(f => ({
+      label: f.label,
+      codepage: f.codepage,
+      deviceName: f.deviceName,
+      width: f.width,
+      height: f.height,
+      numChars: f.numChars,
+      fontData: toBase64(f.fontData),
+    })),
+  }))
+  localStorage.setItem(CONTAINER_KEY, JSON.stringify(stored))
+}
+
+export function setupContainerAutoSave(getContainers: () => FontContainer[]) {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  effect(() => {
+    const all = getContainers()
+    // Access the array to subscribe to changes
+    all.length
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => saveContainersToStorage(all), 300)
   })
 }
 

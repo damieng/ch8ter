@@ -10,8 +10,9 @@ import { BasePane } from './components/BasePane'
 import { EditorTitle } from './components/EditorTitle'
 import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer } from './store'
 import { PreviewPane } from './panes/PreviewPane'
+import { ContainerPane, ContainerPaneTitle } from './panes/ContainerPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
@@ -102,6 +103,25 @@ export function App() {
             </div>
           </BasePane>
         </Fragment>
+      ))}
+
+      {/* Container windows */}
+      {containers.value.map((c, i) => (
+        <BasePane
+          key={c.id}
+          title={<ContainerPaneTitle container={c} />}
+          windowId={`container-${c.id}`}
+          initialX={200 + i * 30}
+          initialY={80 + i * 30}
+          initialW={420}
+          initialH={300}
+          resizable
+          zIndex={getZIndex(`container-${c.id}`)}
+          onFocus={() => setFocus(`container-${c.id}`)}
+          onClose={() => removeContainer(c.id)}
+        >
+          <ContainerPane container={c} />
+        </BasePane>
       ))}
 
       {/* Preview windows */}

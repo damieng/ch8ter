@@ -11,6 +11,8 @@ import {
 } from "../store"
 import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
+import { parseCpi } from "../fileFormats/cpiParser"
+import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
@@ -51,6 +53,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.bbc',          name: 'BBC Micro' },
   { exts: '.64c',          name: 'Commodore 64' },
   { exts: '',              name: 'Commodore Amiga' },
+  { exts: '.cpi',          name: 'CPI codepage' },
   { exts: '.com',          name: 'CP/M Plus' },
   { exts: '.psf',          name: 'Linux console' },
   { exts: '.pdb',          name: 'PalmOS' },
@@ -135,6 +138,31 @@ export function AppPane() {
   function openFontBuffer(name: string, buf: ArrayBuffer) {
     const lower = name.toLowerCase()
 
+    // .cpi files are font containers — show in container pane
+    if (lower.endsWith(".cpi")) {
+      try {
+        const result = parseCpi(buf)
+        const fonts: ContainerFont[] = result.fonts.map(f => ({
+          label: `CP${f.codepage} ${f.width}x${f.height} (${f.deviceName})`,
+          codepage: f.codepage,
+          deviceName: f.deviceName,
+          width: f.width,
+          height: f.height,
+          numChars: f.numChars,
+          fontData: f.fontData,
+        }))
+        addContainer({
+          id: createContainerId(),
+          fileName: name,
+          format: `CPI (${result.variant})`,
+          fonts,
+        })
+      } catch (e) {
+        alert(`Failed to parse CPI file: ${(e as Error).message}`)
+      }
+      return
+    }
+
     // .com files can contain multiple fonts — handle separately
     if (lower.endsWith(".com")) {
       try {
@@ -167,7 +195,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.pcf,.pdb,.png,.bin,.raw,.cpi,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
