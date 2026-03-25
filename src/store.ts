@@ -161,8 +161,10 @@ export function updatePreviewSettings(id: string, settings: Partial<StoredPrevie
 
 // --- Global state ---
 const restored = loadFontsFromStorage()
-export const fonts = signal<FontInstance[]>(restored ?? [createFont()])
-export const activeFontId = signal<string>(fonts.value[0].id)
+const restoredContainers = loadContainersFromStorage()
+const needsBlankFont = !restored && (!restoredContainers || restoredContainers.length === 0)
+export const fonts = signal<FontInstance[]>(restored ?? (needsBlankFont ? [createFont()] : []))
+export const activeFontId = signal<string>(fonts.value.length > 0 ? fonts.value[0].id : '')
 
 // Auto-save fonts to localStorage
 setupFontAutoSave(() => fonts.value)
@@ -268,7 +270,6 @@ export interface FontContainer {
   fonts: ContainerFont[]
 }
 
-const restoredContainers = loadContainersFromStorage()
 export const containers = signal<FontContainer[]>(restoredContainers ?? [])
 
 let nextContainerId = restoredContainers

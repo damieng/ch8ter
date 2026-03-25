@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.9.6",
+    "date": "2026-03-25",
+    "changes": [
+      "Font container support for multi-font files",
+      "CPI (Code Page Information) font format support",
+      "Codepage 860 (Portuguese), 863 (Canadian French), and 865 (Nordic) character sets"
+    ]
+  },
+  {
     "version": "0.9.5",
     "date": "2026-03-24",
     "changes": [
