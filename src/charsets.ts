@@ -152,7 +152,7 @@ const CHARSETS_RAW = {
     0xFB: '\uD83E\uDFC8', 0xFC: '\uD807\uDC63', 0xFD: '\uD807\uDC64',
     0xFE: '\u2B65', 0xFF: '\u2B64',
   }},
-  cp437: { label: 'DOS (CP437)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cp437: { label: 'DOS (CP437 US)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
     0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
     0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
     0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',
@@ -195,7 +195,7 @@ const CHARSETS_RAW = {
     0xF8: '\u00B0', 0xF9: '\u2219', 0xFA: '\u00B7', 0xFB: '\u221A',
     0xFC: '\u207F', 0xFD: '\u00B2', 0xFE: '\u25A0', 0xFF: '\u00A0',
   }},
-  cp850: { label: 'DOS (CP850)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
+  cp850: { label: 'DOS (CP850 Western European)', range: [0, 255] as [number, number], colorSystem: 'Custom', overrides: {
     0x00: '\u0000', 0x01: '\u263A', 0x02: '\u263B', 0x03: '\u2665',
     0x04: '\u2666', 0x05: '\u2663', 0x06: '\u2660', 0x07: '\u2022',
     0x08: '\u25D8', 0x09: '\u25CB', 0x0A: '\u25D9', 0x0B: '\u2642',

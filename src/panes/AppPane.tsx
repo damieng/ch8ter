@@ -7,6 +7,7 @@ import {
   charset,
   recalcMetrics,
   calcMissingMetrics,
+  CHARSETS,
   type Charset,
 } from "../store"
 import { loadFontFile, type FontConversionData } from "../fontLoad"
@@ -47,6 +48,7 @@ async function decompressGz(buf: ArrayBuffer): Promise<ArrayBuffer> {
 
 const showChangelog = signal(false)
 const showHotkeys = signal(false)
+const helpTab = signal<'shortcuts' | 'formats' | 'codepages'>('shortcuts')
 
 const FORMATS: { exts: string; name: string }[] = [
   { exts: '.draw',         name: 'Acorn Draw' },
@@ -55,11 +57,10 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.bbc',          name: 'BBC Micro' },
   { exts: '.64c',          name: 'Commodore 64' },
   { exts: '',              name: 'Commodore Amiga' },
-  { exts: '.cpi .cpx',     name: 'CPI codepage' },
   { exts: '.com',          name: 'CP/M Plus' },
   { exts: '.psf',          name: 'Linux console' },
   { exts: '.pdb',          name: 'PalmOS' },
-  { exts: '.com',          name: 'PC DOS EGA/VGA' },
+  { exts: '.com .cpi .cpx', name: 'PC DOS' },
   { exts: '.png',          name: 'PNG tile sheet' },
   { exts: '.bin .raw',     name: 'RAW binary' },
   { exts: '.fnt',          name: 'Windows FNT' },
@@ -300,36 +301,61 @@ export function AppPane() {
       )}
       {showHotkeys.value && (
         <div class="px-3 pb-3 border-t border-gray-200 mt-1 pt-2">
-          <div class="text-xs font-bold text-gray-600 mb-1">Keyboard Shortcuts</div>
-          <table class="text-xs w-full">
-            {HOTKEYS.map((h, i) => (
-              <tr key={i}>
-                <td class="pr-3 py-0.5 whitespace-nowrap">
-                  {h.key.split(', ').map((combo, ci) => (
-                    <span key={ci}>
-                      {ci > 0 && <span class="text-gray-400 mx-1">/</span>}
-                      {combo.split('+').map((k, j) => (
-                        <span key={j}>
-                          {j > 0 && <span class="text-gray-400 mx-0.5">+</span>}
-                          <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px] shadow-sm">{k.trim()}</kbd>
-                        </span>
-                      ))}
-                    </span>
-                  ))}
-                </td>
-                <td class="py-0.5 text-gray-600">{h.desc}</td>
-              </tr>
+          <div class="flex gap-1 mb-2">
+            {(['shortcuts', 'formats', 'codepages'] as const).map(tab => (
+              <button
+                key={tab}
+                class={`px-2 py-0.5 text-xs rounded ${helpTab.value === tab ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => { helpTab.value = tab }}
+              >
+                {tab[0].toUpperCase() + tab.slice(1)}
+              </button>
             ))}
-          </table>
-          <div class="text-xs font-bold text-gray-600 mt-3 mb-1">File Formats</div>
-          <table class="text-xs w-full">
-            {FORMATS.map((f, i) => (
-              <tr key={i}>
-                <td class="py-0.5 text-gray-600">{f.name}</td>
-                <td class="py-0.5 text-gray-500 font-mono text-right">{f.exts || '(none)'}</td>
-              </tr>
-            ))}
-          </table>
+          </div>
+          {helpTab.value === 'shortcuts' && (
+            <table class="text-xs w-full">
+              {HOTKEYS.map((h, i) => (
+                <tr key={i}>
+                  <td class="pr-3 py-0.5 whitespace-nowrap">
+                    {h.key.split(', ').map((combo, ci) => (
+                      <span key={ci}>
+                        {ci > 0 && <span class="text-gray-400 mx-1">/</span>}
+                        {combo.split('+').map((k, j) => (
+                          <span key={j}>
+                            {j > 0 && <span class="text-gray-400 mx-0.5">+</span>}
+                            <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px] shadow-sm">{k.trim()}</kbd>
+                          </span>
+                        ))}
+                      </span>
+                    ))}
+                  </td>
+                  <td class="py-0.5 text-gray-600">{h.desc}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+          {helpTab.value === 'formats' && (
+            <table class="text-xs w-full">
+              {FORMATS.map((f, i) => (
+                <tr key={i}>
+                  <td class="py-0.5 text-gray-600">{f.name}</td>
+                  <td class="py-0.5 text-gray-500 font-mono text-right">{f.exts || '(none)'}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+          {helpTab.value === 'codepages' && (
+            <table class="text-xs w-full">
+              {Object.entries(CHARSETS)
+                .sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true }))
+                .map(([key, def]) => (
+                  <tr key={key}>
+                    <td class="py-0.5 text-gray-600">{def.label}</td>
+                    <td class="py-0.5 text-gray-500 font-mono text-right">{key}</td>
+                  </tr>
+                ))}
+            </table>
+          )}
         </div>
       )}
     </div>
