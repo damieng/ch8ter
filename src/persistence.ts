@@ -76,7 +76,12 @@ function toBase64(data: Uint8Array): string {
 }
 
 function fromBase64(b64: string): Uint8Array {
-  const binary = atob(b64)
+  let binary: string
+  try {
+    binary = atob(b64)
+  } catch {
+    throw new Error('Corrupted font data in localStorage (invalid base64)')
+  }
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
@@ -132,7 +137,8 @@ export function loadFontsFromStorage(): FontInstance[] | null {
       }
       return font
     })
-  } catch {
+  } catch (e) {
+    console.warn('Failed to restore fonts from localStorage:', e)
     return null
   }
 }
@@ -170,7 +176,8 @@ export function loadLayoutFromStorage(): StoredLayout | null {
     const raw = localStorage.getItem(LAYOUT_KEY)
     if (!raw) return null
     return JSON.parse(raw)
-  } catch {
+  } catch (e) {
+    console.warn('Failed to restore layout from localStorage:', e)
     return null
   }
 }
@@ -275,7 +282,8 @@ export function loadContainersFromStorage(): FontContainer[] | null {
         spacingMode: sf.spacingMode,
       })),
     }))
-  } catch {
+  } catch (e) {
+    console.warn('Failed to restore containers from localStorage:', e)
     return null
   }
 }

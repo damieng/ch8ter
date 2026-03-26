@@ -12,8 +12,8 @@
 - [ ] **No bounds check on Windows FNT character table reads** — `windowsFntParser.ts:106-111` reads from DataView without verifying offsets are within buffer bounds. Could overread on malformed files.
 - [x] **`ComSingleResult` type: TSR tagged as `source: 'ega'`** — `comOpener.ts:13-14` has both EGA and TSR results using `source: 'ega'`. TSR should have its own source tag.
 - [ ] **No error boundary in app** — render errors crash the entire app. Add an error boundary wrapper at the root.
-- [ ] **Persistence: `atob()` can throw on corrupted localStorage** — `persistence.ts:79-84` calls `atob()` without try/catch inside `fromBase64()`. Corrupted data will crash instead of gracefully degrading.
-- [ ] **Persistence: silent failures on restore** — `persistence.ts:148-150` swallows errors with empty catch blocks. User gets blank state with no notification.
+- [x] **Persistence: `atob()` can throw on corrupted localStorage** — `persistence.ts:79-84` calls `atob()` without try/catch inside `fromBase64()`. Corrupted data will crash instead of gracefully degrading.
+- [x] **Persistence: silent failures on restore** — `persistence.ts:148-150` swallows errors with empty catch blocks. User gets blank state with no notification.
 
 ## High Priority — Docs
 
