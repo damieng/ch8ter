@@ -620,10 +620,10 @@ export function resizeFont(
 }
 
 export function saveFont(font: FontInstance): Uint8Array {
-  const data = new Uint8Array(font.fontData.value)
-  font.savedSnapshot.value = new Uint8Array(data)
+  const snapshot = new Uint8Array(font.fontData.value)
+  font.savedSnapshot.value = snapshot
   font.dirty.value = false
-  return data
+  return snapshot
 }
 
 /** Extract a plain FontConversionData snapshot from a FontInstance (marks font as saved). */
