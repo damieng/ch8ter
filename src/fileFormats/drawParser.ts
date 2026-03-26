@@ -50,9 +50,24 @@ export function parseDraw(text: string): DrawParseResult {
 
   const glyphHeight = coded[0].rows.length
   const glyphWidth = coded[0].rows[0].length
+  if (glyphWidth <= 0 || glyphHeight <= 0)
+    throw new Error('Invalid glyph dimensions in .draw file')
+
+  // Warn about inconsistent glyph sizes (use first glyph as reference)
+  const inconsistent = coded.filter(g => g.rows.length !== glyphHeight || g.rows.some(r => r.length !== glyphWidth))
+  if (inconsistent.length > 0) {
+    const first = inconsistent[0]
+    const actual = `${first.rows[0]?.length ?? 0}x${first.rows.length}`
+    throw new Error(
+      `Inconsistent glyph size at codepoint 0x${first.codepoint.toString(16).toUpperCase()}: ` +
+      `expected ${glyphWidth}x${glyphHeight}, got ${actual}`
+    )
+  }
 
   let minCp = 0x7FFFFFFF, maxCp = 0
   for (const g of coded) {
+    if (g.codepoint < 0 || g.codepoint > 0xFFFF)
+      throw new Error(`Codepoint 0x${g.codepoint.toString(16).toUpperCase()} out of range (0-FFFF)`)
     if (g.codepoint < minCp) minCp = g.codepoint
     if (g.codepoint > maxCp) maxCp = g.codepoint
   }

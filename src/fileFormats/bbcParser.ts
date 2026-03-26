@@ -19,6 +19,9 @@ export interface BbcParseResult {
 
 export function parseBbc(buf: ArrayBuffer): BbcParseResult {
   const bytes = new Uint8Array(buf)
+  if (bytes.length < 10)
+    throw new Error('File too small to contain BBC Micro character definitions')
+
   const glyphs = new Uint8Array(256 * 8) // all 256 possible chars
   const populated = new Set<number>()
   let firstChar = 256
@@ -30,6 +33,7 @@ export function parseBbc(buf: ArrayBuffer): BbcParseResult {
     if (pos + 10 > bytes.length) break // not enough data for a full definition
 
     const charCode = bytes[pos + 1]
+    if (charCode > 255) { pos++; continue } // skip invalid char codes
     const offset = charCode * 8
     for (let y = 0; y < 8; y++) {
       glyphs[offset + y] = bytes[pos + 2 + y]
