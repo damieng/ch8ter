@@ -36,4 +36,4 @@
 - [ ] **No test framework** — complex algorithms like `remapFontForCharset()`, TTF generation, and charset remapping have no test coverage.
 - [x] **`saveFont()` double-wraps Uint8Array** — `store.ts:627-628` creates `new Uint8Array(data)` when data is already a Uint8Array. Harmless but wasteful.
 - [ ] **`useClickOutside` refs dependency** — `useClickOutside.ts:26` may cause unnecessary listener re-registration when inline arrays are passed.
-- [ ] **PreviewPane is 496 lines** — could extract ColorSwatch and text selection logic to separate files.
+- [x] **PreviewPane is 496 lines** — could extract ColorSwatch and text selection logic to separate files.
