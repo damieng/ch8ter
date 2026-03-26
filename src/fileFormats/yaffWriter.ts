@@ -2,18 +2,10 @@
 
 import { bpr, getBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
+import type { FontWriteData } from '../fontSave'
 
-interface YaffWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  name: string
-}
-
-export function writeYaff(params: YaffWriteParams): string {
-  const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, name } = params
+export function writeYaff(params: FontWriteData): string {
+  const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, fontName: name } = params
   const rowBytes = bpr(w)
   const bpg = h * rowBytes
   const lines: string[] = []

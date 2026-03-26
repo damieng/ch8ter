@@ -2,16 +2,9 @@
 
 import { bpr, getBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
+import type { FontWriteData } from '../fontSave'
 
-interface DrawWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-}
-
-export function writeDraw(params: DrawWriteParams): string {
+export function writeDraw(params: FontWriteData): string {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount } = params
   const rowBytes = bpr(w)
   const bpg = h * rowBytes

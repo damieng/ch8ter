@@ -3,7 +3,9 @@
 // Output: a stream of VDU23 commands, one per character.
 // Each definition is 10 bytes: 0x17, charCode, 8 bitmap rows.
 
-export function writeBbc(fontData: Uint8Array, startChar: number, glyphCount: number): Uint8Array {
+import type { FontWriteData } from '../fontSave'
+
+export function writeBbc({ fontData, startChar, glyphCount }: FontWriteData): Uint8Array {
   // Count non-empty glyphs to size the output
   const entries: { code: number; offset: number }[] = []
   for (let i = 0; i < glyphCount; i++) {

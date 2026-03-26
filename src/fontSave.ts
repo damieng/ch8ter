@@ -1,7 +1,23 @@
 // Font file saving logic used by both the web UI and CLI.
 // No DOM or Preact dependencies — pure TypeScript operating on ArrayBuffer/Uint8Array.
 
+import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import type { FontConversionData } from './fontLoad'
+
+/** Shared parameter interface accepted by all font format writers. */
+export interface FontWriteData {
+  fontData: Uint8Array
+  glyphWidth: number
+  glyphHeight: number
+  startChar: number
+  glyphCount: number
+  baseline: number
+  meta: FontMeta | null
+  glyphMeta: (GlyphMeta | null)[] | null
+  fontName: string
+  ascender?: number
+  descender?: number
+}
 
 import { writeBdf } from './fileFormats/bdfWriter'
 import { writePsf } from './fileFormats/psfWriter'
@@ -24,84 +40,20 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
   const e = ext.toLowerCase().replace(/^\./, '')
 
   switch (e) {
-    case 'ch8':
-      return new Uint8Array(data.fontData)
-
-    case 'bdf':
-      return writeBdf({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
-        meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
-      })
-
-    case 'psf':
-      return writePsf({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount,
-      })
-
-    case 'yaff':
-      return writeYaff({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount,
-        name: data.fontName,
-      })
-
-    case 'draw':
-      return writeDraw({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount,
-      })
-
-    case 'fzx':
-      return writeFzx({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, glyphMeta: data.glyphMeta,
-      })
-
-    case 'fnt':
-      return writeGdosFont({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, glyphMeta: data.glyphMeta,
-        baseline: data.baseline,
-        ascender: data.ascender ?? data.meta?.fontAscent ?? data.baseline,
-        descender: data.descender ?? data.meta?.fontDescent ?? (data.glyphHeight - data.baseline - 1),
-        name: data.fontName, fontName: data.fontName, meta: data.meta,
-      })
-
-    case 'pcf':
-      return writePcf({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
-        meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
-      })
-
-    case 'pdb':
-      return writePdbFont({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
-        meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
-      })
-
-    case 'amiga':
-      return writeAmigaFont({
-        fontData: data.fontData, glyphWidth: data.glyphWidth, glyphHeight: data.glyphHeight,
-        startChar: data.startChar, glyphCount: data.glyphCount, baseline: data.baseline,
-        meta: data.meta, glyphMeta: data.glyphMeta, fontName: data.fontName,
-      })
-
-    case 'atari8':
-      return writeAtari8Bit(data.fontData, data.startChar)
-
-    case 'ega':
-      return writeEgaCom(data.fontData, data.glyphHeight)
-
-    case 'bbc':
-      return writeBbc(data.fontData, data.startChar, data.glyphCount)
-
-    case 'com':
-      return exportCpm(data.glyphHeight, data.fontData)
-
+    case 'ch8':   return new Uint8Array(data.fontData)
+    case 'bdf':   return writeBdf(data)
+    case 'psf':   return writePsf(data)
+    case 'yaff':  return writeYaff(data)
+    case 'draw':  return writeDraw(data)
+    case 'fzx':   return writeFzx(data)
+    case 'fnt':   return writeGdosFont(data)
+    case 'pcf':   return writePcf(data)
+    case 'pdb':   return writePdbFont(data)
+    case 'amiga': return writeAmigaFont(data)
+    case 'atari8': return writeAtari8Bit(data)
+    case 'ega':   return writeEgaCom(data)
+    case 'bbc':   return writeBbc(data)
+    case 'com':   return exportCpm(data)
     default:
       throw new Error(`Unsupported output format: .${e}`)
   }

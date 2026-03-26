@@ -16,7 +16,9 @@ function decodeStub(): Uint8Array {
   return out
 }
 
-export function writeEgaCom(fontData: Uint8Array, glyphHeight: number): Uint8Array {
+import type { FontWriteData } from '../fontSave'
+
+export function writeEgaCom({ fontData, glyphHeight }: FontWriteData): Uint8Array {
   const stub = decodeStub()
   const fontSize = 256 * glyphHeight
   const fontOffset = stub.length // font data immediately follows stub

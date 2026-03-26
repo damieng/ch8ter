@@ -1,20 +1,8 @@
 // Write BDF (Bitmap Distribution Format) font files from our internal format.
 
-import type { FontMeta, GlyphMeta } from './bdfParser'
 import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
-
-interface BdfWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  baseline: number
-  meta: FontMeta | null
-  glyphMeta: (GlyphMeta | null)[] | null
-  fontName?: string
-}
+import type { FontWriteData } from '../fontSave'
 
 // BDF properties that are defined as integers per the spec
 const NUMERIC_PROPS = new Set([
@@ -29,7 +17,7 @@ const NUMERIC_PROPS = new Set([
   'MIN_SPACE', 'MAX_SPACE', 'END_SPACE',
 ])
 
-export function writeBdf(params: BdfWriteParams): string {
+export function writeBdf(params: FontWriteData): string {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta, fontName: paramFontName } = params
   const rowBytes = bpr(w)
   const bpg = h * rowBytes

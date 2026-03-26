@@ -13,22 +13,10 @@
 //   [58..109]:  TextFont (tf_Message + fields)
 //   [110..]:    CharLoc, CharSpace, CharKern, CharData
 
-import type { GlyphMeta, FontMeta } from './bdfParser'
 import { bpr, getBit, setBit } from '../bitUtils'
+import type { FontWriteData } from '../fontSave'
 
-export interface AmigaFontWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  glyphMeta: (GlyphMeta | null)[] | null
-  baseline: number
-  fontName?: string
-  meta: FontMeta | null
-}
-
-export function writeAmigaFont(params: AmigaFontWriteParams): Uint8Array {
+export function writeAmigaFont(params: FontWriteData): Uint8Array {
   const {
     fontData, glyphWidth, glyphHeight, startChar, glyphCount,
     glyphMeta, baseline, fontName, meta,

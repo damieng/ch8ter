@@ -11,7 +11,9 @@ function decodeHeader(): Uint8Array {
   return out
 }
 
-export function exportCpm(glyphHeight: number, fontData: Uint8Array): Uint8Array {
+import type { FontWriteData } from '../fontSave'
+
+export function exportCpm({ glyphHeight, fontData }: FontWriteData): Uint8Array {
   const bpg = glyphHeight // 8px wide font = 1 byte per row
   const glyphs = 256
   const header = decodeHeader()

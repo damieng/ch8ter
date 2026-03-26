@@ -1,20 +1,8 @@
 // Write PCF (Portable Compiled Format) font files.
 
-import type { FontMeta, GlyphMeta } from './bdfParser'
 import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
-
-interface PcfWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  baseline: number
-  meta: FontMeta | null
-  glyphMeta: (GlyphMeta | null)[] | null
-  fontName?: string
-}
+import type { FontWriteData } from '../fontSave'
 
 const PCF_MAGIC = 0x70636601
 
@@ -35,7 +23,7 @@ const PCF_COMPRESSED_METRICS = 0x100
 
 function pad4(n: number): number { return (n + 3) & ~3 }
 
-export function writePcf(params: PcfWriteParams): Uint8Array {
+export function writePcf(params: FontWriteData): Uint8Array {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount, baseline, meta, glyphMeta, fontName } = params
   const rowBytes = bpr(w)
   const bpg = h * rowBytes

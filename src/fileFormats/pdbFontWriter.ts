@@ -3,23 +3,11 @@
 // Produces a PDB with type/creator 'Font'/'Font' containing a single
 // NFNT font record. See pdbFontParser.ts for format details.
 
-import type { GlyphMeta, FontMeta } from './bdfParser'
 import { bpr, getBit, setBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
+import type { FontWriteData } from '../fontSave'
 
-export interface PdbFontWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  glyphMeta: (GlyphMeta | null)[] | null
-  baseline: number
-  fontName?: string
-  meta: FontMeta | null
-}
-
-export function writePdbFont(params: PdbFontWriteParams): Uint8Array {
+export function writePdbFont(params: FontWriteData): Uint8Array {
   const {
     fontData, glyphWidth, glyphHeight, startChar, glyphCount,
     glyphMeta, baseline, fontName, meta,

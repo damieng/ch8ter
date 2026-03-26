@@ -7,23 +7,8 @@
 //
 // No horizontal offset table is written.
 
-import type { GlyphMeta, FontMeta } from './bdfParser'
 import { bpr, getBit, setBit } from '../bitUtils'
-
-interface GdosFontWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  glyphMeta: (GlyphMeta | null)[] | null
-  baseline: number
-  ascender: number
-  descender: number
-  name: string
-  fontName: string
-  meta: FontMeta | null
-}
+import type { FontWriteData } from '../fontSave'
 
 function rightmostPixel(
   fontData: Uint8Array, glyphOffset: number, rowBytes: number,
@@ -42,9 +27,11 @@ function rightmostPixel(
   return rightmost
 }
 
-export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
+export function writeGdosFont(params: FontWriteData): Uint8Array {
   const { fontData, glyphWidth, glyphHeight, startChar, glyphCount,
-          glyphMeta, baseline, ascender, descender, name, fontName, meta } = params
+          glyphMeta, baseline, fontName, meta } = params
+  const ascender = params.ascender ?? meta?.fontAscent ?? baseline
+  const descender = params.descender ?? meta?.fontDescent ?? (glyphHeight - baseline - 1)
   const props = meta?.properties ?? {}
 
   const rowBytes = bpr(glyphWidth)
@@ -114,7 +101,7 @@ export function writeGdosFont(params: GdosFontWriteParams): Uint8Array {
   view.setUint16(2, faceSize, LE)   // face size (points)
 
   // Face name: 32 bytes — prefer font name, then stored family, then filename
-  const faceName = (fontName || meta?.family || name).substring(0, 31)
+  const faceName = (fontName || meta?.family || '').substring(0, 31)
   for (let i = 0; i < 32; i++) {
     out[4 + i] = i < faceName.length ? faceName.charCodeAt(i) : 0
   }

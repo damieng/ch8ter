@@ -2,19 +2,9 @@
 //
 // Each offset in the character table is relative to the position of that offset word itself.
 
-import type { GlyphMeta } from './bdfParser'
 import { bpr, getBit, setBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
-
-interface FzxWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-  glyphMeta: (GlyphMeta | null)[] | null
-  tracking?: number
-}
+import type { FontWriteData } from '../fontSave'
 
 function countTopAndBottomBlankRows(
   fontData: Uint8Array, glyphOffset: number, rowBytes: number,
@@ -49,8 +39,9 @@ function countTopAndBottomBlankRows(
   return [top, bottom]
 }
 
-export function writeFzx(params: FzxWriteParams): Uint8Array {
-  const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta, tracking = 0 } = params
+export function writeFzx(params: FontWriteData): Uint8Array {
+  const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta } = params
+  const tracking = 0
   const rowBytes = bpr(glyphWidth)
   const bpg = glyphHeight * rowBytes
 

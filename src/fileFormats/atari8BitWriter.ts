@@ -2,7 +2,9 @@
 // 1024 bytes: 128 glyphs × 8 bytes, stored in internal (screen) code order.
 // Input font data is in ATASCII order; we remap back to internal codes.
 
-export function writeAtari8Bit(fontData: Uint8Array, startChar: number): Uint8Array {
+import type { FontWriteData } from '../fontSave'
+
+export function writeAtari8Bit({ fontData, startChar }: FontWriteData): Uint8Array {
   const out = new Uint8Array(1024)
 
   for (let atascii = 0; atascii < 128; atascii++) {

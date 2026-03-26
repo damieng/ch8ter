@@ -25,7 +25,7 @@
 - [x] **Inconsistent baseline conventions across parsers** — `fontLoad.ts:114` uses `height-2`, `amigaFontParser.ts:195` uses `baseline-1`, `gdosFontParser.ts:201` uses `topLine-1`, `pdbFontParser.ts:200` uses `ascent-1`. Document the convention or normalize.
 - [x] **Truncated last glyph silently dropped** — `store.ts:91`: if `fontData.length % bpg !== 0`, the last partial glyph is silently discarded. Should pad or warn.
 - [ ] **`remapFontForCharset()` is 90 lines of complex logic** — `store.ts:398-487`. Three passes, nested loops, no tests. Consider refactoring into smaller functions.
-- [ ] **Writers lack shared interface** — some accept `FontInstance`, others accept `FontConversionData` fields. No abstract base defining the pattern.
+- [x] **Writers lack shared interface** — some accept `FontInstance`, others accept `FontConversionData` fields. No abstract base defining the pattern.
 - [x] **Dialogs lack focus management** — no focus trapping, no `role="dialog"`, no focus-return-on-close in `NewFontDialog.tsx`, `ConfirmDialog.tsx`, etc.
 - [x] **BasePane useEffect missing `windowId` dependency** — `BasePane.tsx:102` has `[aspectRatio]` but handler uses `windowId`. Stale closure risk.
 - [ ] **`charsets.ts` is 606 lines** — ~400 lines of charset override tables. Consider extracting to JSON data file.

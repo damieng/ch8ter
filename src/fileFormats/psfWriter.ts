@@ -2,19 +2,12 @@
 
 import { bpr } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
+import type { FontWriteData } from '../fontSave'
 
 const PSF2_MAGIC = 0x864AB572
 const PSF2_HAS_UNICODE = 1
 
-interface PsfWriteParams {
-  fontData: Uint8Array
-  glyphWidth: number
-  glyphHeight: number
-  startChar: number
-  glyphCount: number
-}
-
-export function writePsf(params: PsfWriteParams): Uint8Array {
+export function writePsf(params: FontWriteData): Uint8Array {
   const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount } = params
   const rowBytes = bpr(w)
   const bpg = h * rowBytes
