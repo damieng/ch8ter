@@ -4,6 +4,13 @@ import { describe, it, expect } from 'vitest'
 import { bpr, getBit, setBit } from '../bitUtils'
 import type { FontWriteData } from '../fontSave'
 
+/** Convert Uint8Array to a standalone ArrayBuffer (avoids ArrayBufferLike type issues). */
+function toBuffer(arr: Uint8Array): ArrayBuffer {
+  const buf = new ArrayBuffer(arr.length)
+  new Uint8Array(buf).set(arr)
+  return buf
+}
+
 // --- Parsers ---
 import { parseDraw } from './drawParser'
 import { parseYaff } from './yaffParser'
@@ -187,7 +194,7 @@ describe('PSF round-trip', () => {
   it('preserves glyph data for 8x16 font', () => {
     const font = makeTestFont(8, 16, 32, 96)
     const bytes = writePsf(font)
-    const parsed = parsePsf(bytes.buffer)
+    const parsed = parsePsf(toBuffer(bytes))
 
     expect(parsed.glyphWidth).toBe(8)
     expect(parsed.glyphHeight).toBe(16)
@@ -214,7 +221,7 @@ describe('BBC round-trip', () => {
     // BBC is always 8x8, chars 32-255
     const font = makeTestFont(8, 8, 32, 96)
     const bytes = writeBbc(font)
-    const parsed = parseBbc(bytes.buffer)
+    const parsed = parseBbc(toBuffer(bytes))
 
     expect(parsed.glyphWidth).toBe(8)
     expect(parsed.glyphHeight).toBe(8)
@@ -236,7 +243,7 @@ describe('EGA COM round-trip', () => {
     // EGA COM is always 8px wide, 256 glyphs starting at 0
     const font = makeTestFont(8, 16, 0, 256)
     const bytes = writeEgaCom(font)
-    const parsed = parseEgaCom(bytes.buffer)
+    const parsed = parseEgaCom(toBuffer(bytes))
 
     expect(parsed.glyphWidth).toBe(8)
     expect(parsed.glyphHeight).toBe(16)
@@ -254,7 +261,7 @@ describe('EGA COM round-trip', () => {
   it('preserves glyph data for 8x8 font', () => {
     const font = makeTestFont(8, 8, 0, 256)
     const bytes = writeEgaCom(font)
-    const parsed = parseEgaCom(bytes.buffer)
+    const parsed = parseEgaCom(toBuffer(bytes))
 
     expect(parsed.glyphHeight).toBe(8)
 
@@ -273,7 +280,7 @@ describe('FZX round-trip', () => {
     // FZX always starts at char 32
     const font = makeTestFont(8, 8, 32, 96)
     const bytes = writeFzx(font)
-    const parsed = parseFzx(bytes.buffer)
+    const parsed = parseFzx(toBuffer(bytes))
 
     expect(parsed.glyphHeight).toBe(8)
     expect(parsed.startChar).toBe(32)
