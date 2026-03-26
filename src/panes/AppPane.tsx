@@ -253,7 +253,7 @@ export function AppPane() {
           recalcMetrics(font)
           addFont(font)
         }
-        charset.value = (results[0].source === "ega" ? "cp437" : "cpm") as Charset
+        charset.value = (results[0].source === "cpm" ? "cpm" : "cp437") as Charset
       } catch (e) {
         setError({ title: 'Failed to open font', message: (e as Error).message })
       }

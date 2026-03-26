@@ -11,14 +11,14 @@ import { parseCpm } from './cpmParser'
 
 export type ComSingleResult =
   | (EgaComParseResult & { source: 'ega' })
-  | (TsrComParseResult & { source: 'ega' })
+  | (TsrComParseResult & { source: 'tsr' })
   | { fontData: Uint8Array; glyphHeight: number; startChar: number; glyphWidth: number; source: 'cpm' }
 
 export type ComParseResult = ComSingleResult[]
 
 export function openCom(buffer: ArrayBuffer): ComParseResult {
   if (isTsrCom(buffer)) {
-    return parseTsrCom(buffer).map(r => ({ ...r, source: 'ega' as const }))
+    return parseTsrCom(buffer).map(r => ({ ...r, source: 'tsr' as const }))
   }
   if (isEgaCom(buffer)) {
     return [{ ...parseEgaCom(buffer), source: 'ega' as const }]

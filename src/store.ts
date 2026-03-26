@@ -3,7 +3,7 @@ import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { baseName } from './fontLoad'
-import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, type GlyphLookup } from './charMetrics'
+import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, buildGlyphLookup } from './charMetrics'
 import {
   type Charset, CHARSETS, charset,
   charsetGlyphFilter as charsetGlyphFilterImpl,
@@ -174,16 +174,6 @@ export const activeFontId = signal<string>(fonts.value.length > 0 ? fonts.value[
 // Auto-save fonts to localStorage
 setupFontAutoSave(() => fonts.value)
 
-/** Build a GlyphLookup that maps Unicode characters to glyph indices via the active charset. */
-function buildGlyphLookup(startChar: number, count: number): GlyphLookup {
-  const reverse = buildUnicodeReverse(charset.value)
-  return (ch: string) => {
-    const cp = reverse.get(ch)
-    if (cp === undefined) return undefined
-    const idx = cp - startChar
-    return idx >= 0 && idx < count ? idx : undefined
-  }
-}
 
 // Fill in only metrics that are still at default (-1), using BDF properties where available
 export function calcMissingMetrics(font: FontInstance) {

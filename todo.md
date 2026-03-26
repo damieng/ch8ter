@@ -2,22 +2,22 @@
 
 ## Critical
 
-- [ ] **Windows FNT docs: bitmap storage layout was wrong** — described as row-major but actual format is byte-column-major. *Fixed in this review.*
-- [ ] **PSF1 parser: mode flag constants are swapped** — `PSF1_MODE_HAS_TAB` is defined as `0x01` and `PSF1_MODE_512` as `0x04`, but the Linux kernel spec defines `PSF1_MODE512 = 0x01` and `PSF1_MODEHASTAB = 0x02`. The doc was correct; the parser constants are wrong. Works by coincidence when all mode bits are set together but will misparse fonts with mode `0x01` (512 glyphs, no unicode table). (`psfParser.ts:14-16`)
+- [x] **Windows FNT docs: bitmap storage layout was wrong** — described as row-major but actual format is byte-column-major. *Fixed in this review.*
+- [x] **PSF1 parser: mode flag constants are swapped** — `PSF1_MODE_HAS_TAB` is defined as `0x01` and `PSF1_MODE_512` as `0x04`, but the Linux kernel spec defines `PSF1_MODE512 = 0x01` and `PSF1_MODEHASTAB = 0x02`. The doc was correct; the parser constants are wrong. Works by coincidence when all mode bits are set together but will misparse fonts with mode `0x01` (512 glyphs, no unicode table). (`psfParser.ts:14-16`)
 
 ## High Priority — Code
 
-- [ ] **Circular dependency store.ts ↔ persistence.ts** — `store.ts` imports from `persistence.ts` and vice versa. Extract shared utilities (e.g., `buildGlyphLookup`) to a separate module.
-- [ ] **Duplicate `buildGlyphLookup()`** — identical function in `store.ts:178` and `persistence.ts:88`. Extract to shared module.
+- [x] **Circular dependency store.ts ↔ persistence.ts** — `store.ts` imports from `persistence.ts` and vice versa. Extract shared utilities (e.g., `buildGlyphLookup`) to a separate module.
+- [x] **Duplicate `buildGlyphLookup()`** — identical function in `store.ts:178` and `persistence.ts:88`. Extract to shared module.
 - [ ] **No bounds check on Windows FNT character table reads** — `windowsFntParser.ts:106-111` reads from DataView without verifying offsets are within buffer bounds. Could overread on malformed files.
-- [ ] **`ComSingleResult` type: TSR tagged as `source: 'ega'`** — `comOpener.ts:13-14` has both EGA and TSR results using `source: 'ega'`. TSR should have its own source tag.
+- [x] **`ComSingleResult` type: TSR tagged as `source: 'ega'`** — `comOpener.ts:13-14` has both EGA and TSR results using `source: 'ega'`. TSR should have its own source tag.
 - [ ] **No error boundary in app** — render errors crash the entire app. Add an error boundary wrapper at the root.
 - [ ] **Persistence: `atob()` can throw on corrupted localStorage** — `persistence.ts:79-84` calls `atob()` without try/catch inside `fromBase64()`. Corrupted data will crash instead of gracefully degrading.
 - [ ] **Persistence: silent failures on restore** — `persistence.ts:148-150` swallows errors with empty catch blocks. User gets blank state with no notification.
 
 ## High Priority — Docs
 
-- [ ] **BBC Micro format: missing docs** — parser exists (`bbcParser.ts`) but no doc file. *Created in this review.*
+- [x] **BBC Micro format: missing docs** — parser exists (`bbcParser.ts`) but no doc file. *Created in this review.*
 - [ ] **TTF Bitmap EBLC/EBDT: docs exist but no parser** — `TTF-Bitmap-EBLC-EBDT.md` exists but format is unimplemented. Consider adding a note to the doc or removing it.
 
 ## Medium Priority — Code

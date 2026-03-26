@@ -5,8 +5,7 @@ import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import type { FontInstance, SpacingMode, FontContainer, ContainerMeta } from './store'
 import { createFont } from './store'
 import { bpr } from './bitUtils'
-import { calcAllMetrics, type GlyphLookup } from './charMetrics'
-import { buildUnicodeReverse, charset } from './charsets'
+import { calcAllMetrics, buildGlyphLookup } from './charMetrics'
 
 // --- Types ---
 
@@ -81,18 +80,6 @@ function fromBase64(b64: string): Uint8Array {
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
-}
-
-// --- Glyph lookup for metrics ---
-
-function buildGlyphLookup(startChar: number, count: number): GlyphLookup {
-  const reverse = buildUnicodeReverse(charset.value)
-  return (ch: string) => {
-    const cp = reverse.get(ch)
-    if (cp === undefined) return undefined
-    const idx = cp - startChar
-    return idx >= 0 && idx < count ? idx : undefined
-  }
 }
 
 // --- Font persistence ---

@@ -213,7 +213,7 @@ export function loadFontFile(
     const result = openCom(buf)[0]
     return makeResult({
       ...result, fontName: name,
-      detectedCharset: result.source === 'ega' ? 'cp437' : 'cpm',
+      detectedCharset: result.source === 'cpm' ? 'cpm' : 'cp437',
       source: result.source,
     })
   }

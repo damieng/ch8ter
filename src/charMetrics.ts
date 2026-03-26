@@ -1,6 +1,7 @@
 // Character metric classification for ISO-8859-1.
 // Each character is tagged with which font metrics it exhibits.
 import { bpr } from './bitUtils'
+import { buildUnicodeReverse, charset } from './charsets'
 
 export const Metric = {
   Baseline:  1,   // sits on the baseline (most printable chars)
@@ -62,6 +63,17 @@ const DESCENDER_CHARS = 'gpqy'
  * (e.g. 'H' → screen code 72 in C64) rather than assuming codepoint == index.
  */
 export type GlyphLookup = (ch: string) => number | undefined
+
+/** Build a GlyphLookup that maps Unicode characters to glyph indices via the active charset. */
+export function buildGlyphLookup(startChar: number, count: number): GlyphLookup {
+  const reverse = buildUnicodeReverse(charset.value)
+  return (ch: string) => {
+    const cp = reverse.get(ch)
+    if (cp === undefined) return undefined
+    const idx = cp - startChar
+    return idx >= 0 && idx < count ? idx : undefined
+  }
+}
 
 // Raw font data params
 interface FontData {
