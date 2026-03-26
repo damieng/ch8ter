@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.9.7",
+    "date": "2026-03-26",
+    "changes": [
+      "TTF/OTF embedded bitmap (sbit) font import via EBLC/EBDT tables",
+      "Multi-strike TTF bitmaps shown as font container",
+      "Dialog accessibility: focus trapping, Escape key, ARIA roles across all 13 dialogs",
+      "Shared FontWriteData interface for all font format writers",
+      "Fix PSF1 mode flag constants to match Linux kernel spec",
+      "Fix Windows FNT parser bounds checking for malformed files",
+      "Harden localStorage persistence against corrupted data"
+    ]
+  },
+  {
     "version": "0.9.6",
     "date": "2026-03-25",
     "changes": [

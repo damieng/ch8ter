@@ -14,6 +14,7 @@ import { parsePdbFont } from './fileFormats/pdbFontParser'
 import { parseCh8 } from './fileFormats/ch8Format'
 import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
+import { parseSbit, isSbitFont } from './fileFormats/sbitParser'
 import { bdfCharsetMap } from './charsets'
 import { bpr } from './bitUtils'
 
@@ -215,6 +216,22 @@ export function loadFontFile(
       ...result, fontName: name,
       detectedCharset: result.source === 'cpm' ? 'cpm' : 'cp437',
       source: result.source,
+    })
+  }
+
+  // TTF/OTF files
+  if (lower.endsWith('.ttf') || lower.endsWith('.otf')) {
+    if (!isSbitFont(buf))
+      throw new Error('This TTF/OTF font contains only vector outlines — no embedded bitmaps found')
+    const result = parseSbit(buf)
+    // Use the largest strike for single-font loading
+    const strike = result.strikes[result.strikes.length - 1]
+    return makeResult({
+      fontData: strike.fontData, glyphWidth: strike.glyphWidth, glyphHeight: strike.glyphHeight,
+      startChar: strike.startChar, baseline: strike.baseline,
+      meta: strike.meta, glyphMeta: strike.glyphMeta, populated: strike.populated,
+      fontName: result.fontName || name,
+      spacingMode: strike.spacingMode, useCalcMissing: true,
     })
   }
 

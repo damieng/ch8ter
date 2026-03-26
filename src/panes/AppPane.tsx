@@ -15,6 +15,7 @@ import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
 import { decompressCpx } from "../fileFormats/cpxDecoder"
 import { parseFon } from "../fileFormats/fonParser"
+import { parseSbit, isSbitFont } from "../fileFormats/sbitParser"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -85,6 +86,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.com .cpi .cpx', name: 'PC DOS' },
   { exts: '.png',          name: 'PNG tile sheet' },
   { exts: '.bin .raw',     name: 'RAW binary' },
+  { exts: '.ttf .otf',     name: 'TTF/OTF embedded bitmap' },
   { exts: '.fnt .fon',     name: 'Windows FNT' },
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
@@ -240,6 +242,57 @@ export function AppPane() {
       return
     }
 
+    // TTF/OTF files — check for embedded bitmaps
+    if (lower.endsWith(".ttf") || lower.endsWith(".otf")) {
+      if (!isSbitFont(buf)) {
+        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines — no embedded bitmaps found.' })
+        return
+      }
+      try {
+        const result = parseSbit(buf)
+        if (result.strikes.length === 1) {
+          // Single strike — open as regular font
+          const s = result.strikes[0]
+          const font = createFont(
+            s.fontData, name, s.startChar, s.glyphWidth, s.glyphHeight,
+            s.meta, undefined, s.baseline, s.glyphMeta, s.spacingMode,
+          )
+          font.populatedGlyphs.value = s.populated
+          recalcMetrics(font)
+          calcMissingMetrics(font)
+          addFont(font)
+        } else {
+          // Multiple strikes — show as container
+          const fonts: ContainerFont[] = result.strikes.map(s => ({
+            label: `${s.ppemX}×${s.ppemY}`,
+            codepage: 0,
+            deviceName: '',
+            deviceType: 1,
+            startChar: s.startChar,
+            width: s.glyphWidth,
+            height: s.glyphHeight,
+            numChars: s.populated.size,
+            fontData: s.fontData,
+            baseline: s.baseline,
+            meta: s.meta,
+            glyphMeta: s.glyphMeta,
+            populated: s.populated,
+            spacingMode: s.spacingMode,
+          }))
+          addContainer({
+            id: createContainerId(),
+            fileName: name,
+            format: 'TTF sbit',
+            meta: null,
+            fonts,
+          })
+        }
+      } catch (e) {
+        setError({ title: 'Failed to open TTF', message: (e as Error).message })
+      }
+      return
+    }
+
     // .com files can contain multiple fonts — handle separately
     if (lower.endsWith(".com")) {
       try {
@@ -272,7 +325,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.fon,.pcf,.pdb,.png,.bin,.raw,.cpi,.cpx,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.fon,.pcf,.pdb,.ttf,.otf,.png,.bin,.raw,.cpi,.cpx,.gz"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return

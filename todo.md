@@ -18,7 +18,7 @@
 ## High Priority — Docs
 
 - [x] **BBC Micro format: missing docs** — parser exists (`bbcParser.ts`) but no doc file. *Created in this review.*
-- [ ] **TTF Bitmap EBLC/EBDT: docs exist but no parser** — `TTF-Bitmap-EBLC-EBDT.md` exists but format is unimplemented. Consider adding a note to the doc or removing it.
+- [x] **TTF Bitmap EBLC/EBDT: docs exist but no parser** — `TTF-Bitmap-EBLC-EBDT.md` exists but format is unimplemented. *Parser implemented in this review (1-bit depth, index formats 1-5, image formats 1,2,5,6,7).*
 
 ## Medium Priority — Code
 
