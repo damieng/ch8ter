@@ -111,7 +111,7 @@ function makeResult(
   const bpg = fields.glyphHeight * rowBytes
   return {
     glyphCount: bpg > 0 ? Math.floor(fields.fontData.length / bpg) : 0,
-    baseline: fields.glyphHeight - 2,
+    baseline: fields.glyphHeight - 1,
     meta: null,
     encodings: null,
     glyphMeta: null,

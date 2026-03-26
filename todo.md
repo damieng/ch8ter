@@ -22,7 +22,7 @@
 
 ## Medium Priority — Code
 
-- [ ] **Inconsistent baseline conventions across parsers** — `fontLoad.ts:114` uses `height-2`, `amigaFontParser.ts:195` uses `baseline-1`, `gdosFontParser.ts:201` uses `topLine-1`, `pdbFontParser.ts:200` uses `ascent-1`. Document the convention or normalize.
+- [x] **Inconsistent baseline conventions across parsers** — `fontLoad.ts:114` uses `height-2`, `amigaFontParser.ts:195` uses `baseline-1`, `gdosFontParser.ts:201` uses `topLine-1`, `pdbFontParser.ts:200` uses `ascent-1`. Document the convention or normalize.
 - [x] **Truncated last glyph silently dropped** — `store.ts:91`: if `fontData.length % bpg !== 0`, the last partial glyph is silently discarded. Should pad or warn.
 - [ ] **`remapFontForCharset()` is 90 lines of complex logic** — `store.ts:398-487`. Three passes, nested loops, no tests. Consider refactoring into smaller functions.
 - [ ] **Writers lack shared interface** — some accept `FontInstance`, others accept `FontConversionData` fields. No abstract base defining the pattern.
