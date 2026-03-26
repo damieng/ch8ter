@@ -3,6 +3,7 @@ import { type FontInstance } from '../store'
 import { createObliqueVariant } from '../createVariants'
 import { shearGlyphBytes } from '../glyphTransforms'
 import { drawGlyphToCtx } from '../drawGlyph'
+import { DialogOverlay } from '../components/DialogOverlay'
 import { bpr } from '../bitUtils'
 
 const PREVIEW_GLYPHS = [
@@ -82,10 +83,7 @@ export function ObliqueDialog({ font, onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Create Oblique Variant">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[340px]">
         <h2 class="font-bold text-lg">Create Oblique Variant</h2>
 
@@ -120,6 +118,6 @@ export function ObliqueDialog({ font, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

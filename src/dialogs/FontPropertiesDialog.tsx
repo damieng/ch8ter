@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { type FontInstance } from '../store'
 import type { FontMeta } from '../fileFormats/bdfParser'
+import { DialogOverlay } from '../components/DialogOverlay'
 
 interface Props {
   font: FontInstance
@@ -57,10 +58,7 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
   const keys = Object.keys(properties).sort()
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Font Properties">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[400px] max-w-[500px] max-h-[80vh]">
         <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
           <h2 class="font-bold text-lg">Font Properties</h2>
@@ -132,6 +130,6 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

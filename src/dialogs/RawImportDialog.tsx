@@ -3,6 +3,7 @@ import { createFont, addFont, recalcMetrics, charset } from '../store'
 import { NumField } from '../components/NumField'
 import { CharsetSelect } from '../components/CharsetSelect'
 import { ZoomControl } from '../components/ZoomControl'
+import { DialogOverlay } from '../components/DialogOverlay'
 import { type Charset } from '../store'
 
 interface Props {
@@ -160,10 +161,7 @@ export function RawImportDialog({ file, onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Import RAW Binary">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
         <div class="flex items-center gap-2">
           <h2 class="font-bold">Import RAW Binary</h2>
@@ -225,6 +223,6 @@ export function RawImportDialog({ file, onClose }: Props) {
           >Import {result.glyphCount > 0 ? `${result.glyphCount} glyphs` : ''}</button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

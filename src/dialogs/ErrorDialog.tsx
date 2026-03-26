@@ -1,3 +1,5 @@
+import { DialogOverlay } from '../components/DialogOverlay'
+
 interface Props {
   title: string
   message: string
@@ -6,10 +8,7 @@ interface Props {
 
 export function ErrorDialog({ title, message, onClose }: Props) {
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label={title}>
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[300px] max-w-[450px]">
         <div class="px-5 py-2 bg-red-100 border-b border-gray-300 rounded-t-lg">
           <h2 class="font-bold text-lg text-red-800">{title}</h2>
@@ -24,6 +23,6 @@ export function ErrorDialog({ title, message, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

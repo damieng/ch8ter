@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { Ruler } from 'lucide-preact'
 import { type FontInstance, resizeFont } from '../store'
+import { DialogOverlay } from '../components/DialogOverlay'
 import {
   calcBaseline, calcAscender, calcCapHeight,
   calcXHeight, calcNumericHeight, calcDescender,
@@ -67,10 +68,7 @@ export function MetricsDialog({ font, onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Glyph Metrics">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[340px]">
         <div class="flex items-center">
           <h2 class="font-bold text-lg">Glyph Metrics</h2>
@@ -169,6 +167,6 @@ export function MetricsDialog({ font, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

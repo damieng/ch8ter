@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { type Charset, createFont, addFont, charset } from '../store'
 import { bpr } from '../bitUtils'
+import { DialogOverlay } from '../components/DialogOverlay'
 
 const CODEPAGES: { value: Charset; label: string; startChar: number; glyphCount: number }[] = [
   { value: 'amiga', label: 'Amiga (ISO-8859-1)', startChar: 32, glyphCount: 224 },
@@ -62,10 +63,7 @@ export function NewFontDialog({ onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="New Font">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4" style={{ width: 440 }}>
         <h2 class="font-bold text-lg">New Font</h2>
 
@@ -123,6 +121,6 @@ export function NewFontDialog({ onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

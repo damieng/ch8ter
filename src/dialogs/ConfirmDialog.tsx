@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo } from 'preact/hooks'
 import { type FontInstance, bytesPerGlyph } from '../store'
 import { drawGlyphToCtx } from '../drawGlyph'
 import { bpr } from '../bitUtils'
+import { DialogOverlay } from '../components/DialogOverlay'
 
 interface Props {
   font: FontInstance
@@ -56,10 +57,7 @@ export function ConfirmDialog({ font, onConfirm, onCancel }: Props) {
   }, [font])
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
-    >
+    <DialogOverlay onClose={onCancel} label="Discard changes">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[300px] max-w-[400px]">
         <h2 class="font-bold text-lg">Discard changes to {font.fileName.value}?</h2>
         <div class="flex justify-center p-2 bg-gray-100 rounded border border-gray-200">
@@ -83,6 +81,6 @@ export function ConfirmDialog({ font, onConfirm, onCancel }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import { type FontInstance, glyphCount } from '../store'
 import type { GlyphMeta } from '../fileFormats/bdfParser'
+import { DialogOverlay } from '../components/DialogOverlay'
 
 interface Props {
   font: FontInstance
@@ -74,10 +75,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
     : `U+${charCode.toString(16).toUpperCase().padStart(4, '0')}`
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Glyph Properties">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[350px] max-w-[450px]">
         <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
           <h2 class="font-bold text-lg">Glyph Properties — {label}</h2>
@@ -145,6 +143,6 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

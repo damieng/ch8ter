@@ -3,6 +3,7 @@ import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSet
 import { createFont, addFont, recalcMetrics, charset } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
 import { SizeField } from '../components/SizeField'
+import { DialogOverlay } from '../components/DialogOverlay'
 import { NumField } from '../components/NumField'
 import { CharsetSelect } from '../components/CharsetSelect'
 import { type Charset } from '../store'
@@ -144,10 +145,7 @@ export function PngImportDialog({ file, onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Import PNG">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
         <div class="flex items-center gap-2">
           <h2 class="font-bold">Import PNG</h2>
@@ -199,6 +197,6 @@ export function PngImportDialog({ file, onClose }: Props) {
           >Import {grid.total > 0 ? `${grid.total} glyphs` : ''}</button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   )
 }

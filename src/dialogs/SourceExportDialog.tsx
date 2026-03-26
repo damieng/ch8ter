@@ -2,6 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { Copy, Download } from 'lucide-preact'
 import { type FontInstance } from '../store'
 import { exportSource, SOURCE_FORMATS, type SourceFormat } from '../fileFormats/sourceExport'
+import { DialogOverlay } from '../components/DialogOverlay'
 
 interface Props {
   font: FontInstance
@@ -31,10 +32,7 @@ export function SourceExportDialog({ font, onClose }: Props) {
   }
 
   return (
-    <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <DialogOverlay onClose={onClose} label="Export Source Code">
       <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-3" style={{ width: 680, height: 560 }}>
         <div class="flex items-center gap-2">
           <h2 class="font-bold">Export Source Code</h2>
@@ -83,6 +81,6 @@ export function SourceExportDialog({ font, onClose }: Props) {
           onClick={(e) => (e.target as HTMLTextAreaElement).select()}
         />
       </div>
-    </div>
+    </DialogOverlay>
   )
 }
