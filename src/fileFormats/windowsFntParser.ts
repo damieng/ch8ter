@@ -105,6 +105,8 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
   const charOffsets: number[] = []
   for (let i = 0; i < numChars + 1; i++) { // +1 for sentinel
     const off = charTableStart + i * charEntrySize
+    if (off + charEntrySize > bytes.length)
+      throw new Error(`FNT character table entry ${i} at offset ${off} exceeds file size`)
     const width = view.getUint16(off, true)
     const bitmapOffset = charEntrySize === 6
       ? view.getUint32(off + 2, true)
@@ -144,6 +146,8 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
       populated.add(i)
       continue
     }
+
+    if (bitmapOff >= bytes.length) continue
 
     const base = i * outBpg
     let hasPixels = false
