@@ -104,7 +104,7 @@ Then the `TextFont` fields:
 
 | Offset | Size | Type   | Field         | Notes |
 |--------|------|--------|---------------|-------|
-| 28     | 2    | UInt16 | tf_YSize      | Font height in pixels |
+| 28     | 2    | UInt16 | tf_YSize      | Font height in pixels (parser enforces maximum of 256) |
 | 30     | 1    | UInt8  | tf_Style      | Style flags |
 | 31     | 1    | UInt8  | tf_Flags      | Font flags |
 | 32     | 2    | UInt16 | tf_XSize      | Nominal character width |

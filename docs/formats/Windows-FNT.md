@@ -67,7 +67,7 @@ Read `dfVersion` at offset 0 to determine which layout to use.
 | 98     | 1    | UInt8  | dfBreakChar      | Word-break character (relative to dfFirstChar) |
 | 99     | 2    | UInt16 | dfWidthBytes     | Bytes per row of the bitmap (for fixed-pitch fonts) |
 | 101    | 4    | UInt32 | dfDevice         | Offset to device name string (0 = generic) |
-| 105    | 4    | UInt32 | dfFace           | Offset to face name string (null-terminated) |
+| 105    | 4    | UInt32 | dfFace           | Offset to face name string (null-terminated). **Note:** In v3, this field is at offset 141 (shifted by the 36-byte v3 header extension). |
 | 109    | 4    | UInt32 | dfBitsPointer    | Reserved, always 0 on disk |
 | 113    | 4    | UInt32 | dfBitsOffset     | Offset to bitmap data from start of file |
 
@@ -164,43 +164,52 @@ The bitmap data starts at `dfBitsOffset`. Each character's data is located at th
 
 ### Storage Format
 
-Bitmaps are stored **row-major** with **MSBit-first** bit ordering. Each row is `ceil(width / 8)` bytes with no per-row padding.
+Bitmaps are stored in **byte-column-major** order with **MSBit-first** bit ordering. This is different from most bitmap font formats: instead of storing each row contiguously, each byte-column is stored as `dfPixHeight` consecutive bytes (one byte per row, top to bottom), and the byte-columns are stored left to right.
 
 For a character of width `w` pixels and height `h` pixels (`h` = `dfPixHeight`):
 
 ```
-bytesPerRow = ceil(w / 8)
-totalBytes = h * bytesPerRow
+widthBytes = ceil(w / 8)       — number of byte-columns
+totalBytes = widthBytes * h    — total bytes for this character
 ```
 
-Note: the total glyph allocation (spacing between consecutive character offsets) may be larger than `totalBytes` due to padding, but the pixel data is packed contiguously at `bytesPerRow` per row.
-
-Within each byte, bit 7 is the leftmost pixel (MSBit-first), same as most bitmap font formats:
+The layout in memory is:
 
 ```
-Bit 7 → leftmost pixel
-Bit 6 → next pixel
+[byte-col 0, row 0] [byte-col 0, row 1] ... [byte-col 0, row h-1]
+[byte-col 1, row 0] [byte-col 1, row 1] ... [byte-col 1, row h-1]
 ...
-Bit 0 → rightmost pixel of that byte
+[byte-col N, row 0] [byte-col N, row 1] ... [byte-col N, row h-1]
 ```
+
+Within each byte, bit 0 corresponds to the leftmost pixel of that byte's 8-pixel column, and bit 7 to the rightmost:
+
+```
+Bit 0 → leftmost pixel (x = k*8 + 7)  — note: reversed from most formats
+Bit 7 → rightmost pixel (x = k*8 + 0)
+```
+
+The pixel at column `x` within byte-column `k` is at bit `(7 - (x - k*8))`, i.e., bit position increases right-to-left.
 
 ### Reading a Pixel
 
 To read pixel (x, y) for a character whose bitmap starts at file offset `charOffset`:
 
 ```
-bytesPerRow = ceil(charWidth / 8)
-byteIndex = charOffset + y * bytesPerRow + (x >> 3)
-pixel = (data[byteIndex] >> (7 - (x & 7))) & 1
+widthBytes = ceil(charWidth / 8)
+byteCol = x >> 3                              — which byte-column
+byteIndex = charOffset + byteCol * height + y — byte-column-major indexing
+bit = x & 7
+pixel = (data[byteIndex] >> bit) & 1          — bit 0 = leftmost within column
 ```
 
 ### Fixed-Pitch Layout
 
-For fixed-pitch fonts, all characters have the same width (`dfPixWidth`). The `dfWidthBytes` field gives the total bytes per scanline across the entire character set, but this is primarily used for the in-memory raster format, not the on-disk per-character layout.
+For fixed-pitch fonts, all characters have the same width (`dfPixWidth`). In v3, `dfWidthBytes` gives the number of byte-columns per character for the bitmap data.
 
 ### Proportional Layout
 
-Each character has its own width from the character width table. The `offset` field in each character entry points to where that character's bitmap data begins. The row stride is computed from each character's individual width.
+Each character has its own width from the character width table. The `offset` field in each character entry points to where that character's bitmap data begins. The number of byte-columns is computed from each character's individual width: `ceil(width / 8)`.
 
 ## Face Name String
 

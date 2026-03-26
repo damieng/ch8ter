@@ -15,7 +15,7 @@ The first 512 bytes are a Z80 executable stub that loads the font data into the 
 
 | Offset | Size | Type  | Field       | Notes |
 |--------|------|-------|-------------|-------|
-| 0x2F   | 1    | UInt8 | glyphHeight | Pixel height of each glyph (typically 8) |
+| 0x2F   | 1    | UInt8 | glyphHeight | Pixel height of each glyph (typically 8, maximum 64) |
 
 All other bytes are Z80 machine code and should be preserved when round-tripping. The loader template is specific to PSF2AMS and handles the CRT+ driver interface.
 
@@ -59,6 +59,7 @@ The 8 bytes at that offset represent the 8 rows of the 'A' glyph.
 
 - Fixed 8-pixel width
 - Fixed 256 glyph count (codepoints 0-255)
+- Maximum glyph height of 64 pixels (enforced by parser; height byte at 0x2F must be 1-64)
 - No metadata, font name, or proportional width support
 - Requires the PSF2AMS loader template for the .com file to be executable
 
