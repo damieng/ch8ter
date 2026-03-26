@@ -99,7 +99,7 @@ export function BasePane({
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
     }
-  }, [aspectRatio])
+  }, [aspectRatio, windowId])
 
   return (
     <div

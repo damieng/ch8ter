@@ -86,7 +86,13 @@ export function createFont(
   const h = height ?? 8
   const bpr = calcBpr(w)
   const bpg = h * bpr
-  const initial = data ?? new Uint8Array(96 * bpg)
+  let initial = data ?? new Uint8Array(96 * bpg)
+  // Pad to whole glyph boundary if truncated
+  if (bpg > 0 && initial.length % bpg !== 0) {
+    const padded = new Uint8Array(Math.ceil(initial.length / bpg) * bpg)
+    padded.set(initial)
+    initial = padded
+  }
   // Count blank glyphs to decide default hideEmpty
   const numGlyphs = bpg > 0 ? Math.floor(initial.length / bpg) : 0
   let blankCount = 0
