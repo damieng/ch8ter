@@ -19,6 +19,12 @@ import { parsePsf } from './psfParser'
 import { parseBbc } from './bbcParser'
 import { parseFzx } from './fzxParser'
 import { parseEgaCom } from './egaComParser'
+import { parseGdosFont } from './gdosFontParser'
+import { parsePcf } from './pcfParser'
+import { parsePdbFont } from './pdbFontParser'
+import { parseAmigaFont } from './amigaFontParser'
+import { openFnt } from './fntOpener'
+import { parseCpm } from './cpmParser'
 
 // --- Writers ---
 import { writeDraw } from './drawWriter'
@@ -28,6 +34,12 @@ import { writePsf } from './psfWriter'
 import { writeBbc } from './bbcWriter'
 import { writeFzx } from './fzxWriter'
 import { writeEgaCom } from './egaComWriter'
+import { writeGdosFont } from './gdosFontWriter'
+import { writePcf } from './pcfWriter'
+import { writePdbFont } from './pdbFontWriter'
+import { writeAmigaFont } from './amigaFontWriter'
+import { writeAtari8Bit } from './atari8BitWriter'
+import { exportCpm } from './cpmExport'
 
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
@@ -262,6 +274,204 @@ describe('EGA COM round-trip', () => {
     const font = makeTestFont(8, 8, 0, 256)
     const bytes = writeEgaCom(font)
     const parsed = parseEgaCom(toBuffer(bytes))
+
+    expect(parsed.glyphHeight).toBe(8)
+
+    for (const idx of [32, 65, 90]) {
+      assertGlyphMatch(
+        font.fontData, 8, 8, idx,
+        parsed.fontData, 8, 8, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+})
+
+describe('GDOS round-trip', () => {
+  it('preserves glyph data for 8x16 font', () => {
+    const font = makeTestFont(8, 16, 32, 96)
+    const bytes = writeGdosFont(font)
+    const parsed = parseGdosFont(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(8)
+    expect(parsed.glyphHeight).toBe(16)
+    expect(parsed.startChar).toBe(32)
+
+    for (const idx of [0, 1, 33, 50, 94]) {
+      assertGlyphMatch(
+        font.fontData, 8, 16, idx,
+        parsed.fontData, 8, 16, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+
+  it('round-trips a 12x14 font', () => {
+    const font = makeTestFont(12, 14, 32, 16)
+    const bytes = writeGdosFont(font)
+    const parsed = parseGdosFont(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(12)
+    expect(parsed.glyphHeight).toBe(14)
+
+    for (let i = 0; i < 16; i++) {
+      assertGlyphMatch(
+        font.fontData, 12, 14, i,
+        parsed.fontData, 12, 14, i,
+        `glyph ${i}`,
+      )
+    }
+  })
+})
+
+describe('PCF round-trip', () => {
+  it('preserves glyph data for 8x16 font', () => {
+    const font = makeTestFont(8, 16, 32, 96)
+    const bytes = writePcf(font)
+    const parsed = parsePcf(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(8)
+    expect(parsed.glyphHeight).toBe(16)
+
+    // PCF uses encodings; map charCode → parsed glyph index
+    for (const charCode of [33, 65, 90, 126]) {
+      const srcIdx = charCode - font.startChar
+      const dstIdx = parsed.encodings.indexOf(charCode)
+      expect(dstIdx, `encoding for char ${charCode}`).toBeGreaterThanOrEqual(0)
+      assertGlyphMatch(
+        font.fontData, 8, 16, srcIdx,
+        parsed.fontData, parsed.glyphWidth, parsed.glyphHeight, dstIdx,
+        `char ${charCode}`,
+      )
+    }
+  })
+
+  it('round-trips a 12-pixel-wide font', () => {
+    const font = makeTestFont(12, 14, 32, 16)
+    const bytes = writePcf(font)
+    const parsed = parsePcf(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(12)
+    expect(parsed.glyphHeight).toBe(14)
+
+    const charCode = 33
+    const srcIdx = charCode - font.startChar
+    const dstIdx = parsed.encodings.indexOf(charCode)
+    expect(dstIdx).toBeGreaterThanOrEqual(0)
+    assertGlyphMatch(
+      font.fontData, 12, 14, srcIdx,
+      parsed.fontData, 12, 14, dstIdx,
+      `char ${charCode}`,
+    )
+  })
+})
+
+describe('PDB round-trip', () => {
+  it('preserves glyph data for 8x16 font', () => {
+    const font = makeTestFont(8, 16, 32, 96)
+    const bytes = writePdbFont(font)
+    const parsed = parsePdbFont(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(8)
+    expect(parsed.glyphHeight).toBe(16)
+    expect(parsed.startChar).toBe(32)
+
+    for (const idx of [0, 1, 33, 50, 94]) {
+      assertGlyphMatch(
+        font.fontData, 8, 16, idx,
+        parsed.fontData, 8, 16, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+
+  it('round-trips a 12x10 font', () => {
+    const font = makeTestFont(12, 10, 32, 16)
+    const bytes = writePdbFont(font)
+    const parsed = parsePdbFont(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(12)
+    expect(parsed.glyphHeight).toBe(10)
+
+    for (let i = 0; i < 16; i++) {
+      assertGlyphMatch(
+        font.fontData, 12, 10, i,
+        parsed.fontData, 12, 10, i,
+        `glyph ${i}`,
+      )
+    }
+  })
+})
+
+describe('Amiga round-trip', () => {
+  it('preserves glyph data for 8x16 font', () => {
+    const font = makeTestFont(8, 16, 32, 96)
+    const bytes = writeAmigaFont(font)
+    const parsed = parseAmigaFont(toBuffer(bytes))
+
+    expect(parsed.glyphHeight).toBe(16)
+    expect(parsed.startChar).toBe(32)
+
+    for (const idx of [0, 1, 33, 50, 94]) {
+      assertGlyphMatch(
+        font.fontData, 8, 16, idx,
+        parsed.fontData, parsed.glyphWidth, 16, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+})
+
+describe('Atari 8-bit round-trip', () => {
+  it('preserves glyph data through ATASCII remapping', () => {
+    // Atari 8-bit: 128 glyphs, 8x8, startChar 0
+    // Glyph 32 (space, ATASCII 0x20 → internal 0) must be blank for detection
+    const font = makeTestFont(8, 8, 0, 128)
+    // Clear glyph 32 so internal code 0 is all-zero (required by isAtari8Bit)
+    font.fontData.fill(0, 32 * 8, 33 * 8)
+
+    const bytes = writeAtari8Bit(font)
+    const parsed = openFnt(toBuffer(bytes))
+
+    expect(parsed.source).toBe('atari8bit')
+    expect(parsed.glyphWidth).toBe(8)
+    expect(parsed.glyphHeight).toBe(8)
+    expect(parsed.startChar).toBe(0)
+
+    // Check glyphs in ATASCII range that survive the remap round-trip
+    for (const idx of [33, 65, 90, 95]) {
+      assertGlyphMatch(
+        font.fontData, 8, 8, idx,
+        parsed.fontData, 8, 8, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+})
+
+describe('CP/M round-trip', () => {
+  it('preserves glyph data for 8x16 font', () => {
+    // CP/M: 256 glyphs, 8px wide, startChar 0
+    const font = makeTestFont(8, 16, 0, 256)
+    const bytes = exportCpm(font)
+    const parsed = parseCpm(toBuffer(bytes))
+
+    expect(parsed.glyphHeight).toBe(16)
+
+    // Parser returns raw fontData: 256 glyphs × glyphHeight bytes
+    for (const idx of [0, 32, 65, 128, 255]) {
+      assertGlyphMatch(
+        font.fontData, 8, 16, idx,
+        parsed.fontData, 8, 16, idx,
+        `glyph ${idx}`,
+      )
+    }
+  })
+
+  it('preserves glyph data for 8x8 font', () => {
+    const font = makeTestFont(8, 8, 0, 256)
+    const bytes = exportCpm(font)
+    const parsed = parseCpm(toBuffer(bytes))
 
     expect(parsed.glyphHeight).toBe(8)
 
