@@ -418,12 +418,14 @@ function parseStrike(
         const numGlyphs = view.getUint32(subtablePos + 8)
         for (let i = 0; i < numGlyphs; i++) {
           const pairOff = subtablePos + 12 + i * 4
-          if (pairOff + 8 > bytes.length) break
+          if (pairOff + 4 > bytes.length) break
           const glyphID = view.getUint16(pairOff)
           const sbitOff = view.getUint16(pairOff + 2)
-          const nextSbitOff = view.getUint16(pairOff + 4 + 2)
-          const dataSize = nextSbitOff - sbitOff
-          if (dataSize <= 0) continue
+          if (i < numGlyphs - 1) {
+            const nextSbitOff = view.getUint16(pairOff + 4 + 2)
+            const dataSize = nextSbitOff - sbitOff
+            if (dataSize <= 0) continue
+          }
           const bmp = readGlyphBitmap(view, bytes, ebdtStart, imageDataOffset + sbitOff, imageFormat, null)
           if (bmp) { bmp.glyphID = glyphID; glyphs.push(bmp) }
         }
