@@ -545,7 +545,7 @@ export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance:
   const len = glyphCount(font)
   const meta: (GlyphMeta | null)[] = gmArr ? [...gmArr] : new Array(len).fill(null)
   const existing = meta[glyphIndex]
-  meta[glyphIndex] = { ...existing, dwidth: [advance, 0] }
+  meta[glyphIndex] = existing ? { ...existing, dwidth: [advance, 0] } : { dwidth: [advance, 0] }
   font.glyphMeta.value = meta
   font.dirty.value = true
 }
