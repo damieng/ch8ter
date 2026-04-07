@@ -149,7 +149,8 @@ export function writeFzx(params: FontWriteData): Uint8Array {
     const meta = glyphMeta?.[slotIdx]
     const kern = meta?.bbx ? (meta.bbx[2] & 3) : 0
     const relativeOffset = dataPos - entryPos
-    const offsetWord = (kern << 14) | (relativeOffset & 0x3FFF)
+    if (relativeOffset > 0x3FFF) throw new Error('FZX font too large: character data offset exceeds 14-bit limit (16383 bytes)')
+    const offsetWord = (kern << 14) | relativeOffset
     out[entryPos] = offsetWord & 0xFF
     out[entryPos + 1] = (offsetWord >> 8) & 0xFF
     out[entryPos + 2] = (charInfo[i].shift << 4) | (charInfo[i].width - 1)

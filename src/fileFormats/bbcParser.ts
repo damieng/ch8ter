@@ -33,7 +33,6 @@ export function parseBbc(buf: ArrayBuffer): BbcParseResult {
     if (pos + 10 > bytes.length) break // not enough data for a full definition
 
     const charCode = bytes[pos + 1]
-    if (charCode > 255) { pos++; continue } // skip invalid char codes
     const offset = charCode * 8
     for (let y = 0; y < 8; y++) {
       glyphs[offset + y] = bytes[pos + 2 + y]

@@ -13,8 +13,9 @@ function decodeHeader(): Uint8Array {
 
 import type { FontWriteData } from '../fontSave'
 
-export function exportCpm({ glyphHeight, fontData }: FontWriteData): Uint8Array {
-  const bpg = glyphHeight // 8px wide font = 1 byte per row
+export function exportCpm({ glyphHeight, glyphWidth, fontData }: FontWriteData): Uint8Array {
+  if (glyphWidth > 8) throw new Error('CP/M export requires fonts 8 pixels or narrower')
+  const bpg = glyphHeight
   const glyphs = 256
   const header = decodeHeader()
   header[0x2F] = glyphHeight

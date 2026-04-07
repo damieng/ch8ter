@@ -258,7 +258,7 @@ export function loadFontFile(
   if (lower.endsWith('.64c')) {
     const dataLen = Math.min(128 * 8, buf.byteLength - 2)
     return makeResult({
-      fontData: new Uint8Array(buf, 2, dataLen), glyphWidth: 8, glyphHeight: 8,
+      fontData: new Uint8Array(buf.slice(2, 2 + dataLen)), glyphWidth: 8, glyphHeight: 8,
       startChar: 0, baseline: 6, fontName: name,
       detectedCharset: 'c64',
     })

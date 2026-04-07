@@ -49,7 +49,11 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
     const shift = (sw >> 4) & 0x0F
     const width = (sw & 0x0F) + 1
 
-    chars.push({ absDataPos: entryPos + offset, kern, shift, width })
+    if (offset === 0) {
+      chars.push({ absDataPos: -1, kern, shift, width })
+    } else {
+      chars.push({ absDataPos: entryPos + offset, kern, shift, width })
+    }
   }
 
   // Final word — offset relative to its own position
@@ -74,6 +78,8 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
 
   for (let i = 0; i < numChars; i++) {
     const c = chars[i]
+    if (c.absDataPos < 0) continue
+
     const nextAbsPos = i < numChars - 1 ? chars[i + 1].absDataPos : absEndPos
     const dataLen = nextAbsPos - c.absDataPos
 
