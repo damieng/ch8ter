@@ -569,11 +569,9 @@ function hexLabel(charCode: number): string {
 }
 
 export function charLabel(charCode: number): string {
-  const overrides = CHARSETS[charset.value]?.overrides
-  if (overrides && overrides[charCode] !== undefined) {
-    return overrides[charCode]
-  }
   if (charCode === 32) return '\u2423'
+  const ch = cpToUnicode(charCode, charset.value)
+  if (ch.length === 1 && ch.codePointAt(0)! >= 33 && ch.codePointAt(0)! < 0xFFFD) return ch
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
   if (charCode >= 160 && charCode <= 255) return String.fromCharCode(charCode)
   return hexLabel(charCode)
