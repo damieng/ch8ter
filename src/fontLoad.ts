@@ -66,6 +66,7 @@ function layoutPsfGlyphs(psf: PsfParseResult): {
       if (cp > maxCp) maxCp = cp
     }
     const totalSlots = maxCp - minCp + 1
+    if (totalSlots > 65536) throw new Error(`PSF unicode mapping range too large (${minCp}..${maxCp}, ${totalSlots} slots). Maximum is 65536 glyphs.`)
     const out = new Uint8Array(totalSlots * bpg)
     const populated = new Set<number>()
     for (const [cp, glyphIdx] of psf.unicodeMap) {

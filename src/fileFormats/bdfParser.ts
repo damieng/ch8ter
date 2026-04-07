@@ -120,6 +120,7 @@ export function parseBdf(text: string): BdfParseResult {
   const cellW = fontBBW || 8
   const cellH = fontBBH || 16
   const totalGlyphs = maxEnc - minEnc + 1
+  if (totalGlyphs > 65536) throw new Error(`BDF encoding range too large (${minEnc}..${maxEnc}, ${totalGlyphs} slots). Maximum is 65536 glyphs.`)
   const rowBytes = bpr(cellW)
   const bpg = cellH * rowBytes
   const fontData = new Uint8Array(totalGlyphs * bpg)
