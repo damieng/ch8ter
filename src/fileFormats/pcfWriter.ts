@@ -211,9 +211,32 @@ export function writePcf(params: FontWriteData): Uint8Array {
     bp += chunk.length
   }
 
-  // Encodings table
-  const minEnc = included[0].cp
-  const maxEnc = included[included.length - 1].cp
+  // Encodings table — find contiguous range, skip glyphs that would create huge sparse gaps
+  const sortedCps = included.map(g => g.cp).sort((a, b) => a - b)
+  const MIN_GLYPH_RATIO = 0.1
+  let bestMin = sortedCps[0], bestMax = sortedCps[sortedCps.length - 1]
+  // If filling the full range would be >90% empty, trim to a tighter contiguous range
+  const fullRange = bestMax - bestMin + 1
+  if (fullRange > numGlyphs * 10) {
+    // Find the densest contiguous subrange that covers most glyphs
+    let bestStart = bestMin, bestEnd = bestMax, bestDensity = 0
+    for (let i = 0; i < sortedCps.length; i++) {
+      for (let j = sortedCps.length - 1; j >= i; j--) {
+        const range = sortedCps[j] - sortedCps[i] + 1
+        const count = j - i + 1
+        const density = count / range
+        if (density > bestDensity && density >= MIN_GLYPH_RATIO) {
+          bestDensity = density
+          bestStart = sortedCps[i]
+          bestEnd = sortedCps[j]
+        }
+      }
+    }
+    bestMin = bestStart
+    bestMax = bestEnd
+  }
+  const minEnc = bestMin
+  const maxEnc = bestMax
   const encRange = maxEnc - minEnc + 1
   const encodingsTableSize = 4 + 10 + encRange * 2
   const encodingsTable = new Uint8Array(pad4(encodingsTableSize))
@@ -226,10 +249,11 @@ export function writePcf(params: FontWriteData): Uint8Array {
   encodingsView.setInt16(ep, 0, false); ep += 2       // maxByte1
   encodingsView.setInt16(ep, 0xFFFF, false); ep += 2   // defaultChar
 
-  // Build codepoint -> output glyph index map
+  // Build codepoint -> output glyph index map (only for glyphs within encoding range)
   const cpToGlyph = new Map<number, number>()
   for (let i = 0; i < included.length; i++) {
-    cpToGlyph.set(included[i].cp, i)
+    const cp = included[i].cp
+    if (cp >= minEnc && cp <= maxEnc) cpToGlyph.set(cp, i)
   }
   for (let enc = minEnc; enc <= maxEnc; enc++) {
     const gi = cpToGlyph.get(enc)
