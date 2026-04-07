@@ -1,5 +1,21 @@
 import { type FontInstance, bytesPerGlyph, bytesPerRow, markDirty } from './store'
-import { setBit } from './bitUtils'
+import { setBit, bpr as calcBpr } from './bitUtils'
+import { type GlyphTransform, type TransformResult, isDimensionSwapping } from './glyphTransforms'
+
+function repackageGlyph(
+  src: Uint8Array, srcOff: number, _srcBpg: number, srcW: number,
+  dst: Uint8Array, dstOff: number, _dstBpg: number, dstW: number, dstH: number,
+) {
+  const srcBpr = calcBpr(srcW)
+  const dstBpr = calcBpr(dstW)
+  const minH = dstH
+  const minBpr = Math.min(srcBpr, dstBpr)
+  for (let y = 0; y < minH; y++) {
+    for (let b = 0; b < minBpr; b++) {
+      dst[dstOff + y * dstBpr + b] = src[srcOff + y * srcBpr + b]
+    }
+  }
+}
 
 export interface UndoCommand {
   name: string
@@ -60,48 +76,132 @@ function restoreGlyph(font: FontInstance, index: number, bytes: Uint8Array) {
 
 export function execTransformGlyph(
   font: FontInstance, index: number,
-  transformFn: (b: Uint8Array, w: number, h: number) => Uint8Array, name: string
+  transformFn: GlyphTransform, name: string
 ) {
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
   const before = snapshotGlyph(font, index)
-  const after = transformFn(before, w, h)
-  const cmd: UndoCommand = {
-    name,
-    execute() { restoreGlyph(font, index, after); markDirty(font) },
-    undo() { restoreGlyph(font, index, before); markDirty(font) },
+  const rawAfter = transformFn(before, w, h)
+
+  if (isDimensionSwapping(transformFn)) {
+    const result = rawAfter as TransformResult
+    const newW = result.w, newH = result.h
+    const oldBpg = bytesPerGlyph(font)
+    const newBpr = calcBpr(newW)
+    const newBpg = newH * newBpr
+    const oldData = font.fontData.value
+    const glyphCount = oldBpg > 0 ? Math.floor(oldData.length / oldBpg) : 0
+    const newData = new Uint8Array(glyphCount * newBpg)
+
+    for (let i = 0; i < glyphCount; i++) {
+      if (i === index) {
+        newData.set(result.data, i * newBpg)
+      } else {
+        repackageGlyph(oldData, i * oldBpg, oldBpg, w, newData, i * newBpg, newBpg, newW, newH)
+      }
+    }
+
+    const oldW = w, oldH = h, oldBaseline = font.baseline.value
+    const oldBefore = oldData.slice()
+    const cmd: UndoCommand = {
+      name,
+      execute() {
+        font.glyphWidth.value = newW
+        font.glyphHeight.value = newH
+        font.baseline.value = Math.min(oldBaseline, newH - 1)
+        font.fontData.value = newData.slice()
+        markDirty(font)
+      },
+      undo() {
+        font.glyphWidth.value = oldW
+        font.glyphHeight.value = oldH
+        font.baseline.value = oldBaseline
+        font.fontData.value = oldBefore.slice()
+        markDirty(font)
+      },
+    }
+    cmd.execute()
+    font.undoHistory.push(cmd)
+  } else {
+    const after = rawAfter as Uint8Array
+    const cmd: UndoCommand = {
+      name,
+      execute() { restoreGlyph(font, index, after); markDirty(font) },
+      undo() { restoreGlyph(font, index, before); markDirty(font) },
+    }
+    cmd.execute()
+    font.undoHistory.push(cmd)
   }
-  cmd.execute()
-  font.undoHistory.push(cmd)
 }
 
 export function execTransformSelection(
   font: FontInstance,
-  transformFn: (b: Uint8Array, w: number, h: number) => Uint8Array, name: string
+  transformFn: GlyphTransform, name: string
 ) {
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
   const bpg = bytesPerGlyph(font)
   const indices = [...font.selectedGlyphs.value]
   const befores = indices.map(i => snapshotGlyph(font, i))
-  const afters = befores.map(b => transformFn(b, w, h))
-  const cmd: UndoCommand = {
-    name,
-    execute() {
-      const data = new Uint8Array(font.fontData.value)
-      for (let i = 0; i < indices.length; i++) data.set(afters[i], indices[i] * bpg)
-      font.fontData.value = data
-      markDirty(font)
-    },
-    undo() {
-      const data = new Uint8Array(font.fontData.value)
-      for (let i = 0; i < indices.length; i++) data.set(befores[i], indices[i] * bpg)
-      font.fontData.value = data
-      markDirty(font)
-    },
+
+  if (isDimensionSwapping(transformFn)) {
+    const afters = befores.map(b => transformFn(b, w, h) as TransformResult)
+    const newW = afters[0].w, newH = afters[0].h
+    const newBpr = calcBpr(newW)
+    const newBpg = newH * newBpr
+    const glyphCount = bpg > 0 ? Math.floor(font.fontData.value.length / bpg) : 0
+    const newData = new Uint8Array(glyphCount * newBpg)
+
+    for (let i = 0; i < glyphCount; i++) {
+      const idx = indices.indexOf(i)
+      if (idx >= 0) {
+        newData.set(afters[idx].data, i * newBpg)
+      } else {
+        repackageGlyph(font.fontData.value, i * bpg, bpg, w, newData, i * newBpg, newBpg, newW, newH)
+      }
+    }
+
+    const oldW = w, oldH = h, oldBaseline = font.baseline.value
+    const oldBefore = font.fontData.value.slice()
+    const cmd: UndoCommand = {
+      name,
+      execute() {
+        font.glyphWidth.value = newW
+        font.glyphHeight.value = newH
+        font.baseline.value = Math.min(oldBaseline, newH - 1)
+        font.fontData.value = newData.slice()
+        markDirty(font)
+      },
+      undo() {
+        font.glyphWidth.value = oldW
+        font.glyphHeight.value = oldH
+        font.baseline.value = oldBaseline
+        font.fontData.value = oldBefore.slice()
+        markDirty(font)
+      },
+    }
+    cmd.execute()
+    font.undoHistory.push(cmd)
+  } else {
+    const afters = befores.map(b => transformFn(b, w, h) as Uint8Array)
+    const cmd: UndoCommand = {
+      name,
+      execute() {
+        const data = new Uint8Array(font.fontData.value)
+        for (let i = 0; i < indices.length; i++) data.set(afters[i], indices[i] * bpg)
+        font.fontData.value = data
+        markDirty(font)
+      },
+      undo() {
+        const data = new Uint8Array(font.fontData.value)
+        for (let i = 0; i < indices.length; i++) data.set(befores[i], indices[i] * bpg)
+        font.fontData.value = data
+        markDirty(font)
+      },
+    }
+    cmd.execute()
+    font.undoHistory.push(cmd)
   }
-  cmd.execute()
-  font.undoHistory.push(cmd)
 }
 
 export function execClearGlyph(font: FontInstance, index: number) {

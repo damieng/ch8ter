@@ -177,18 +177,15 @@ describe('shiftRight', () => {
 
 describe('rotateCWBytes', () => {
   it('rotates a square glyph 90 degrees clockwise', () => {
-    // 1 0 0      0 0 1
-    // 0 1 0  ->  0 1 0
-    // 0 0 1      1 0 0
-    // Wait — for a 3x3 CW rotation: (x,y) -> (h-1-y, x)
-    // pixel (0,0) -> (2,0), (1,1) -> (1,1), (2,2) -> (0,2)
     const input = makeGlyph(3, [
       '#..',
       '.#.',
       '..#',
     ])
-    // This is a diagonal — CW rotation of identity diagonal gives anti-diagonal
-    expect(glyphToStrings(rotateCWBytes(input, 3, 3), 3, 3)).toEqual([
+    const r = rotateCWBytes(input, 3, 3)
+    expect(r.w).toBe(3)
+    expect(r.h).toBe(3)
+    expect(glyphToStrings(r.data, 3, 3)).toEqual([
       '..#',
       '.#.',
       '#..',
@@ -202,9 +199,55 @@ describe('rotateCWBytes', () => {
       '....',
       '....',
     ])
-    let data = input
-    for (let i = 0; i < 4; i++) data = rotateCWBytes(data, 4, 4)
-    expect(glyphToStrings(data, 4, 4)).toEqual(glyphToStrings(input, 4, 4))
+    let r = rotateCWBytes(input, 4, 4)
+    for (let i = 1; i < 4; i++) r = rotateCWBytes(r.data, r.w, r.h)
+    expect(glyphToStrings(r.data, 4, 4)).toEqual(glyphToStrings(input, 4, 4))
+  })
+
+  it('transposes dimensions for non-square glyphs (8x4 -> 4x8)', () => {
+    const input = makeGlyph(8, [
+      '#.......',
+      '.#......',
+      '..#.....',
+      '...#....',
+    ])
+    const r = rotateCWBytes(input, 8, 4)
+    expect(r.w).toBe(4)
+    expect(r.h).toBe(8)
+    // CW rotation: (x,y) -> (h-1-y, x) where h=4
+    // (0,0) -> (3,0), (1,1) -> (2,1), (2,2) -> (1,2), (3,3) -> (0,3)
+    expect(glyphToStrings(r.data, 4, 8)).toEqual([
+      '...#',
+      '..#.',
+      '.#..',
+      '#...',
+      '....',
+      '....',
+      '....',
+      '....',
+    ])
+  })
+
+  it('preserves all pixels for non-square glyph', () => {
+    const input = makeGlyph(8, [
+      '########',
+      '........',
+      '........',
+      '........',
+    ])
+    const r = rotateCWBytes(input, 8, 4)
+    // Top row becomes left column: (x,0) -> (3, x) for x=0..7
+    // Output is 4 wide, 8 tall
+    expect(glyphToStrings(r.data, 4, 8)).toEqual([
+      '...#',
+      '...#',
+      '...#',
+      '...#',
+      '...#',
+      '...#',
+      '...#',
+      '...#',
+    ])
   })
 })
 
@@ -217,8 +260,26 @@ describe('rotateCCWBytes', () => {
       '...#',
     ])
     const cw = rotateCWBytes(input, 4, 4)
-    expect(glyphToStrings(rotateCCWBytes(cw, 4, 4), 4, 4))
+    const ccw = rotateCCWBytes(cw.data, cw.w, cw.h)
+    expect(glyphToStrings(ccw.data, 4, 4))
       .toEqual(glyphToStrings(input, 4, 4))
+  })
+
+  it('is inverse of rotateCW (non-square)', () => {
+    const input = makeGlyph(8, [
+      '#.......',
+      '.#......',
+      '..#.....',
+      '...#....',
+    ])
+    const cw = rotateCWBytes(input, 8, 4)
+    expect(cw.w).toBe(4)
+    expect(cw.h).toBe(8)
+    const ccw = rotateCCWBytes(cw.data, cw.w, cw.h)
+    expect(ccw.w).toBe(8)
+    expect(ccw.h).toBe(4)
+    expect(glyphToStrings(ccw.data, 8, 4))
+      .toEqual(glyphToStrings(input, 8, 4))
   })
 })
 

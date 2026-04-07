@@ -37,31 +37,38 @@ export function invertBytes(bytes: Uint8Array, w: number, h: number): Uint8Array
   return out
 }
 
-export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  // Rotate CW: (x,y) -> (h-1-y, x) — output is w×h but transposed
-  // For non-square, output dims swap but we keep same bpg for simplicity
-  // Only works cleanly for square glyphs; for non-square, use same dims
-  const bpr = calcBpr(w)
-  const out = new Uint8Array(h * bpr)
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++)
-      if (getPixelBit(bytes, bpr, x, y)) {
-        const nx = h - 1 - y, ny = x
-        if (nx < w && ny < h) setPixelBit(out, bpr, nx, ny)
-      }
-  return out
+export interface TransformResult {
+  data: Uint8Array
+  w: number
+  h: number
 }
 
-export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): Uint8Array {
-  const bpr = calcBpr(w)
-  const out = new Uint8Array(h * bpr)
+export type GlyphTransform = (b: Uint8Array, w: number, h: number) => Uint8Array | TransformResult
+
+export function isDimensionSwapping(t: GlyphTransform): t is (b: Uint8Array, w: number, h: number) => TransformResult {
+  return t === rotateCWBytes || t === rotateCCWBytes
+}
+
+export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): TransformResult {
+  const outW = h, outH = w
+  const outBpr = calcBpr(outW)
+  const out = new Uint8Array(outH * outBpr)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++)
-      if (getPixelBit(bytes, bpr, x, y)) {
-        const nx = y, ny = w - 1 - x
-        if (nx < w && ny < h) setPixelBit(out, bpr, nx, ny)
-      }
-  return out
+      if (getPixelBit(bytes, calcBpr(w), x, y))
+        setPixelBit(out, outBpr, h - 1 - y, x)
+  return { data: out, w: outW, h: outH }
+}
+
+export function rotateCCWBytes(bytes: Uint8Array, w: number, h: number): TransformResult {
+  const outW = h, outH = w
+  const outBpr = calcBpr(outW)
+  const out = new Uint8Array(outH * outBpr)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (getPixelBit(bytes, calcBpr(w), x, y))
+        setPixelBit(out, outBpr, y, w - 1 - x)
+  return { data: out, w: outW, h: outH }
 }
 
 export function shiftUp(bytes: Uint8Array, w: number, h: number): Uint8Array {
