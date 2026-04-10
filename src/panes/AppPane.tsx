@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks"
+import { useEffect, useState } from "preact/hooks"
 import { signal } from "@preact/signals"
 import { FilePlus, FolderOpen } from "lucide-preact"
 import {
@@ -321,6 +321,130 @@ export function AppPane() {
     }
   }
 
+  async function openFontFile(file: File) {
+    const lower = file.name.toLowerCase()
+
+    if (lower.endsWith(".png")) {
+      setPngFile(file)
+      return
+    }
+
+    if (lower.endsWith(".bin") || lower.endsWith(".raw")) {
+      setRawFile(file)
+      return
+    }
+
+    if (lower.endsWith(".gz")) {
+      const innerName = file.name.slice(0, -3)
+      try {
+        const buf = await file.arrayBuffer()
+        const decompressed = await decompressGz(buf)
+        openFontBuffer(innerName, decompressed)
+      } catch (e) {
+        setError({ title: 'Failed to decompress', message: (e as Error).message })
+      }
+      return
+    }
+
+    try {
+      const buf = await file.arrayBuffer()
+      openFontBuffer(file.name, buf)
+    } catch (e) {
+      setError({ title: 'Failed to open font', message: (e as Error).message })
+    }
+  }
+
+  async function openFontUrl(url: string) {
+    const trimmed = url.trim()
+    if (!/^https?:\/\//i.test(trimmed)) return
+
+    let name = 'download'
+    try {
+      const parsed = new URL(trimmed)
+      name = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() ?? name)
+    } catch {
+      // Keep default name for malformed URLs.
+    }
+    if (!name) name = 'download'
+
+    try {
+      const response = await fetch(trimmed)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      const buf = await response.arrayBuffer()
+      const lower = name.toLowerCase()
+
+      if (lower.endsWith(".png")) {
+        setPngFile(new File([buf], name))
+        return
+      }
+
+      if (lower.endsWith(".bin") || lower.endsWith(".raw")) {
+        setRawFile(new File([buf], name))
+        return
+      }
+
+      if (lower.endsWith(".gz")) {
+        const innerName = name.slice(0, -3)
+        const decompressed = await decompressGz(buf)
+        openFontBuffer(innerName, decompressed)
+        return
+      }
+
+      openFontBuffer(name, buf)
+    } catch (e) {
+      setError({ title: 'Failed to fetch font', message: (e as Error).message })
+    }
+  }
+
+  function extractDropUrls(dt: DataTransfer): string[] {
+    const urls: string[] = []
+    const uriList = dt.getData('text/uri-list')
+    if (uriList) {
+      for (const line of uriList.split(/\r?\n/)) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) continue
+        urls.push(trimmed)
+      }
+    } else {
+      const text = dt.getData('text/plain')
+      const trimmed = text.trim()
+      if (/^https?:\/\//i.test(trimmed)) urls.push(trimmed)
+    }
+    return urls
+  }
+
+  useEffect(() => {
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault()
+    }
+
+    const handleDrop = async (event: DragEvent) => {
+      event.preventDefault()
+      const dt = event.dataTransfer
+      if (!dt) return
+
+      const files = Array.from(dt.files ?? [])
+      const urls = extractDropUrls(dt)
+
+      for (const file of files) {
+        await openFontFile(file)
+      }
+      for (const url of urls) {
+        await openFontUrl(url)
+      }
+    }
+
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('drop', handleDrop)
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('drop', handleDrop)
+    }
+  }, [])
+
   function handleOpen() {
     const input = document.createElement("input")
     input.type = "file"
@@ -329,32 +453,7 @@ export function AppPane() {
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
-      const lower = file.name.toLowerCase()
-
-      if (lower.endsWith(".png")) {
-        setPngFile(file)
-        return
-      }
-
-      if (lower.endsWith(".bin") || lower.endsWith(".raw")) {
-        setRawFile(file)
-        return
-      }
-
-      if (lower.endsWith(".gz")) {
-        const innerName = file.name.slice(0, -3)
-        file.arrayBuffer().then(async (buf) => {
-          try {
-            const decompressed = await decompressGz(buf)
-            openFontBuffer(innerName, decompressed)
-          } catch (e) {
-            setError({ title: 'Failed to decompress', message: (e as Error).message })
-          }
-        })
-        return
-      }
-
-      file.arrayBuffer().then((buf) => openFontBuffer(file.name, buf))
+      openFontFile(file)
     }
     input.click()
   }

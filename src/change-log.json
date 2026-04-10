@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.9.9",
+    "date": "2026-04-10",
+    "changes": [
+      "Drag-and-drop support for opening font files and URL imports"
+    ]
+  },
+  {
     "version": "0.9.7",
     "date": "2026-03-26",
     "changes": [
