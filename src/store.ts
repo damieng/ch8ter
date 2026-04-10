@@ -252,6 +252,11 @@ export function removeFont(id: string) {
   }
 }
 
+export function removeAllFonts() {
+  fonts.value = []
+  activeFontId.value = ''
+}
+
 // --- Font containers ---
 
 export interface ContainerFont {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks"
 import { signal } from "@preact/signals"
-import { FilePlus, FolderOpen } from "lucide-preact"
+import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import {
   createFont,
   addFont,
@@ -9,6 +9,7 @@ import {
   calcMissingMetrics,
   CHARSETS,
   type Charset,
+  removeAllFonts,
 } from "../store"
 import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
@@ -22,7 +23,9 @@ import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
 import { RawImportDialog } from "../dialogs/RawImportDialog"
 import { ErrorDialog } from "../dialogs/ErrorDialog"
+import { ConfirmActionDialog } from "../dialogs/ConfirmActionDialog"
 import CHANGELOG from "../change-log.json"
+import { Dropdown } from "../components/Dropdown"
 
 const ICON = 18
 
@@ -141,6 +144,13 @@ export function AppPane() {
   const [pngFile, setPngFile] = useState<File | null>(null)
   const [rawFile, setRawFile] = useState<File | null>(null)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string
+    message: string
+    confirmLabel: string
+    confirmClass?: string
+    onConfirm: () => void
+  } | null>(null)
 
   function applyLoadResult(name: string, result: FontConversionData) {
     const font = createFont(
@@ -458,6 +468,46 @@ export function AppPane() {
     input.click()
   }
 
+  function handleCloseAllFonts() {
+    if (confirmAction) return
+    setConfirmAction({
+      title: 'Close all fonts?',
+      message: 'This will close all open fonts, including any unsaved changes.',
+      confirmLabel: 'Close all fonts',
+      confirmClass: 'px-4 py-1.5 rounded bg-red-600 text-white text-sm hover:bg-red-700',
+      onConfirm: () => {
+        removeAllFonts()
+        setConfirmAction(null)
+      },
+    })
+  }
+
+  function handleResetLocalStorage() {
+    if (confirmAction) return
+    setConfirmAction({
+      title: 'Reset local storage?',
+      message: 'This will remove all saved fonts, layout, and container data from this browser. This cannot be undone.',
+      confirmLabel: 'Reset local storage',
+      confirmClass: 'px-4 py-1.5 rounded bg-red-600 text-white text-sm hover:bg-red-700',
+      onConfirm: () => {
+        localStorage.clear()
+        removeAllFonts()
+        window.location.reload()
+      },
+    })
+  }
+
+  function menuItem(label: string, fn: () => void, close: () => void) {
+    return (
+      <button
+        class="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-blue-50 rounded"
+        onClick={() => { fn(); close() }}
+      >
+        {label}
+      </button>
+    )
+  }
+
   return (
     <div>
       <div class="flex items-center gap-3 px-3 py-2">
@@ -476,9 +526,34 @@ export function AppPane() {
         {error && (
           <ErrorDialog title={error.title} message={error.message} onClose={() => setError(null)} />
         )}
+        {confirmAction && (
+          <ConfirmActionDialog
+            title={confirmAction.title}
+            message={confirmAction.message}
+            confirmLabel={confirmAction.confirmLabel}
+            confirmClass={confirmAction.confirmClass}
+            onConfirm={confirmAction.onConfirm}
+            onCancel={() => setConfirmAction(null)}
+          />
+        )}
         <IconBtn onClick={handleOpen} title="Open font file">
           <FolderOpen size={ICON} />
         </IconBtn>
+        <Dropdown
+          title="More"
+          button={<MoreVertical size={ICON} />}
+          buttonClass="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
+          popupClass="w-48"
+          align="left"
+          portal
+        >
+          {(close) => (
+            <>
+              {menuItem('Close All Fonts', handleCloseAllFonts, close)}
+              {menuItem('Reset Local Storage', handleResetLocalStorage, close)}
+            </>
+          )}
+        </Dropdown>
         <span class="w-px h-6 bg-gray-300 mx-0.5" />
         <div class="flex flex-col">
           <span class="text-sm text-gray-600">Online Bitmap Font Editor</span>
