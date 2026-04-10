@@ -12,7 +12,7 @@ import {
   removeAllFonts,
   removeAllFontsAndContainers,
 } from "../store"
-import { loadFontFile, type FontConversionData } from "../fontLoad"
+import { loadFontFile, UnknownFormatError, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
 import { decompressCpx } from "../fileFormats/cpxDecoder"
@@ -328,7 +328,11 @@ export function AppPane() {
       const result = loadFontFile(name, buf)
       applyLoadResult(name, result)
     } catch (e) {
-      setError({ title: 'Failed to open font', message: (e as Error).message })
+      if (e instanceof UnknownFormatError) {
+        setRawFile(new File([buf], name))
+      } else {
+        setError({ title: 'Failed to open font', message: (e as Error).message })
+      }
     }
   }
 
@@ -337,11 +341,6 @@ export function AppPane() {
 
     if (lower.endsWith(".png")) {
       setPngFile(file)
-      return
-    }
-
-    if (lower.endsWith(".bin") || lower.endsWith(".raw")) {
-      setRawFile(file)
       return
     }
 
@@ -460,7 +459,7 @@ export function AppPane() {
     const input = document.createElement("input")
     input.type = "file"
     input.accept =
-      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.fon,.pcf,.pdb,.ttf,.otf,.png,.bin,.raw,.cpi,.cpx,.gz"
+      ".ch8,.64c,.com,.bbc,.bdf,.psf,.psfu,.yaff,.draw,.fzx,.fnt,.fon,.pcf,.pdb,.ttf,.otf,.png,.bin,.raw,.cpi,.cpx,.gz,*"
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return

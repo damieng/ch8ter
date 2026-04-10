@@ -1,6 +1,13 @@
 // Font file loading — detects format by extension/magic bytes and returns unified FontConversionData.
 // No DOM or Preact dependencies — pure TypeScript operating on ArrayBuffer/Uint8Array.
 
+export class UnknownFormatError extends Error {
+  constructor(filename: string) {
+    super(`Unknown font format: ${filename}`)
+    this.name = 'UnknownFormatError'
+  }
+}
+
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { parseBdf } from './fileFormats/bdfParser'
 import { parsePsf, type PsfParseResult } from './fileFormats/psfParser'
@@ -236,17 +243,7 @@ export function loadFontFile(
     })
   }
 
-  // Detect Amiga hunk files (no standard extension — numeric filenames like "10", "15")
-  if (isAmigaHunk(buf)) {
-    const result = parseAmigaFont(buf)
-    return makeResult({
-      ...result, fontName: result.meta?.family || name,
-      spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
-      detectedCharset: 'amiga', useCalcMissing: true,
-    })
-  }
-
-  if (lower.endsWith('.bbc') || isBbcFont(buf)) {
+  if (lower.endsWith('.bbc')) {
     const result = parseBbc(buf)
     return makeResult({
       fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
@@ -254,6 +251,30 @@ export function loadFontFile(
       populated: result.populated, fontName: name,
       detectedCharset: 'bbc',
     })
+  }
+
+  // Magic-byte detection only for files without a recognized extension
+  // (e.g. numeric filenames like "10", "15" for Amiga, or extensionless BBC dumps)
+  const ext = lower.includes('.') ? lower.slice(lower.lastIndexOf('.')) : ''
+  if (!ext) {
+    if (isAmigaHunk(buf)) {
+      const result = parseAmigaFont(buf)
+      return makeResult({
+        ...result, fontName: result.meta?.family || name,
+        spacingMode: detectPropSpacing(result.glyphMeta, result.glyphWidth) ? 'proportional' : 'monospace',
+        detectedCharset: 'amiga', useCalcMissing: true,
+      })
+    }
+
+    if (isBbcFont(buf)) {
+      const result = parseBbc(buf)
+      return makeResult({
+        fontData: result.fontData, glyphWidth: 8, glyphHeight: 8,
+        startChar: result.startChar, baseline: 6,
+        populated: result.populated, fontName: name,
+        detectedCharset: 'bbc',
+      })
+    }
   }
 
   if (lower.endsWith('.64c')) {
@@ -265,10 +286,14 @@ export function loadFontFile(
     })
   }
 
-  // Raw formats: .ch8
-  return makeResult({
-    fontData: parseCh8(buf, h), glyphWidth: w, glyphHeight: h,
-    startChar: options?.startChar ?? 32, fontName: name,
-    detectedCharset: 'zx',
-  })
+  // Raw .ch8 format
+  if (lower.endsWith('.ch8')) {
+    return makeResult({
+      fontData: parseCh8(buf, h), glyphWidth: w, glyphHeight: h,
+      startChar: options?.startChar ?? 32, fontName: name,
+      detectedCharset: 'zx',
+    })
+  }
+
+  throw new UnknownFormatError(filename)
 }

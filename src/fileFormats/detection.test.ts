@@ -120,13 +120,18 @@ describe('loadFontFile extension dispatch', () => {
     expect(result.glyphWidth).toBe(8)
   })
 
-  it('treats unknown extensions as raw ch8', () => {
+  it('loads .ch8 as raw ch8 format', () => {
     const raw = new Uint8Array(96 * 8)
     raw[0] = 0xFF // first byte of first glyph
     const result = loadFontFile('font.ch8', raw.buffer, { width: 8, height: 8, startChar: 32 })
     expect(result.glyphWidth).toBe(8)
     expect(result.glyphHeight).toBe(8)
     expect(result.startChar).toBe(32)
+  })
+
+  it('throws UnknownFormatError for unknown extensions', () => {
+    const raw = new Uint8Array(96 * 8)
+    expect(() => loadFontFile('font.xyz', raw.buffer)).toThrow('Unknown font format')
   })
 })
 
