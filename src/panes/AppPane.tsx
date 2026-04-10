@@ -10,6 +10,7 @@ import {
   CHARSETS,
   type Charset,
   removeAllFonts,
+  removeAllFontsAndContainers,
 } from "../store"
 import { loadFontFile, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
@@ -476,7 +477,7 @@ export function AppPane() {
       confirmLabel: 'Close all fonts',
       confirmClass: 'px-4 py-1.5 rounded bg-red-600 text-white text-sm hover:bg-red-700',
       onConfirm: () => {
-        removeAllFonts()
+        removeAllFontsAndContainers()
         setConfirmAction(null)
       },
     })
