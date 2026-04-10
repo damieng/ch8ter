@@ -4,7 +4,8 @@
     "date": "2026-04-10",
     "changes": [
       "Drag-and-drop support for opening font files and URL imports",
-      "New app menu for closing all fonts or resetting local storage"
+      "New app menu for closing all fonts or resetting local storage",
+      "Fixed-size panes now persist position only"
     ]
   },
   {

@@ -25,12 +25,19 @@ export function BasePane({
 }: Props) {
   const stored = windowId ? windowLayouts.value[windowId] : undefined
   const [pos, setPos] = useState({ x: stored?.x ?? initialX, y: stored?.y ?? initialY })
-  const [size, setSize] = useState({ w: stored?.w ?? (initialW ?? 0), h: stored?.h ?? (initialH ?? 0) })
+  const [size, setSize] = useState({
+    w: resizable ? (stored?.w ?? (initialW ?? 0)) : (initialW ?? 0),
+    h: resizable ? (stored?.h ?? (initialH ?? 0)) : (initialH ?? 0),
+  })
 
   // Save on mount
   useEffect(() => {
     if (windowId) {
-      updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: size.w, h: size.h })
+      if (resizable) {
+        updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: size.w, h: size.h })
+      } else {
+        updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: undefined, h: undefined })
+      }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -89,8 +96,13 @@ export function BasePane({
       dragging.current = false
       resizing.current = false
       if (wasDragging && windowId) {
-        const p = posRef.current, s = sizeRef.current
-        updateWindowLayout(windowId, { x: p.x, y: p.y, w: s.w, h: s.h })
+        const p = posRef.current
+        if (resizable) {
+          const s = sizeRef.current
+          updateWindowLayout(windowId, { x: p.x, y: p.y, w: s.w, h: s.h })
+        } else {
+          updateWindowLayout(windowId, { x: p.x, y: p.y, w: undefined, h: undefined })
+        }
       }
     }
     document.addEventListener('mousemove', onMouseMove)
