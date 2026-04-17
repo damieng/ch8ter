@@ -3,11 +3,9 @@
     "version": "0.9.10",
     "date": "2026-04-10",
     "changes": [
-      "Unknown file types now open the RAW binary importer instead of guessing as ch8",
-      "RAW importer: column-major (vertical bytes) layout for fonts where each byte is 8 vertical pixels",
-      "RAW importer: live preview now shows the whole file with skipped/unused glyphs faded",
-      "RAW importer: scrubbable Skip slider popover, Chars limit, MSB/LSB and HORZ/VERT toggles",
-      "RAW importer: only fall back to BBC/Amiga magic-byte detection for extensionless files"
+      "Unknown file types open the RAW binary importer",
+      "RAW importer: vertical/column-major byte layout",
+      "RAW importer: scrubbable Skip slider"
     ]
   },
   {
