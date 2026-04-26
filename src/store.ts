@@ -43,6 +43,13 @@ export interface FontInstance {
   /** Bumped on each in-place pixel edit; lets the glyph editor re-render without copying fontData. */
   paintVersion: Signal<number>
   undoHistory: UndoHistory
+  /**
+   * Per-glyph un-clipped buffer from the most recent rotation, keyed by glyph index.
+   * Lets repeat rotations operate on full data so e.g. four CW rotations restore the
+   * original glyph even when intermediate rotations had to clip to fit. Cleared on
+   * any other edit to that glyph or on font resize.
+   */
+  glyphRotationLive: Map<number, { data: Uint8Array; w: number; h: number }>
   /** If opened from a container pane, the container's id. */
   sourceContainerId?: string
   /** Original byte index for each glyph slot, if known. Sparse — only set for glyphs loaded from file. */
@@ -135,6 +142,7 @@ export function createFont(
     charIndex: data != null
       ? signal<(number | undefined)[]>(Array.from({ length: numGlyphs }, (_, i) => (start ?? 32) + i))
       : signal<(number | undefined)[]>([]),
+    glyphRotationLive: new Map(),
     undoHistory: new UndoHistory(),
   }
 }
@@ -635,6 +643,9 @@ export function resizeFont(
   const prevData = new Uint8Array(src)
   const newBaseline = Math.max(0, Math.min(newH - 1, font.baseline.value + dy))
 
+  const prevRotationLive = new Map(font.glyphRotationLive)
+  font.glyphRotationLive.clear()
+
   font.baseline.value = newBaseline
   font.glyphWidth.value = newW
   font.glyphHeight.value = newH
@@ -647,6 +658,7 @@ export function resizeFont(
       font.glyphHeight.value = newH
       font.baseline.value = newBaseline
       font.fontData.value = dst.slice()
+      font.glyphRotationLive.clear()
       markDirty(font)
     },
     undo() {
@@ -654,6 +666,8 @@ export function resizeFont(
       font.glyphHeight.value = prevH
       font.baseline.value = prevBaseline
       font.fontData.value = prevData.slice()
+      font.glyphRotationLive.clear()
+      for (const [k, v] of prevRotationLive) font.glyphRotationLive.set(k, v)
       markDirty(font)
     },
   })

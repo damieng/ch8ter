@@ -45,10 +45,6 @@ export interface TransformResult {
 
 export type GlyphTransform = (b: Uint8Array, w: number, h: number) => Uint8Array | TransformResult
 
-export function isDimensionSwapping(t: GlyphTransform): t is (b: Uint8Array, w: number, h: number) => TransformResult {
-  return t === rotateCWBytes || t === rotateCCWBytes
-}
-
 export function rotateCWBytes(bytes: Uint8Array, w: number, h: number): TransformResult {
   const outW = h, outH = w
   const outBpr = calcBpr(outW)

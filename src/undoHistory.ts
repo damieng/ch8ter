@@ -1,19 +1,42 @@
 import { type FontInstance, bytesPerGlyph, bytesPerRow, markDirty } from './store'
-import { setBit, bpr as calcBpr } from './bitUtils'
-import { type GlyphTransform, type TransformResult, isDimensionSwapping } from './glyphTransforms'
+import { getBit, setBit, bpr as calcBpr } from './bitUtils'
+import { type GlyphTransform, type TransformResult, rotateCWBytes, rotateCCWBytes } from './glyphTransforms'
 
-function repackageGlyph(
-  src: Uint8Array, srcOff: number, _srcBpg: number, srcW: number,
-  dst: Uint8Array, dstOff: number, _dstBpg: number, dstW: number, dstH: number,
-) {
+function isRotation(t: GlyphTransform): boolean {
+  return t === rotateCWBytes || t === rotateCCWBytes
+}
+
+/** Top-left clip/pad srcBytes (srcW × srcH) into a dstW × dstH glyph. */
+function clipGlyphBytes(srcBytes: Uint8Array, srcW: number, srcH: number, dstW: number, dstH: number): Uint8Array {
   const srcBpr = calcBpr(srcW)
   const dstBpr = calcBpr(dstW)
-  const minH = dstH
-  const minBpr = Math.min(srcBpr, dstBpr)
+  const out = new Uint8Array(dstH * dstBpr)
+  const minH = Math.min(srcH, dstH)
+  const minW = Math.min(srcW, dstW)
   for (let y = 0; y < minH; y++) {
-    for (let b = 0; b < minBpr; b++) {
-      dst[dstOff + y * dstBpr + b] = src[srcOff + y * srcBpr + b]
+    for (let x = 0; x < minW; x++) {
+      if (getBit(srcBytes, y * srcBpr, x)) setBit(out, y * dstBpr, x)
     }
+  }
+  return out
+}
+
+type RotationLive = { data: Uint8Array; w: number; h: number }
+
+function snapshotRotationLive(font: FontInstance, indices: Iterable<number>): Map<number, RotationLive> {
+  const snap = new Map<number, RotationLive>()
+  for (const i of indices) {
+    const e = font.glyphRotationLive.get(i)
+    if (e) snap.set(i, { data: e.data.slice(), w: e.w, h: e.h })
+  }
+  return snap
+}
+
+function restoreRotationLive(font: FontInstance, indices: Iterable<number>, snap: Map<number, RotationLive>) {
+  for (const i of indices) {
+    const e = snap.get(i)
+    if (e) font.glyphRotationLive.set(i, { data: e.data.slice(), w: e.w, h: e.h })
+    else font.glyphRotationLive.delete(i)
   }
 }
 
@@ -74,143 +97,135 @@ function restoreGlyph(font: FontInstance, index: number, bytes: Uint8Array) {
 
 // --- Command factories ---
 
-export function execTransformGlyph(
-  font: FontInstance, index: number,
-  transformFn: GlyphTransform, name: string
-) {
-  const w = font.glyphWidth.value
-  const h = font.glyphHeight.value
-  const before = snapshotGlyph(font, index)
-  const rawAfter = transformFn(before, w, h)
-
-  if (isDimensionSwapping(transformFn)) {
-    const result = rawAfter as TransformResult
-    const newW = result.w, newH = result.h
-    const oldBpg = bytesPerGlyph(font)
-    const newBpr = calcBpr(newW)
-    const newBpg = newH * newBpr
-    const oldData = font.fontData.value
-    const glyphCount = oldBpg > 0 ? Math.floor(oldData.length / oldBpg) : 0
-    const newData = new Uint8Array(glyphCount * newBpg)
-
-    for (let i = 0; i < glyphCount; i++) {
-      if (i === index) {
-        newData.set(result.data, i * newBpg)
-      } else {
-        repackageGlyph(oldData, i * oldBpg, oldBpg, w, newData, i * newBpg, newBpg, newW, newH)
-      }
-    }
-
-    const oldW = w, oldH = h, oldBaseline = font.baseline.value
-    const oldBefore = oldData.slice()
-    const cmd: UndoCommand = {
-      name,
-      execute() {
-        font.glyphWidth.value = newW
-        font.glyphHeight.value = newH
-        font.baseline.value = Math.min(oldBaseline, newH - 1)
-        font.fontData.value = newData.slice()
-        markDirty(font)
-      },
-      undo() {
-        font.glyphWidth.value = oldW
-        font.glyphHeight.value = oldH
-        font.baseline.value = oldBaseline
-        font.fontData.value = oldBefore.slice()
-        markDirty(font)
-      },
-    }
-    cmd.execute()
-    font.undoHistory.push(cmd)
-  } else {
-    const after = rawAfter as Uint8Array
-    const cmd: UndoCommand = {
-      name,
-      execute() { restoreGlyph(font, index, after); markDirty(font) },
-      undo() { restoreGlyph(font, index, before); markDirty(font) },
-    }
-    cmd.execute()
-    font.undoHistory.push(cmd)
-  }
-}
-
-export function execTransformSelection(
-  font: FontInstance,
-  transformFn: GlyphTransform, name: string
+function execRotateGlyphs(
+  font: FontInstance, indices: number[],
+  transformFn: typeof rotateCWBytes | typeof rotateCCWBytes, name: string,
 ) {
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
   const bpg = bytesPerGlyph(font)
-  const indices = [...font.selectedGlyphs.value]
-  const befores = indices.map(i => snapshotGlyph(font, i))
 
-  if (isDimensionSwapping(transformFn)) {
-    const afters = befores.map(b => transformFn(b, w, h) as TransformResult)
-    const newW = afters[0].w, newH = afters[0].h
-    const newBpr = calcBpr(newW)
-    const newBpg = newH * newBpr
-    const glyphCount = bpg > 0 ? Math.floor(font.fontData.value.length / bpg) : 0
-    const newData = new Uint8Array(glyphCount * newBpg)
-
-    for (let i = 0; i < glyphCount; i++) {
-      const idx = indices.indexOf(i)
-      if (idx >= 0) {
-        newData.set(afters[idx].data, i * newBpg)
-      } else {
-        repackageGlyph(font.fontData.value, i * bpg, bpg, w, newData, i * newBpg, newBpg, newW, newH)
-      }
-    }
-
-    const oldW = w, oldH = h, oldBaseline = font.baseline.value
-    const oldBefore = font.fontData.value.slice()
-    const cmd: UndoCommand = {
-      name,
-      execute() {
-        font.glyphWidth.value = newW
-        font.glyphHeight.value = newH
-        font.baseline.value = Math.min(oldBaseline, newH - 1)
-        font.fontData.value = newData.slice()
-        markDirty(font)
-      },
-      undo() {
-        font.glyphWidth.value = oldW
-        font.glyphHeight.value = oldH
-        font.baseline.value = oldBaseline
-        font.fontData.value = oldBefore.slice()
-        markDirty(font)
-      },
-    }
-    cmd.execute()
-    font.undoHistory.push(cmd)
-  } else {
-    const afters = befores.map(b => transformFn(b, w, h) as Uint8Array)
-    const cmd: UndoCommand = {
-      name,
-      execute() {
-        const data = new Uint8Array(font.fontData.value)
-        for (let i = 0; i < indices.length; i++) data.set(afters[i], indices[i] * bpg)
-        font.fontData.value = data
-        markDirty(font)
-      },
-      undo() {
-        const data = new Uint8Array(font.fontData.value)
-        for (let i = 0; i < indices.length; i++) data.set(befores[i], indices[i] * bpg)
-        font.fontData.value = data
-        markDirty(font)
-      },
-    }
-    cmd.execute()
-    font.undoHistory.push(cmd)
+  const beforeBytes = new Map<number, Uint8Array>()
+  const afterBytes = new Map<number, Uint8Array>()
+  const newLive = new Map<number, RotationLive>()
+  for (const idx of indices) {
+    beforeBytes.set(idx, snapshotGlyph(font, idx))
+    const prev = font.glyphRotationLive.get(idx)
+    const srcBytes = prev?.data ?? snapshotGlyph(font, idx)
+    const srcW = prev?.w ?? w
+    const srcH = prev?.h ?? h
+    const result = transformFn(srcBytes, srcW, srcH) as TransformResult
+    newLive.set(idx, { data: result.data, w: result.w, h: result.h })
+    afterBytes.set(idx, clipGlyphBytes(result.data, result.w, result.h, w, h))
   }
+  const prevLive = snapshotRotationLive(font, indices)
+
+  const cmd: UndoCommand = {
+    name,
+    execute() {
+      const data = new Uint8Array(font.fontData.value)
+      for (const idx of indices) data.set(afterBytes.get(idx)!, idx * bpg)
+      font.fontData.value = data
+      for (const idx of indices) {
+        const live = newLive.get(idx)!
+        font.glyphRotationLive.set(idx, { data: live.data.slice(), w: live.w, h: live.h })
+      }
+      markDirty(font)
+    },
+    undo() {
+      const data = new Uint8Array(font.fontData.value)
+      for (const idx of indices) data.set(beforeBytes.get(idx)!, idx * bpg)
+      font.fontData.value = data
+      restoreRotationLive(font, indices, prevLive)
+      markDirty(font)
+    },
+  }
+  cmd.execute()
+  font.undoHistory.push(cmd)
+}
+
+export function execTransformGlyph(
+  font: FontInstance, index: number,
+  transformFn: GlyphTransform, name: string,
+) {
+  if (isRotation(transformFn)) {
+    execRotateGlyphs(font, [index], transformFn as typeof rotateCWBytes, name)
+    return
+  }
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const before = snapshotGlyph(font, index)
+  const after = transformFn(before, w, h) as Uint8Array
+  const prevLive = snapshotRotationLive(font, [index])
+  const cmd: UndoCommand = {
+    name,
+    execute() {
+      restoreGlyph(font, index, after)
+      font.glyphRotationLive.delete(index)
+      markDirty(font)
+    },
+    undo() {
+      restoreGlyph(font, index, before)
+      restoreRotationLive(font, [index], prevLive)
+      markDirty(font)
+    },
+  }
+  cmd.execute()
+  font.undoHistory.push(cmd)
+}
+
+export function execTransformSelection(
+  font: FontInstance,
+  transformFn: GlyphTransform, name: string,
+) {
+  const indices = [...font.selectedGlyphs.value]
+  if (isRotation(transformFn)) {
+    execRotateGlyphs(font, indices, transformFn as typeof rotateCWBytes, name)
+    return
+  }
+  const w = font.glyphWidth.value
+  const h = font.glyphHeight.value
+  const bpg = bytesPerGlyph(font)
+  const befores = indices.map(i => snapshotGlyph(font, i))
+  const afters = befores.map(b => transformFn(b, w, h) as Uint8Array)
+  const prevLive = snapshotRotationLive(font, indices)
+  const cmd: UndoCommand = {
+    name,
+    execute() {
+      const data = new Uint8Array(font.fontData.value)
+      for (let i = 0; i < indices.length; i++) data.set(afters[i], indices[i] * bpg)
+      font.fontData.value = data
+      for (const idx of indices) font.glyphRotationLive.delete(idx)
+      markDirty(font)
+    },
+    undo() {
+      const data = new Uint8Array(font.fontData.value)
+      for (let i = 0; i < indices.length; i++) data.set(befores[i], indices[i] * bpg)
+      font.fontData.value = data
+      restoreRotationLive(font, indices, prevLive)
+      markDirty(font)
+    },
+  }
+  cmd.execute()
+  font.undoHistory.push(cmd)
 }
 
 export function execClearGlyph(font: FontInstance, index: number) {
   const bpg = bytesPerGlyph(font)
   const before = snapshotGlyph(font, index)
+  const prevLive = snapshotRotationLive(font, [index])
   const cmd: UndoCommand = {
     name: 'Clear',
-    execute() { restoreGlyph(font, index, new Uint8Array(bpg)); markDirty(font) },
-    undo() { restoreGlyph(font, index, before); markDirty(font) },
+    execute() {
+      restoreGlyph(font, index, new Uint8Array(bpg))
+      font.glyphRotationLive.delete(index)
+      markDirty(font)
+    },
+    undo() {
+      restoreGlyph(font, index, before)
+      restoreRotationLive(font, [index], prevLive)
+      markDirty(font)
+    },
   }
   cmd.execute()
   font.undoHistory.push(cmd)
@@ -234,10 +249,19 @@ export function execPasteGlyph(font: FontInstance, index: number, text: string):
       }
     }
   }
+  const prevLive = snapshotRotationLive(font, [index])
   const cmd: UndoCommand = {
     name: 'Paste',
-    execute() { restoreGlyph(font, index, after); markDirty(font) },
-    undo() { restoreGlyph(font, index, before); markDirty(font) },
+    execute() {
+      restoreGlyph(font, index, after)
+      font.glyphRotationLive.delete(index)
+      markDirty(font)
+    },
+    undo() {
+      restoreGlyph(font, index, before)
+      restoreRotationLive(font, [index], prevLive)
+      markDirty(font)
+    },
   }
   cmd.execute()
   font.undoHistory.push(cmd)
@@ -245,7 +269,7 @@ export function execPasteGlyph(font: FontInstance, index: number, text: string):
 }
 
 export function execCopyRange(
-  font: FontInstance, srcStart: number, srcEnd: number, dstStart: number, name: string
+  font: FontInstance, srcStart: number, srcEnd: number, dstStart: number, name: string,
 ) {
   const s = font.startChar.value
   const bpg = bytesPerGlyph(font)
@@ -262,18 +286,22 @@ export function execCopyRange(
       })
     }
   }
+  const dstIndices = entries.map(e => e.dstIdx)
+  const prevLive = snapshotRotationLive(font, dstIndices)
   const cmd: UndoCommand = {
     name,
     execute() {
       const data = new Uint8Array(font.fontData.value)
       for (const e of entries) data.set(e.srcBytes, e.dstIdx * bpg)
       font.fontData.value = data
+      for (const idx of dstIndices) font.glyphRotationLive.delete(idx)
       markDirty(font)
     },
     undo() {
       const data = new Uint8Array(font.fontData.value)
       for (const e of entries) data.set(e.before, e.dstIdx * bpg)
       font.fontData.value = data
+      restoreRotationLive(font, dstIndices, prevLive)
       markDirty(font)
     },
   }
@@ -283,19 +311,20 @@ export function execCopyRange(
 
 // --- Paint stroke (live painting, commit on mouseup) ---
 
-let pendingStroke: { font: FontInstance; index: number; before: Uint8Array } | null = null
+let pendingStroke: { font: FontInstance; index: number; before: Uint8Array; prevLive: Map<number, RotationLive> } | null = null
 
 export function beginPaintStroke(font: FontInstance, glyphIndex: number) {
   pendingStroke = {
     font,
     index: glyphIndex,
     before: snapshotGlyph(font, glyphIndex),
+    prevLive: snapshotRotationLive(font, [glyphIndex]),
   }
 }
 
 export function commitPaintStroke(font: FontInstance) {
   if (!pendingStroke || pendingStroke.font !== font) { pendingStroke = null; return }
-  const { index, before } = pendingStroke
+  const { index, before, prevLive } = pendingStroke
   const after = snapshotGlyph(font, index)
   pendingStroke = null
   // Don't push if nothing changed
@@ -306,11 +335,20 @@ export function commitPaintStroke(font: FontInstance) {
   // (tiles, preview, localStorage persistence).  During the stroke itself,
   // setPixel mutated in place and only bumped paintVersion.
   font.fontData.value = new Uint8Array(font.fontData.value)
+  font.glyphRotationLive.delete(index)
   markDirty(font)
   const cmd: UndoCommand = {
     name: 'Paint',
-    execute() { restoreGlyph(font, index, after); markDirty(font) },
-    undo() { restoreGlyph(font, index, before); markDirty(font) },
+    execute() {
+      restoreGlyph(font, index, after)
+      font.glyphRotationLive.delete(index)
+      markDirty(font)
+    },
+    undo() {
+      restoreGlyph(font, index, before)
+      restoreRotationLive(font, [index], prevLive)
+      markDirty(font)
+    },
   }
   font.undoHistory.push(cmd)
 }

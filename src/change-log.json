@@ -4,7 +4,9 @@
     "date": "2026-04-26",
     "changes": [
       "Added Open CP/M +3 sample text to preview Tools group",
-      "Preview sample picker always groups items under their group label"
+      "Preview sample picker always groups items under their group label",
+      "Rotating a single glyph no longer resizes the whole font — clips to fit instead",
+      "Repeat rotations preserve the un-clipped rotated buffer so 4× CW restores the original glyph"
     ]
   },
   {
