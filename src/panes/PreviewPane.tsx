@@ -312,17 +312,13 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
           value={textKey}
           onChange={(e) => setTextKey((e.target as HTMLSelectElement).value)}
         >
-          {sampleTexts.map((group, gi) =>
-            group.items.length === 1 ? (
-              <option key={gi} value={`${gi}-0`}>{group.items[0].name}</option>
-            ) : (
-              <optgroup key={gi} label={group.group}>
-                {group.items.map((item, ii) => (
-                  <option key={`${gi}-${ii}`} value={`${gi}-${ii}`}>{item.name}</option>
-                ))}
-              </optgroup>
-            )
-          )}
+          {sampleTexts.map((group, gi) => (
+            <optgroup key={gi} label={group.group}>
+              {group.items.map((item, ii) => (
+                <option key={`${gi}-${ii}`} value={`${gi}-${ii}`}>{item.name}</option>
+              ))}
+            </optgroup>
+          ))}
         </select>
         <ColorSwatch
           anchorRef={colorRef}

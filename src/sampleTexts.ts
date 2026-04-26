@@ -97,6 +97,15 @@ export const sampleTexts: SampleGroup[] = [
     ],
   },
   {
+    group: 'Tools',
+    items: [
+      {
+        name: 'Open CP/M +3',
+        text: 'Open CP/M +3\n(Build 0BA), 61K TPA\n\nRAMdisc loaded: 16K as C:\n\nA>dir\nA: CPM3     SYS : FONT51   BIN : FONT32   BIN\nA: BDOSTEST COM : XTEST    COM : DISKTEST COM\nA: TERMTEST COM : DATE     COM : SHOWXDPB COM\nA: DUMP     COM : SETDEF   COM : RAMDISK  FID\nA: BBCBASIC COM : ED       COM : PIP      COM\nA: RENAME   COM : SET      COM : SETKEYS  COM\nA: SHOW     COM : SUBMIT   COM : TYPE     COM\nA: PROFILE  SUB : RPED     SUB\n\nA>',
+      },
+    ],
+  },
+  {
     group: 'Games',
     items: [
       {

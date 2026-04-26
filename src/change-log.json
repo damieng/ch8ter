@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9.12",
+    "date": "2026-04-26",
+    "changes": [
+      "Added Open CP/M +3 sample text to preview Tools group",
+      "Preview sample picker always groups items under their group label"
+    ]
+  },
+  {
     "version": "0.9.11",
     "date": "2026-04-26",
     "changes": [
