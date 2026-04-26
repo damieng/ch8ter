@@ -621,12 +621,34 @@ export function resizeFont(
   }
 
   // Adjust baseline by the same vertical offset as the pixels
-  font.baseline.value = Math.max(0, Math.min(newH - 1, font.baseline.value + dy))
+  const prevW = oldW
+  const prevH = oldH
+  const prevBaseline = font.baseline.value
+  const prevData = new Uint8Array(src)
+  const newBaseline = Math.max(0, Math.min(newH - 1, font.baseline.value + dy))
+
+  font.baseline.value = newBaseline
   font.glyphWidth.value = newW
   font.glyphHeight.value = newH
   font.fontData.value = dst
   font.dirty.value = true
-  font.undoHistory.clear()
+  font.undoHistory.push({
+    name: 'Resize',
+    execute() {
+      font.glyphWidth.value = newW
+      font.glyphHeight.value = newH
+      font.baseline.value = newBaseline
+      font.fontData.value = dst.slice()
+      markDirty(font)
+    },
+    undo() {
+      font.glyphWidth.value = prevW
+      font.glyphHeight.value = prevH
+      font.baseline.value = prevBaseline
+      font.fontData.value = prevData.slice()
+      markDirty(font)
+    },
+  })
 }
 
 export function saveFont(font: FontInstance): Uint8Array {

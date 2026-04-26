@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.11 — 2026-04-26
+
+- Made font resize undoable (Ctrl+Z / Ctrl+Y)
+
 ## 0.9.8 — 2026-04-07
 
 - Fixed rotation of non-square glyphs (e.g. 8×16) — now correctly swaps width and height
