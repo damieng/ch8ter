@@ -4,7 +4,8 @@
     "date": "2026-04-26",
     "changes": [
       "Made font resize undoable (Ctrl+Z / Ctrl+Y)",
-      "RAW import: changing codepage auto-sets start char and glyph count"
+      "RAW import: changing codepage auto-sets start char and glyph count",
+      "Fixed missing Unicode mappings for Amstrad CP/M Plus characters 0x7F-0x9F"
     ]
   },
   {
