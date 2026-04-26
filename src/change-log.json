@@ -3,7 +3,8 @@
     "version": "0.9.11",
     "date": "2026-04-26",
     "changes": [
-      "Made font resize undoable (Ctrl+Z / Ctrl+Y)"
+      "Made font resize undoable (Ctrl+Z / Ctrl+Y)",
+      "RAW import: changing codepage auto-sets start char and glyph count"
     ]
   },
   {

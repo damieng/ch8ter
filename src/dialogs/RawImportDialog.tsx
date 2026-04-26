@@ -1,6 +1,7 @@
 import { type ComponentChildren } from 'preact'
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createFont, addFont, recalcMetrics, charset } from '../store'
+import { CHARSETS } from '../charsets'
 import { NumField } from '../components/NumField'
 import { CharsetSelect } from '../components/CharsetSelect'
 import { ZoomControl } from '../components/ZoomControl'
@@ -172,6 +173,14 @@ export function RawImportDialog({ file, onClose }: Props) {
   const skipSliderDragging = useRef(false)
   const [codepage, setCodepage] = useState<Charset>('iso8859_1')
 
+  function handleCodepageChange(cs: Charset) {
+    setCodepage(cs)
+    const range = CHARSETS[cs].range
+    if (range) {
+      setSettings(s => ({ ...s, startChar: range[0], numChars: range[1] - range[0] + 1 }))
+    }
+  }
+
   useEffect(() => {
     file.arrayBuffer().then(buf => setRaw(new Uint8Array(buf)))
   }, [file])
@@ -321,7 +330,7 @@ export function RawImportDialog({ file, onClose }: Props) {
             >{settings.columnMajor ? (settings.bottomToTop ? 'RTL' : 'LTR') : (settings.bottomToTop ? 'BTT' : 'TTB')}</button>
           </div>
           <span class="w-px h-5 bg-gray-300" />
-          <CharsetSelect value={codepage} onChange={setCodepage} />
+          <CharsetSelect value={codepage} onChange={handleCodepageChange} />
         </div>
 
         {/* Preview */}
