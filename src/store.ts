@@ -415,18 +415,40 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
   // New font covers both the new charset range and any existing positions
   const newStart = Math.min(oldStart, newRange[0])
   const newEnd = Math.max(oldStart + oldCount - 1, newRange[1])
-  const newCount = newEnd - newStart + 1
-  const newData = new Uint8Array(newCount * bpg)
-  const newGlyphMeta: (typeof oldGm extends null ? never : NonNullable<typeof oldGm>)[number][] | null =
-    oldGm ? new Array(newCount).fill(null) : null
+  let newCount = newEnd - newStart + 1
+  let newData = new Uint8Array(newCount * bpg)
+  let newGlyphMeta: (GlyphMeta | null)[] | null = oldGm ? new Array(newCount).fill(null) : null
   const newPop = new Set<number>()
 
   const reverse = buildUnicodeReverse(newCs)
   const filled = new Set<number>()
 
+  function growToInclude(index: number) {
+    if (index < newCount) return
+    const nextCount = index + 1
+    const grownData = new Uint8Array(nextCount * bpg)
+    grownData.set(newData)
+    newData = grownData
+    if (newGlyphMeta) {
+      const grownMeta: (GlyphMeta | null)[] = new Array(nextCount).fill(null)
+      for (let i = 0; i < newGlyphMeta.length; i++) grownMeta[i] = newGlyphMeta[i]
+      newGlyphMeta = grownMeta
+    }
+    newCount = nextCount
+  }
+
+  function copyGlyph(oldIdx: number, newIdx: number, hasData: boolean) {
+    growToInclude(newIdx)
+    const offset = oldIdx * bpg
+    newData.set(oldData.subarray(offset, offset + bpg), newIdx * bpg)
+    filled.add(newIdx)
+    if (hasData) newPop.add(newIdx)
+    if (newGlyphMeta && oldGm?.[oldIdx]) newGlyphMeta[newIdx] = oldGm[oldIdx]
+  }
+
   // First pass: place glyphs that have a mapped position in the new charset
   // Second pass: place unmapped glyphs at their original codepoint if available
-  interface PendingGlyph { oldIdx: number; oldCp: number }
+  interface PendingGlyph { oldIdx: number; oldCp: number; hasData: boolean }
   const unmapped: PendingGlyph[] = []
 
   for (let i = 0; i < oldCount; i++) {
@@ -435,7 +457,7 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
     for (let b = 0; b < bpg; b++) {
       if (oldData[offset + b]) { hasData = true; break }
     }
-    if (!hasData && (oldStart + i) !== 32) continue
+    if (!hasData && !oldGm?.[i] && (oldStart + i) !== 32) continue
 
     const oldCp = oldStart + i
     const unicode = cpToUnicode(oldCp, oldCs)
@@ -444,42 +466,28 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
     if (newCp !== undefined) {
       const newIdx = newCp - newStart
       if (newIdx >= 0 && newIdx < newCount && !filled.has(newIdx)) {
-        newData.set(oldData.subarray(offset, offset + bpg), newIdx * bpg)
-        filled.add(newIdx)
-        if (hasData) newPop.add(newIdx)
-        if (newGlyphMeta && oldGm?.[i]) newGlyphMeta[newIdx] = oldGm[i]
+        copyGlyph(i, newIdx, hasData)
         continue
       }
     }
 
-    unmapped.push({ oldIdx: i, oldCp })
+    unmapped.push({ oldIdx: i, oldCp, hasData })
   }
 
   // Place unmapped glyphs at their original codepoint position as fallback
-  let droppedGlyphs = 0
-  for (const { oldIdx, oldCp } of unmapped) {
+  for (const { oldIdx, oldCp, hasData } of unmapped) {
     const fallbackIdx = oldCp - newStart
     if (fallbackIdx >= 0 && fallbackIdx < newCount && !filled.has(fallbackIdx)) {
-      const offset = oldIdx * bpg
-      newData.set(oldData.subarray(offset, offset + bpg), fallbackIdx * bpg)
-      filled.add(fallbackIdx)
-      newPop.add(fallbackIdx)
-      if (newGlyphMeta && oldGm?.[oldIdx]) newGlyphMeta[fallbackIdx] = oldGm[oldIdx]
-    } else {
-      droppedGlyphs++
+      copyGlyph(oldIdx, fallbackIdx, hasData)
+    } else if (hasData || oldGm?.[oldIdx]) {
+      copyGlyph(oldIdx, newCount, hasData)
     }
   }
 
   font.startChar.value = newStart
   font.fontData.value = newData
   if (newGlyphMeta) font.glyphMeta.value = newGlyphMeta
-  if (droppedGlyphs > 0) {
-    // Glyphs were lost — keep font dirty so user gets a save warning
-    font.dirty.value = true
-  } else {
-    // Lossless remap — update snapshot so font stays clean
-    font.savedSnapshot.value = new Uint8Array(newData)
-  }
+  font.savedSnapshot.value = new Uint8Array(newData)
   font.populatedGlyphs.value = newPop
 
   // Remap selection: follow the active glyph's Unicode character

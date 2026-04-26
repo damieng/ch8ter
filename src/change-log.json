@@ -5,7 +5,8 @@
     "changes": [
       "Made font resize undoable (Ctrl+Z / Ctrl+Y)",
       "RAW import: changing codepage auto-sets start char and glyph count",
-      "Fixed missing Unicode mappings for Amstrad CP/M Plus characters 0x7F-0x9F"
+      "Fixed missing Unicode mappings for Amstrad CP/M Plus characters 0x7F-0x9F",
+      "Fixed RAW imports padding missing trailing glyphs and preserving glyphs across charset changes"
     ]
   },
   {

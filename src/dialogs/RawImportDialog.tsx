@@ -152,6 +152,14 @@ function drawPreview(
   }
 }
 
+export function copyGlyphWindow(fontData: Uint8Array, startGlyph: number, glyphCount: number, bytesPerGlyph: number): Uint8Array {
+  const out = new Uint8Array(glyphCount * bytesPerGlyph)
+  const startByte = startGlyph * bytesPerGlyph
+  const availableBytes = Math.max(0, Math.min(fontData.length, startByte + out.length) - startByte)
+  out.set(fontData.subarray(startByte, startByte + availableBytes))
+  return out
+}
+
 export function RawImportDialog({ file, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -191,7 +199,7 @@ export function RawImportDialog({ file, onClose }: Props) {
   const outBytesPerGlyph = bytesPerRow * settings.glyphHeight
 
   // Active window: numChars determines how many leading glyphs are imported (the rest are faded)
-  const activeCount = settings.numChars > 0 ? Math.min(settings.numChars, result.totalGlyphs) : result.totalGlyphs
+  const activeCount = settings.numChars > 0 ? settings.numChars : result.totalGlyphs
   const availableAfterSkip = result.totalGlyphs
   const activeStart = 0
   const activeEnd = activeCount
@@ -208,7 +216,7 @@ export function RawImportDialog({ file, onClose }: Props) {
 
   function handleImport() {
     if (activeCount === 0) return
-    const activeData = result.fontData.slice(activeStart * outBytesPerGlyph, activeEnd * outBytesPerGlyph)
+    const activeData = copyGlyphWindow(result.fontData, activeStart, activeCount, outBytesPerGlyph)
     const font = createFont(
       activeData,
       file.name,
