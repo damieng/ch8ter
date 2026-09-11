@@ -680,9 +680,9 @@ export function saveFont(font: FontInstance): Uint8Array {
   return snapshot
 }
 
-/** Extract a plain FontConversionData snapshot from a FontInstance (marks font as saved). */
+/** Extract a plain FontConversionData snapshot from a FontInstance. */
 export function fontToConversionData(font: FontInstance): import('./fontLoad').FontConversionData {
-  const fontData = saveFont(font)
+  const fontData = new Uint8Array(font.fontData.value)
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
   const bpr = calcBpr(w)

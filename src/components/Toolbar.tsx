@@ -22,6 +22,7 @@ import { exportVarTtf } from '../fileFormats/ttfVarExport'
 import { ttfToWoff } from '../fileFormats/woffExport'
 import { SourceExportDialog } from '../dialogs/SourceExportDialog'
 import { PngExportDialog } from '../dialogs/PngExportDialog'
+import { ErrorDialog } from '../dialogs/ErrorDialog'
 import { Dropdown } from './Dropdown'
 import { baseName } from '../fontLoad'
 import { saveFontFile, TEXT_FORMATS } from '../fontSave'
@@ -38,14 +39,22 @@ function download(blob: Blob, filename: string) {
 }
 
 export function SaveBar({ font }: { font: FontInstance }) {
+  const [error, setError] = useState<string | null>(null)
   const is8x8 = font.glyphWidth.value <= 8 && font.glyphHeight.value <= 8
 
-  function saveAs(formatKey: string, fileExt: string) {
+  function saveAs(formatKey: string, fileExt: string): boolean {
     const data = fontToConversionData(font)
-    const result = saveFontFile(formatKey, data)
-    const blobOpts = TEXT_FORMATS.has(formatKey) ? { type: 'text/plain' } : undefined
-    const blobData = typeof result === 'string' ? result : result.buffer as ArrayBuffer
-    download(new Blob([blobData], blobOpts), baseName(font.fileName.value) + fileExt)
+    try {
+      const result = saveFontFile(formatKey, data)
+      const blobOpts = TEXT_FORMATS.has(formatKey) ? { type: 'text/plain' } : undefined
+      const blobData = typeof result === 'string' ? result : result.buffer as ArrayBuffer
+      download(new Blob([blobData], blobOpts), baseName(font.fileName.value) + fileExt)
+      saveFont(font)
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      return false
+    }
   }
 
   const btn = (label: string, formatKey: string, fileExt: string, close: () => void) => (
@@ -55,31 +64,34 @@ export function SaveBar({ font }: { font: FontInstance }) {
   )
 
   return (
-    <Dropdown
-      button={<><Save size={ICON} /><ChevronDown size={12} /></>}
-      buttonClass="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
-      title="Save"
-      popupClass="w-auto whitespace-nowrap"
-    >
-      {(close) => (
-        <>
-          {is8x8 && btn('Save as .ch8', 'ch8', '.ch8', close)}
-          {btn('Save as .bdf', 'bdf', '.bdf', close)}
-          {btn('Save as .psf', 'psf', '.psf', close)}
-          {btn('Save as .yaff', 'yaff', '.yaff', close)}
-          {btn('Save as .draw', 'draw', '.draw', close)}
-          {btn('Save as .fzx', 'fzx', '.fzx', close)}
-          {btn('Save as Atari ST .fnt', 'fnt', '.fnt', close)}
-          {btn('Save as X11 .pcf', 'pcf', '.pcf', close)}
-          {btn('Save as Palm .pdb', 'pdb', '.pdb', close)}
-          {btn('Save as Atari 8-bit .fnt', 'atari8', '.fnt', close)}
-          {btn('Save as Amiga font', 'amiga', '-' + font.glyphHeight.value, close)}
-          {btn('Save as EGA/VGA .com', 'ega', '.com', close)}
-          {btn('Save as BBC Micro .bbc', 'bbc', '.bbc', close)}
-          {btn('Save as CP/M Plus .com', 'com', '.com', close)}
-        </>
-      )}
-    </Dropdown>
+    <>
+      <Dropdown
+        button={<><Save size={ICON} /><ChevronDown size={12} /></>}
+        buttonClass="p-1.5 hover:bg-blue-50 rounded flex items-center gap-0.5"
+        title="Save"
+        popupClass="w-auto whitespace-nowrap"
+      >
+        {(close) => (
+          <>
+            {is8x8 && btn('Save as .ch8', 'ch8', '.ch8', close)}
+            {btn('Save as .bdf', 'bdf', '.bdf', close)}
+            {btn('Save as .psf', 'psf', '.psf', close)}
+            {btn('Save as .yaff', 'yaff', '.yaff', close)}
+            {btn('Save as .draw', 'draw', '.draw', close)}
+            {btn('Save as .fzx', 'fzx', '.fzx', close)}
+            {btn('Save as Atari ST .fnt', 'fnt', '.fnt', close)}
+            {btn('Save as X11 .pcf', 'pcf', '.pcf', close)}
+            {btn('Save as Palm .pdb', 'pdb', '.pdb', close)}
+            {btn('Save as Atari 8-bit .fnt', 'atari8', '.fnt', close)}
+            {btn('Save as Amiga font', 'amiga', '-' + font.glyphHeight.value, close)}
+            {btn('Save as EGA/VGA .com', 'ega', '.com', close)}
+            {btn('Save as BBC Micro .bbc', 'bbc', '.bbc', close)}
+            {btn('Save as CP/M Plus .com', 'com', '.com', close)}
+          </>
+        )}
+      </Dropdown>
+      {error !== null && <ErrorDialog title="Failed to save font" message={error} onClose={() => setError(null)} />}
+    </>
   )
 }
 
