@@ -160,6 +160,10 @@ export function copyGlyphWindow(fontData: Uint8Array, startGlyph: number, glyphC
   return out
 }
 
+export function activeGlyphCount(totalGlyphs: number, requested: number): number {
+  return requested > 0 ? Math.min(requested, totalGlyphs) : totalGlyphs
+}
+
 export function RawImportDialog({ file, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -199,7 +203,7 @@ export function RawImportDialog({ file, onClose }: Props) {
   const outBytesPerGlyph = bytesPerRow * settings.glyphHeight
 
   // Active window: numChars determines how many leading glyphs are imported (the rest are faded)
-  const activeCount = settings.numChars > 0 ? settings.numChars : result.totalGlyphs
+  const activeCount = activeGlyphCount(result.totalGlyphs, settings.numChars)
   const availableAfterSkip = result.totalGlyphs
   const activeStart = 0
   const activeEnd = activeCount
