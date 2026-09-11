@@ -67,6 +67,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
       font.charIndex.value = idxArr
     }
 
+    font.dirty.value = true
     onClose()
   }
 

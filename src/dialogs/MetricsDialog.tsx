@@ -45,6 +45,7 @@ export function MetricsDialog({ font, onClose }: Props) {
     font.xHeight.value = xHeight
     font.numericHeight.value = numericHeight
     font.descender.value = descender
+    if (changed) font.dirty.value = true
     onClose()
   }
 

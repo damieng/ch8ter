@@ -52,6 +52,7 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
     if (properties.FONT_ASCENT) updated.fontAscent = parseInt(properties.FONT_ASCENT)
     if (properties.FONT_DESCENT) updated.fontDescent = parseInt(properties.FONT_DESCENT)
     font.meta.value = updated
+    font.dirty.value = true
     onClose()
   }
 
