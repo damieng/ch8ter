@@ -98,6 +98,12 @@ describe('FZX tracking', () => {
   })
 })
 
+describe('FZX dimension validation', () => {
+  it('rejects glyphs wider than the format supports', () => {
+    expect(() => writeFzx(makeTestFont(17, 8, 32, 1))).toThrow('1 to 16')
+  })
+})
+
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
   const rowBytes = bpr(w)

@@ -45,6 +45,12 @@ export function writeFzx(params: FontWriteData): Uint8Array {
   if (!Number.isInteger(tracking) || tracking < -128 || tracking > 127) {
     throw new Error('FZX tracking must be an integer from -128 to 127')
   }
+  if (glyphWidth <= 0 || glyphWidth > 16) {
+    throw new Error('FZX export supports glyph widths from 1 to 16 pixels')
+  }
+  if (glyphHeight <= 0 || glyphHeight > 255) {
+    throw new Error('FZX export supports glyph heights from 1 to 255 pixels')
+  }
   const rowBytes = bpr(glyphWidth)
   const bpg = glyphHeight * rowBytes
 
@@ -98,10 +104,14 @@ export function writeFzx(params: FontWriteData): Uint8Array {
       width = glyphWidth
     }
 
+    if (width <= 0 || width > 16) {
+      throw new Error('FZX export supports per-glyph widths from 1 to 16 pixels')
+    }
+
     const numRows = glyphHeight - topBlank - bottomBlank
     if (numRows <= 0) {
       charData.push(new Uint8Array(0))
-      charInfo.push({ shift: 0, width: Math.min(width, 16) })
+      charInfo.push({ shift: 0, width })
       continue
     }
 
@@ -123,7 +133,7 @@ export function writeFzx(params: FontWriteData): Uint8Array {
     }
 
     charData.push(data)
-    charInfo.push({ shift: Math.min(shift, 15), width: Math.min(width, 16) })
+    charInfo.push({ shift: Math.min(shift, 15), width })
   }
 
   // Calculate file layout
