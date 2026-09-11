@@ -79,7 +79,8 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {btn('Save as .yaff', 'yaff', '.yaff', close)}
             {btn('Save as .draw', 'draw', '.draw', close)}
             {btn('Save as .fzx', 'fzx', '.fzx', close)}
-            {btn('Save as Atari ST .fnt', 'fnt', '.fnt', close)}
+           {btn('Save as Atari ST .fnt', 'fnt', '.fnt', close)}
+           {btn('Save as Windows .fnt', 'windows', '.fnt', close)}
             {btn('Save as X11 .pcf', 'pcf', '.pcf', close)}
             {btn('Save as Palm .pdb', 'pdb', '.pdb', close)}
             {btn('Save as Atari 8-bit .fnt', 'atari8', '.fnt', close)}

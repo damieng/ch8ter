@@ -33,6 +33,7 @@ import { writeBbc } from './fileFormats/bbcWriter'
 import { writeEgaCom } from './fileFormats/egaComWriter'
 import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
 import { writePdbFont } from './fileFormats/pdbFontWriter'
+import { writeWindowsFnt } from './fileFormats/windowsFntWriter'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -48,6 +49,7 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'draw':  return writeDraw(data)
     case 'fzx':   return writeFzx(data)
     case 'fnt':   return writeGdosFont(data)
+    case 'windows': return writeWindowsFnt(data)
     case 'pcf':   return writePcf(data)
     case 'pdb':   return writePdbFont(data)
     case 'amiga': return writeAmigaFont(data)

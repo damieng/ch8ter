@@ -17,6 +17,7 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   draw:     { ext: '.draw', key: 'draw' },
   fzx:      { ext: '.fzx',  key: 'fzx' },
   gdos:     { ext: '.fnt',  key: 'fnt' },
+  windows:  { ext: '.fnt',  key: 'windows' },
   pcf:      { ext: '.pcf',  key: 'pcf' },
   pdb:      { ext: '.pdb',  key: 'pdb' },
   palm:     { ext: '.pdb',  key: 'pdb' },

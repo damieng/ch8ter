@@ -47,6 +47,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Acorn Draw | `.draw` |
 | ZX Spectrum FZX | `.fzx` |
 | Atari ST GDOS | `.fnt` |
+| Windows FNT v2 | `.fnt` |
 | Atari 8-bit | `.fnt` |
 | PalmOS | `.pdb` |
 | Amiga | _(height suffix)_ |

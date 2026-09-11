@@ -25,6 +25,7 @@ import { parsePdbFont } from './pdbFontParser'
 import { parseAmigaFont } from './amigaFontParser'
 import { openFnt } from './fntOpener'
 import { parseCpm } from './cpmParser'
+import { parseWindowsFnt } from './windowsFntParser'
 
 // --- Writers ---
 import { writeDraw } from './drawWriter'
@@ -40,6 +41,7 @@ import { writePdbFont } from './pdbFontWriter'
 import { writeAmigaFont } from './amigaFontWriter'
 import { writeAtari8Bit } from './atari8BitWriter'
 import { exportCpm } from './cpmExport'
+import { writeWindowsFnt } from './windowsFntWriter'
 
 describe('fixed-size writer validation', () => {
   it('rejects incompatible BBC and Atari dimensions', () => {
@@ -101,6 +103,21 @@ describe('FZX tracking', () => {
 describe('FZX dimension validation', () => {
   it('rejects glyphs wider than the format supports', () => {
     expect(() => writeFzx(makeTestFont(17, 8, 32, 1))).toThrow('1 to 16')
+  })
+})
+
+describe('Windows FNT round-trip', () => {
+  it('writes and reads a wide v2 bitmap font', () => {
+    const font = makeTestFont(12, 10, 32, 4)
+    const bytes = writeWindowsFnt(font)
+    const parsed = parseWindowsFnt(toBuffer(bytes))
+
+    expect(parsed.glyphWidth).toBe(12)
+    expect(parsed.glyphHeight).toBe(10)
+    expect(parsed.startChar).toBe(32)
+    for (const idx of [0, 1, 3]) {
+      assertGlyphMatch(font.fontData, 12, 10, idx, parsed.fontData, 12, 10, idx, `glyph ${idx}`)
+    }
   })
 })
 
