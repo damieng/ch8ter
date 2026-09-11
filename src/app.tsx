@@ -18,6 +18,7 @@ import { sampleTexts } from './sampleTexts'
 
 export function App() {
   const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
+  const [confirmContainerClose, setConfirmContainerClose] = useState<{ containerId: string; font: typeof allFonts[0] } | null>(null)
   const focusedId = storedFocusedId.value
 
   const allFonts = fonts.value
@@ -43,6 +44,15 @@ export function App() {
       return
     }
     removeFont(fontId)
+  }
+
+  function handleCloseContainer(containerId: string) {
+    const dirtyFont = allFonts.find(f => f.sourceContainerId === containerId && f.dirty.value)
+    if (dirtyFont) {
+      setConfirmContainerClose({ containerId, font: dirtyFont })
+      return
+    }
+    removeContainer(containerId)
   }
 
   return (
@@ -119,7 +129,7 @@ export function App() {
           statusBar={<ContainerStatusBar container={c} />}
           zIndex={getZIndex(`container-${c.id}`)}
           onFocus={() => setFocus(`container-${c.id}`)}
-          onClose={() => removeContainer(c.id)}
+          onClose={() => handleCloseContainer(c.id)}
         >
           <ContainerPane container={c} />
         </BasePane>
@@ -155,6 +165,16 @@ export function App() {
           font={confirmClose.font}
           onConfirm={() => { removeFont(confirmClose.fontId); setConfirmClose(null) }}
           onCancel={() => setConfirmClose(null)}
+        />
+      )}
+      {confirmContainerClose && (
+        <ConfirmDialog
+          font={confirmContainerClose.font}
+          onConfirm={() => {
+            removeContainer(confirmContainerClose.containerId)
+            setConfirmContainerClose(null)
+          }}
+          onCancel={() => setConfirmContainerClose(null)}
         />
       )}
     </div>
