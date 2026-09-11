@@ -5,7 +5,11 @@
 
 import type { FontWriteData } from '../fontSave'
 
-export function writeBbc({ fontData, startChar, glyphCount }: FontWriteData): Uint8Array {
+export function writeBbc({ fontData, glyphWidth, glyphHeight, startChar, glyphCount }: FontWriteData): Uint8Array {
+  if (glyphWidth !== 8 || glyphHeight !== 8) {
+    throw new Error('BBC Micro export requires 8x8 fonts')
+  }
+
   // Count non-empty glyphs to size the output
   const entries: { code: number; offset: number }[] = []
   for (let i = 0; i < glyphCount; i++) {

@@ -4,7 +4,11 @@
 
 import type { FontWriteData } from '../fontSave'
 
-export function writeAtari8Bit({ fontData, startChar }: FontWriteData): Uint8Array {
+export function writeAtari8Bit({ fontData, glyphWidth, glyphHeight, startChar }: FontWriteData): Uint8Array {
+  if (glyphWidth !== 8 || glyphHeight !== 8) {
+    throw new Error('Atari 8-bit export requires 8x8 fonts')
+  }
+
   const out = new Uint8Array(1024)
 
   for (let atascii = 0; atascii < 128; atascii++) {

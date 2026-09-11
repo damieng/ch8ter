@@ -41,6 +41,23 @@ import { writeAmigaFont } from './amigaFontWriter'
 import { writeAtari8Bit } from './atari8BitWriter'
 import { exportCpm } from './cpmExport'
 
+describe('fixed-size writer validation', () => {
+  it('rejects incompatible BBC and Atari dimensions', () => {
+    const font = makeTestFont(8, 16, 32, 96)
+    expect(() => writeBbc(font)).toThrow('8x8')
+    expect(() => writeAtari8Bit(font)).toThrow('8x8')
+  })
+
+  it('rejects incompatible EGA dimensions', () => {
+    expect(() => writeEgaCom(makeTestFont(9, 16, 0, 256))).toThrow('8 pixels wide')
+    expect(() => writeEgaCom(makeTestFont(8, 12, 0, 256))).toThrow('8, 14, or 16')
+  })
+
+  it('rejects unsupported CP/M heights', () => {
+    expect(() => exportCpm(makeTestFont(8, 65, 0, 256))).toThrow('1 to 64')
+  })
+})
+
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
   const rowBytes = bpr(w)

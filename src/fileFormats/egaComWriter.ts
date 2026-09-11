@@ -18,7 +18,14 @@ function decodeStub(): Uint8Array {
 
 import type { FontWriteData } from '../fontSave'
 
-export function writeEgaCom({ fontData, glyphHeight }: FontWriteData): Uint8Array {
+export function writeEgaCom({ fontData, glyphWidth, glyphHeight }: FontWriteData): Uint8Array {
+  if (glyphWidth !== 8) {
+    throw new Error('EGA/VGA export requires fonts exactly 8 pixels wide')
+  }
+  if (glyphHeight !== 8 && glyphHeight !== 14 && glyphHeight !== 16) {
+    throw new Error('EGA/VGA export requires glyph heights of 8, 14, or 16 pixels')
+  }
+
   const stub = decodeStub()
   const fontSize = 256 * glyphHeight
   const fontOffset = stub.length // font data immediately follows stub

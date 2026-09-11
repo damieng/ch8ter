@@ -15,6 +15,7 @@ import type { FontWriteData } from '../fontSave'
 
 export function exportCpm({ glyphHeight, glyphWidth, fontData }: FontWriteData): Uint8Array {
   if (glyphWidth > 8) throw new Error('CP/M export requires fonts 8 pixels or narrower')
+  if (glyphHeight <= 0 || glyphHeight > 64) throw new Error('CP/M export requires glyph heights from 1 to 64 pixels')
   const bpg = glyphHeight
   const glyphs = 256
   const header = decodeHeader()
