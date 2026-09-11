@@ -40,10 +40,11 @@ export function writePdbFont(params: FontWriteData): Uint8Array {
       advanceWidths.push(0)
       isMissing.push(true)
     } else {
-      // Use advance width as bitmap width to preserve trailing blank columns
-      const pixW = Math.max(advW, 1)
-      glyphWidths.push(pixW)
-      advanceWidths.push(pixW)
+      // Keep the raster width separate from the horizontal advance. The
+      // editor bitmap is stored in a fixed-width cell; using the advance here
+      // either clips ink or reads past the end of a row.
+      glyphWidths.push(glyphWidth)
+      advanceWidths.push(Math.max(advW, 0))
       isMissing.push(false)
     }
   }

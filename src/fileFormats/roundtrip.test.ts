@@ -74,6 +74,20 @@ describe('PCF sparse encodings', () => {
   })
 })
 
+describe('PDB proportional widths', () => {
+  it('preserves cell pixels independently from advance width', () => {
+    const font = makeTestFont(8, 8, 32, 1)
+    font.fontData.fill(0)
+    setBit(font.fontData, 7, 7)
+    font.glyphMeta = [{ dwidth: [4, 0] }]
+
+    const parsed = parsePdbFont(toBuffer(writePdbFont(font)))
+    expect(parsed.glyphWidth).toBe(8)
+    expect(getBit(parsed.fontData, 7, 7)).toBe(true)
+    expect(parsed.glyphMeta[0]?.dwidth?.[0]).toBe(4)
+  })
+})
+
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
   const rowBytes = bpr(w)
