@@ -61,7 +61,7 @@ export function selectAll(font: FontInstance) {
   font.lastClickedGlyph.value = 0
 }
 export function selectNone(font: FontInstance) {
-  font.selectedGlyphs.value = new Set([font.lastClickedGlyph.value])
+  font.selectedGlyphs.value = new Set()
 }
 export function invertSelection(font: FontInstance) {
   const count = glyphCount(font)
@@ -70,7 +70,6 @@ export function invertSelection(font: FontInstance) {
   for (let i = 0; i < count; i++) {
     if (!current.has(i)) result.add(i)
   }
-  if (result.size === 0) return
   font.selectedGlyphs.value = result
 }
 
