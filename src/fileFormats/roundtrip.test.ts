@@ -58,6 +58,22 @@ describe('fixed-size writer validation', () => {
   })
 })
 
+describe('PCF sparse encodings', () => {
+  it('preserves glyphs separated by a sparse encoding range', () => {
+    const glyphCount = 469
+    const font = makeTestFont(8, 8, 32, glyphCount)
+    font.fontData.fill(0)
+    setBit(font.fontData, 0, 0)
+    setBit(font.fontData, (glyphCount - 1) * 8, 7)
+
+    const parsed = parsePcf(toBuffer(writePcf(font)))
+    expect(parsed.startChar).toBe(32)
+    expect(parsed.fontData.length).toBe(glyphCount * 8)
+    expect(getBit(parsed.fontData, 0, 0)).toBe(true)
+    expect(getBit(parsed.fontData, (glyphCount - 1) * 8, 7)).toBe(true)
+  })
+})
+
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
   const rowBytes = bpr(w)

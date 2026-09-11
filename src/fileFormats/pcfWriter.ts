@@ -211,43 +211,31 @@ export function writePcf(params: FontWriteData): Uint8Array {
     bp += chunk.length
   }
 
-  // Encodings table — find contiguous range, skip glyphs that would create huge sparse gaps
+  // Encodings table — preserve the complete character range. PCF supports a
+  // two-byte encoding grid, so trimming this range would silently discard glyphs.
   const sortedCps = included.map(g => g.cp).sort((a, b) => a - b)
-  const MIN_GLYPH_RATIO = 0.1
-  let bestMin = sortedCps[0], bestMax = sortedCps[sortedCps.length - 1]
-  // If filling the full range would be >90% empty, trim to a tighter contiguous range
-  const fullRange = bestMax - bestMin + 1
-  if (fullRange > numGlyphs * 10) {
-    // Find the densest contiguous subrange that covers most glyphs
-    let bestStart = bestMin, bestEnd = bestMax, bestDensity = 0
-    for (let i = 0; i < sortedCps.length; i++) {
-      for (let j = sortedCps.length - 1; j >= i; j--) {
-        const range = sortedCps[j] - sortedCps[i] + 1
-        const count = j - i + 1
-        const density = count / range
-        if (density > bestDensity && density >= MIN_GLYPH_RATIO) {
-          bestDensity = density
-          bestStart = sortedCps[i]
-          bestEnd = sortedCps[j]
-        }
-      }
-    }
-    bestMin = bestStart
-    bestMax = bestEnd
+  const bestMin = sortedCps[0]
+  const bestMax = sortedCps[sortedCps.length - 1]
+  if (bestMin < 0 || bestMax > 0xFFFF) {
+    throw new Error('PCF export supports character codes from 0 to 65535')
   }
   const minEnc = bestMin
   const maxEnc = bestMax
-  const encRange = maxEnc - minEnc + 1
+  const minByte1 = minEnc > 0xFF ? minEnc >> 8 : 0
+  const maxByte1 = maxEnc >> 8
+  const minByte2 = minByte1 === maxByte1 ? minEnc & 0xFF : 0
+  const maxByte2 = minByte1 === maxByte1 ? maxEnc & 0xFF : 0xFF
+  const encRange = (maxByte1 - minByte1 + 1) * (maxByte2 - minByte2 + 1)
   const encodingsTableSize = 4 + 10 + encRange * 2
   const encodingsTable = new Uint8Array(pad4(encodingsTableSize))
   const encodingsView = new DataView(encodingsTable.buffer)
   let ep = 0
   encodingsView.setInt32(ep, FORMAT_MSBYTE_MSBIT, true); ep += 4
-  encodingsView.setInt16(ep, minEnc, false); ep += 2  // minCharOrByte2
-  encodingsView.setInt16(ep, maxEnc, false); ep += 2  // maxCharOrByte2
-  encodingsView.setInt16(ep, 0, false); ep += 2       // minByte1
-  encodingsView.setInt16(ep, 0, false); ep += 2       // maxByte1
-  encodingsView.setInt16(ep, 0xFFFF, false); ep += 2   // defaultChar
+  encodingsView.setUint16(ep, minByte2, false); ep += 2  // minCharOrByte2
+  encodingsView.setUint16(ep, maxByte2, false); ep += 2  // maxCharOrByte2
+  encodingsView.setUint16(ep, minByte1, false); ep += 2 // minByte1
+  encodingsView.setUint16(ep, maxByte1, false); ep += 2 // maxByte1
+  encodingsView.setUint16(ep, 0xFFFF, false); ep += 2   // defaultChar
 
   // Build codepoint -> output glyph index map (only for glyphs within encoding range)
   const cpToGlyph = new Map<number, number>()
@@ -255,9 +243,12 @@ export function writePcf(params: FontWriteData): Uint8Array {
     const cp = included[i].cp
     if (cp >= minEnc && cp <= maxEnc) cpToGlyph.set(cp, i)
   }
-  for (let enc = minEnc; enc <= maxEnc; enc++) {
-    const gi = cpToGlyph.get(enc)
-    encodingsView.setInt16(ep, gi !== undefined ? gi : 0xFFFF, false); ep += 2
+  for (let byte1 = minByte1; byte1 <= maxByte1; byte1++) {
+    for (let byte2 = minByte2; byte2 <= maxByte2; byte2++) {
+      const enc = byte1 > 0 ? (byte1 << 8) | byte2 : byte2
+      const gi = cpToGlyph.get(enc)
+      encodingsView.setUint16(ep, gi !== undefined ? gi : 0xFFFF, false); ep += 2
+    }
   }
 
   // Swidths table

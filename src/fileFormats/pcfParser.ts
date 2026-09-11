@@ -336,10 +336,10 @@ function parseEncodings(view: DataView, entry: TocEntry): Map<number, number> {
   pos += 4
   const be = !!(format & PCF_BYTE_ORDER)
 
-  const minCharOrByte2 = getInt16(view, pos, be)
-  const maxCharOrByte2 = getInt16(view, pos + 2, be)
-  const minByte1 = getInt16(view, pos + 4, be)
-  const maxByte1 = getInt16(view, pos + 6, be)
+  const minCharOrByte2 = view.getUint16(pos, !be)
+  const maxCharOrByte2 = view.getUint16(pos + 2, !be)
+  const minByte1 = view.getUint16(pos + 4, !be)
+  const maxByte1 = view.getUint16(pos + 6, !be)
   pos += 10 // skip defaultChar too
 
   const map = new Map<number, number>()
