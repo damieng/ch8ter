@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
-  createFont, addFont, recalcMetrics, charset, CHARSETS, containers,
+  createFont, addFont, recalcMetrics, switchCharset, CHARSETS, containers,
   type FontContainer, type ContainerFont, type ContainerMeta, type Charset,
 } from '../store'
 import { ContainerPropertiesDialog } from '../dialogs/ContainerPropertiesDialog'
@@ -98,10 +98,10 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     if (cf.populated) font.populatedGlyphs.value = cf.populated
     font.sourceContainerId = container.id
 
+    const cpKey = `cp${cf.codepage}` as Charset
+    switchCharset(cpKey in CHARSETS ? cpKey : 'cp437' as Charset)
     recalcMetrics(font)
     addFont(font)
-    const cpKey = `cp${cf.codepage}` as Charset
-    charset.value = cpKey in CHARSETS ? cpKey : 'cp437' as Charset
   }
 
   const hasName = container.fonts.some(f => fontName(f) !== '')

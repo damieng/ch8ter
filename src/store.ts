@@ -404,8 +404,7 @@ export function switchCharset(newCs: Charset) {
   const oldCs = charset.value
   if (newCs === oldCs) return
 
-  const font = fonts.value.find(f => f.id === activeFontId.value)
-  if (font) {
+  for (const font of fonts.value) {
     remapFontForCharset(font, oldCs, newCs)
   }
 
@@ -509,6 +508,7 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
   const activeNewIdx = Math.max(0, activeNewCp - newStart)
   font.selectedGlyphs.value = new Set([activeNewIdx])
   font.lastClickedGlyph.value = activeNewIdx
+  font.undoHistory.clear()
 }
 
 export function markDirty(font: FontInstance) {

@@ -1,6 +1,6 @@
 import { type ComponentChildren } from 'preact'
 import { useState, useRef, useEffect } from 'preact/hooks'
-import { createFont, addFont, recalcMetrics, charset } from '../store'
+import { createFont, addFont, recalcMetrics, switchCharset } from '../store'
 import { CHARSETS } from '../charsets'
 import { NumField } from '../components/NumField'
 import { CharsetSelect } from '../components/CharsetSelect'
@@ -228,9 +228,9 @@ export function RawImportDialog({ file, onClose }: Props) {
       glyphWidth,
       settings.glyphHeight,
     )
+    switchCharset(codepage)
     recalcMetrics(font)
     addFont(font)
-    charset.value = codepage
     onClose()
   }
 

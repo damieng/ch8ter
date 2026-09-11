@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { autoDetect, calcGridSize, extractGlyphs, imageToData, type PngImportSettings } from '../fileFormats/pngImport'
-import { createFont, addFont, recalcMetrics, charset } from '../store'
+import { createFont, addFont, recalcMetrics, switchCharset } from '../store'
 import { ZoomControl } from '../components/ZoomControl'
 import { SizeField } from '../components/SizeField'
 import { DialogOverlay } from '../components/DialogOverlay'
@@ -138,9 +138,9 @@ export function PngImportDialog({ file, onClose }: Props) {
     const result = extractGlyphs(imgData, settings)
     const font = createFont(result.fontData, file.name.replace(/\.png$/i, '.ch8'), result.startChar, result.glyphWidth, result.glyphHeight)
     font.populatedGlyphs.value = result.populated
+    switchCharset(codepage)
     recalcMetrics(font)
     addFont(font)
-    charset.value = codepage
     onClose()
   }
 

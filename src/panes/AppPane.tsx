@@ -4,7 +4,7 @@ import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import {
   createFont,
   addFont,
-  charset,
+  switchCharset,
   recalcMetrics,
   calcMissingMetrics,
   CHARSETS,
@@ -168,10 +168,10 @@ export function AppPane() {
     if (result.source === 'gdos' && result.descender !== undefined) {
       font.descender.value = result.descender
     }
+    switchCharset(result.detectedCharset as Charset)
     if (result.useCalcMissing) calcMissingMetrics(font)
     else recalcMetrics(font)
     addFont(font)
-    charset.value = result.detectedCharset as Charset
   }
 
   function openFontBuffer(name: string, buf: ArrayBuffer) {
@@ -308,6 +308,7 @@ export function AppPane() {
     if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
+        switchCharset((results[0].source === "cpm" ? "cpm" : "cp437") as Charset)
         for (const result of results) {
           const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
           const font = createFont(
@@ -317,7 +318,6 @@ export function AppPane() {
           recalcMetrics(font)
           addFont(font)
         }
-        charset.value = (results[0].source === "cpm" ? "cpm" : "cp437") as Charset
       } catch (e) {
         setError({ title: 'Failed to open font', message: (e as Error).message })
       }

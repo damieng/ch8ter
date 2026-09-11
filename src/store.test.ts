@@ -30,4 +30,18 @@ describe('charset switching', () => {
     expect(font.fontData.value[0xFF]).toBe(0)
     expect(activeFontId.value).toBe(font.id)
   })
+
+  it('remaps every open font when the charset changes', () => {
+    const first = createFont(new Uint8Array(256), 'first.bin', 0, 8, 1)
+    const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1)
+    addFont(first)
+    addFont(second)
+
+    switchCharset('amiga')
+
+    expect(glyphCount(first)).toBe(256)
+    expect(glyphCount(second)).toBe(256)
+    expect(first.undoHistory.undo()).toBe(false)
+    expect(second.undoHistory.undo()).toBe(false)
+  })
 })
