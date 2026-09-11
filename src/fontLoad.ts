@@ -43,6 +43,7 @@ export interface FontConversionData {
   source?: string
   ascender?: number
   descender?: number
+  tracking?: number
 }
 
 export interface LoadOptions {
@@ -181,7 +182,7 @@ export function loadFontFile(
   if (lower.endsWith('.fzx')) {
     const result = parseFzx(buf)
     return makeResult({
-      ...result, fontName: name, spacingMode: 'proportional',
+      ...result, fontName: name, spacingMode: 'proportional', tracking: result.tracking,
     })
   }
 

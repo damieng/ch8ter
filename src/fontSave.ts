@@ -17,6 +17,7 @@ export interface FontWriteData {
   fontName: string
   ascender?: number
   descender?: number
+  tracking?: number
 }
 
 import { writeBdf } from './fileFormats/bdfWriter'

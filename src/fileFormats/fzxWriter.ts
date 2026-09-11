@@ -41,7 +41,10 @@ function countTopAndBottomBlankRows(
 
 export function writeFzx(params: FontWriteData): Uint8Array {
   const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta } = params
-  const tracking = 0
+  const tracking = params.tracking ?? 0
+  if (!Number.isInteger(tracking) || tracking < -128 || tracking > 127) {
+    throw new Error('FZX tracking must be an integer from -128 to 127')
+  }
   const rowBytes = bpr(glyphWidth)
   const bpg = glyphHeight * rowBytes
 

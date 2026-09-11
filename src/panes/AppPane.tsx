@@ -159,7 +159,7 @@ export function AppPane() {
       result.glyphWidth, result.glyphHeight,
       result.meta ?? undefined, result.encodings ?? undefined,
       result.baseline, result.glyphMeta ?? undefined,
-      result.spacingMode,
+      result.spacingMode, result.tracking,
     )
     if (result.populated) font.populatedGlyphs.value = result.populated
     if (result.source === 'gdos' && result.ascender !== undefined) {

@@ -38,6 +38,7 @@ export interface FontInstance {
   hideEmpty: Signal<boolean>
   dirty: Signal<boolean>
   spacing: Signal<SpacingMode>
+  tracking: Signal<number>
   editorOpen: Signal<boolean>
   savedSnapshot: Signal<Uint8Array>
   /** Bumped on each in-place pixel edit; lets the glyph editor re-render without copying fontData. */
@@ -87,6 +88,7 @@ export function createFont(
   baselineOverride?: number,
   glyphMeta?: (GlyphMeta | null)[],
   spacingMode: SpacingMode = 'monospace',
+  tracking = 0,
 ): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
@@ -135,6 +137,7 @@ export function createFont(
     gridZoom: signal(5),
     hideEmpty: signal(defaultHideEmpty),
     spacing: signal(spacingMode),
+    tracking: signal(tracking),
     editorOpen: signal(false),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
@@ -704,5 +707,6 @@ export function fontToConversionData(font: FontInstance): import('./fontLoad').F
     useCalcMissing: false,
     ascender: font.ascender.value >= 0 ? font.ascender.value : undefined,
     descender: font.descender.value >= 0 ? font.descender.value : undefined,
+    tracking: font.tracking.value,
   }
 }

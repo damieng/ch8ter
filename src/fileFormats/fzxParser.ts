@@ -25,7 +25,7 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
   if (bytes.length < 5) throw new Error('File too small to be an FZX font')
 
   const height = bytes[0]
-  const tracking = bytes[1]
+  const tracking = (bytes[1] << 24) >> 24
   const lastChar = bytes[2]
 
   if (height === 0) throw new Error('FZX font has zero height')

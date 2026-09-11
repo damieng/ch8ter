@@ -88,6 +88,16 @@ describe('PDB proportional widths', () => {
   })
 })
 
+describe('FZX tracking', () => {
+  it('preserves signed tracking values', () => {
+    const font = makeTestFont(8, 8, 32, 1)
+    font.tracking = -2
+
+    const parsed = parseFzx(toBuffer(writeFzx(font)))
+    expect(parsed.tracking).toBe(-2)
+  })
+})
+
 /** Build a simple monospace FontWriteData with a few populated glyphs. */
 function makeTestFont(w: number, h: number, startChar: number, glyphCount: number): FontWriteData {
   const rowBytes = bpr(w)

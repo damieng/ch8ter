@@ -28,6 +28,7 @@ interface StoredFont {
   populatedGlyphs?: number[] | null
   hideEmpty?: boolean
   spacing?: SpacingMode
+  tracking?: number
   sourceContainerId?: string
   charIndex?: (number | undefined)[]
 }
@@ -108,6 +109,7 @@ export function loadFontsFromStorage(): FontInstance[] | null {
         s.baseline,
         s.glyphMeta ?? undefined,
         s.spacing ?? 'monospace',
+        s.tracking ?? 0,
       )
       if (s.fontName) font.fontName.value = s.fontName
       if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
@@ -163,6 +165,7 @@ export function saveFontsToStorage(fontList: FontInstance[]) {
     populatedGlyphs: f.populatedGlyphs.value ? [...f.populatedGlyphs.value] : null,
     hideEmpty: f.hideEmpty.value,
     spacing: f.spacing.value,
+    tracking: f.tracking.value,
     sourceContainerId: f.sourceContainerId,
     charIndex: f.charIndex?.value,
   }))
