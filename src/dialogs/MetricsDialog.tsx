@@ -33,10 +33,13 @@ export function MetricsDialog({ font, onClose }: Props) {
   }
 
   function handleApply() {
+    const previousBaseline = font.baseline.value
+    let appliedBaseline = baseline
     if (width !== font.glyphWidth.value || height !== font.glyphHeight.value) {
       resizeFont(font, width, height, anchorX, anchorY)
+      if (baseline === previousBaseline) appliedBaseline = font.baseline.value
     }
-    font.baseline.value = baseline
+    font.baseline.value = appliedBaseline
     font.ascender.value = ascender
     font.capHeight.value = capHeight
     font.xHeight.value = xHeight
