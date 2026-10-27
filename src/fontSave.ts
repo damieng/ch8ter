@@ -29,7 +29,6 @@ import { writeFzx } from './fileFormats/fzxWriter'
 import { writeGdosFont } from './fileFormats/gdosFontWriter'
 import { exportCpm } from './fileFormats/cpmExport'
 import { writePcf } from './fileFormats/pcfWriter'
-import { writeAmigaFont } from './fileFormats/amigaFontWriter'
 import { writeBbc } from './fileFormats/bbcWriter'
 import { writeEgaCom } from './fileFormats/egaComWriter'
 import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
@@ -41,6 +40,8 @@ import { writeGeosCvt } from './fileFormats/geosWriter'
 import { write64c } from './fileFormats/c64Writer'
 import { writeTap } from './fileFormats/tapWriter'
 import { writePsf1 } from './fileFormats/psfWriter'
+import { writeLhaArchive } from './containers/lhaWriter'
+import { buildAmigaFontDirectory } from './fileFormats/amigaFontWriter'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -59,7 +60,11 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'windows': return writeWindowsFnt(data)
     case 'pcf':   return writePcf(data)
     case 'pdb':   return writePdbFont(data)
-    case 'amiga': return writeAmigaFont(data)
+    case 'amiga': {
+      // Full Amiga installation as an LHA archive: the .font directory file
+      // plus the size-suffixed hunk font in the standard FONTS: layout
+      return writeLhaArchive(buildAmigaFontDirectory(data))
+    }
     case 'atari8': return writeAtari8Bit(data)
     case 'ega':   return writeEgaCom(data)
     case 'bbc':   return writeBbc(data)

@@ -22,7 +22,7 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   pdb:      { ext: '.pdb',  key: 'pdb' },
   palm:     { ext: '.pdb',  key: 'pdb' },
   atari8:   { ext: '.fnt',  key: 'atari8' },
-  amiga:    { ext: '',       key: 'amiga' },
+  amiga:    { ext: '.lha',   key: 'amiga' },
   ega:      { ext: '.com',  key: 'ega' },
   bbc:      { ext: '.bbc',  key: 'bbc' },
   cpm:      { ext: '.com',  key: 'com' },
@@ -140,11 +140,7 @@ function main() {
     outputFile = positional[2]
   } else {
     const base = inputBaseName(inputFile)
-    if (formatName === 'amiga') {
-      outputFile = join(dirname(inputFile), base + '-' + height)
-    } else {
-      outputFile = join(dirname(inputFile), base + format.ext)
-    }
+    outputFile = join(dirname(inputFile), base + format.ext)
   }
 
   // Determine input name (strip .gz if present)

@@ -58,7 +58,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Windows FNT v2/v3 | `.fnt` |
 | Atari 8-bit | `.fnt` |
 | PalmOS | `.pdb` |
-| Amiga | _(height suffix)_ |
+| Amiga | `.lha` | Archive with `.font` index + hunk font in `Fonts/<name>/` |
 | EGA/VGA | `.com` |
 | CP/M Plus | `.com` |
 | Commodore 64 | `.64c` |
