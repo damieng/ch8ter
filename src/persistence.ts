@@ -9,7 +9,9 @@ import { calcAllMetrics, buildGlyphLookup } from './charMetrics'
 
 // --- Types ---
 
-interface StoredFont {
+export interface StoredFont {
+  /** Runtime id (exported so previews can be remapped on import). */
+  id?: string
   fileName: string
   fontName?: string
   startChar: number
@@ -59,6 +61,16 @@ interface StoredLayout {
   focusedId: string
 }
 
+/** Portable bundle of everything the app persists. */
+export interface ProjectFile {
+  app: 'ch8ter'
+  version: 1
+  exported: string
+  fonts: StoredFont[]
+  containers: StoredContainer[]
+  layout: StoredLayout
+}
+
 // --- Storage keys ---
 
 const STORAGE_KEY = 'ch8ter-fonts'
@@ -90,63 +102,68 @@ function fromBase64(b64: string): Uint8Array {
 
 // --- Font persistence ---
 
+/** Rebuild a FontInstance from its stored form. */
+export function fontFromStored(s: StoredFont): FontInstance {
+  const data = fromBase64(s.fontData)
+  const font = createFont(
+    data,
+    s.fileName,
+    s.startChar,
+    s.glyphWidth ?? 8,
+    s.glyphHeight ?? 8,
+    s.meta ?? undefined,
+    s.encodings ?? undefined,
+    s.baseline,
+    s.glyphMeta ?? undefined,
+    s.spacing ?? 'monospace',
+    s.tracking ?? 0,
+  )
+  if (s.fontName) font.fontName.value = s.fontName
+  if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
+  if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
+  if (s.sourceContainerId) font.sourceContainerId = s.sourceContainerId
+  if (s.charIndex) font.charIndex!.value = s.charIndex
+  font.savedSnapshot.value = new Uint8Array(data)
+  font.dirty.value = false
+  if (s.ascender != null) font.ascender.value = s.ascender
+  if (s.capHeight != null) font.capHeight.value = s.capHeight
+  if (s.xHeight != null) font.xHeight.value = s.xHeight
+  if (s.numericHeight != null) font.numericHeight.value = s.numericHeight
+  if (s.descender != null) font.descender.value = s.descender
+  // Auto-calc metrics if not stored
+  if (s.ascender == null) {
+    const w = s.glyphWidth ?? 8
+    const h = s.glyphHeight ?? 8
+    const bpg = h * bpr(w)
+    const count = bpg > 0 ? Math.floor(data.length / bpg) : 0
+    const lookup = buildGlyphLookup(s.startChar, count)
+    const m = calcAllMetrics(data, s.startChar, w, h, lookup)
+    font.ascender.value = m.ascender
+    font.capHeight.value = m.capHeight
+    font.xHeight.value = m.xHeight
+    font.numericHeight.value = m.numericHeight
+    font.descender.value = m.descender
+  }
+  return font
+}
+
 export function loadFontsFromStorage(): FontInstance[] | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const stored: StoredFont[] = JSON.parse(raw)
     if (!Array.isArray(stored) || stored.length === 0) return null
-    return stored.map(s => {
-      const data = fromBase64(s.fontData)
-      const font = createFont(
-        data,
-        s.fileName,
-        s.startChar,
-        s.glyphWidth ?? 8,
-        s.glyphHeight ?? 8,
-        s.meta ?? undefined,
-        s.encodings ?? undefined,
-        s.baseline,
-        s.glyphMeta ?? undefined,
-        s.spacing ?? 'monospace',
-        s.tracking ?? 0,
-      )
-      if (s.fontName) font.fontName.value = s.fontName
-      if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
-      if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
-      if (s.sourceContainerId) font.sourceContainerId = s.sourceContainerId
-      if (s.charIndex) font.charIndex!.value = s.charIndex
-      font.savedSnapshot.value = new Uint8Array(data)
-      font.dirty.value = false
-      if (s.ascender != null) font.ascender.value = s.ascender
-      if (s.capHeight != null) font.capHeight.value = s.capHeight
-      if (s.xHeight != null) font.xHeight.value = s.xHeight
-      if (s.numericHeight != null) font.numericHeight.value = s.numericHeight
-      if (s.descender != null) font.descender.value = s.descender
-      // Auto-calc metrics if not stored
-      if (s.ascender == null) {
-        const w = s.glyphWidth ?? 8
-        const h = s.glyphHeight ?? 8
-        const bpg = h * bpr(w)
-        const count = bpg > 0 ? Math.floor(data.length / bpg) : 0
-        const lookup = buildGlyphLookup(s.startChar, count)
-        const m = calcAllMetrics(data, s.startChar, w, h, lookup)
-        font.ascender.value = m.ascender
-        font.capHeight.value = m.capHeight
-        font.xHeight.value = m.xHeight
-        font.numericHeight.value = m.numericHeight
-        font.descender.value = m.descender
-      }
-      return font
-    })
+    return stored.map(fontFromStored)
   } catch (e) {
     console.warn('Failed to restore fonts from localStorage:', e)
     return null
   }
 }
 
-export function saveFontsToStorage(fontList: FontInstance[]) {
-  const stored: StoredFont[] = fontList.map(f => ({
+/** Serialize font instances to their storable form. */
+export function toStoredFonts(fontList: FontInstance[]): StoredFont[] {
+  return fontList.map(f => ({
+    id: f.id,
     fileName: f.fileName.value,
     fontName: f.fontName.value || undefined,
     startChar: f.startChar.value,
@@ -169,7 +186,10 @@ export function saveFontsToStorage(fontList: FontInstance[]) {
     sourceContainerId: f.sourceContainerId,
     charIndex: f.charIndex?.value,
   }))
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+}
+
+export function saveFontsToStorage(fontList: FontInstance[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(toStoredFonts(fontList)))
 }
 
 // --- Layout persistence ---
@@ -191,7 +211,17 @@ export function saveLayoutToStorage(
   storedPreviewSettings: StoredPreview[],
   focusedId: string,
 ) {
-  const layout: StoredLayout = {
+  localStorage.setItem(LAYOUT_KEY, JSON.stringify(toStoredLayout(windows, previews, storedPreviewSettings, focusedId)))
+}
+
+/** Serialize layout state to its storable form. */
+export function toStoredLayout(
+  windows: Record<string, WindowRect>,
+  previews: { id: string; fontId: string }[],
+  storedPreviewSettings: StoredPreview[],
+  focusedId: string,
+): StoredLayout {
+  return {
     windows,
     previews: previews.map(p => {
       const stored = storedPreviewSettings.find(s => s.id === p.id)
@@ -199,7 +229,46 @@ export function saveLayoutToStorage(
     }),
     focusedId,
   }
-  localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
+}
+
+// --- Project export/import ---
+
+/** Bundle all persisted state into a portable project file. */
+export function buildProjectFile(
+  fontList: FontInstance[],
+  containerList: FontContainer[],
+  windows: Record<string, WindowRect>,
+  previews: { id: string; fontId: string }[],
+  storedPreviewSettings: StoredPreview[],
+  focusedId: string,
+): ProjectFile {
+  return {
+    app: 'ch8ter',
+    version: 1,
+    exported: new Date().toISOString(),
+    fonts: toStoredFonts(fontList),
+    containers: toStoredContainers(containerList),
+    layout: toStoredLayout(windows, previews, storedPreviewSettings, focusedId),
+  }
+}
+
+/** Parse and validate a project file's JSON. */
+export function parseProjectFile(json: string): ProjectFile {
+  const file = JSON.parse(json)
+  if (!file || file.app !== 'ch8ter' || typeof file.version !== 'number') {
+    throw new Error('Not a Ch8ter project file')
+  }
+  if (file.version > 1) {
+    throw new Error(`Project file version ${file.version} is newer than this app supports`)
+  }
+  return {
+    app: 'ch8ter',
+    version: 1,
+    exported: typeof file.exported === 'string' ? file.exported : '',
+    fonts: Array.isArray(file.fonts) ? file.fonts : [],
+    containers: Array.isArray(file.containers) ? file.containers : [],
+    layout: file.layout && typeof file.layout === 'object' ? file.layout : { windows: {}, previews: [], focusedId: '' },
+  }
 }
 
 // --- Auto-save effect for fonts ---
@@ -235,7 +304,7 @@ export function setupFontAutoSave(getFonts: () => FontInstance[]) {
 
 // --- Container persistence ---
 
-interface StoredContainerFont {
+export interface StoredContainerFont {
   label: string
   codepage: number
   deviceName: string
@@ -252,12 +321,38 @@ interface StoredContainerFont {
   spacingMode?: SpacingMode
 }
 
-interface StoredContainer {
+export interface StoredContainer {
   id: string
   fileName: string
   format: string
   meta: ContainerMeta | null
   fonts: StoredContainerFont[]
+}
+
+/** Rebuild a FontContainer from its stored form. */
+export function containerFromStored(sc: StoredContainer): FontContainer {
+  return {
+    id: sc.id,
+    fileName: sc.fileName,
+    format: sc.format,
+    meta: sc.meta ?? null,
+    fonts: sc.fonts.map(sf => ({
+      label: sf.label,
+      codepage: sf.codepage,
+      deviceName: sf.deviceName,
+      deviceType: sf.deviceType ?? 1,
+      startChar: sf.startChar ?? 0,
+      width: sf.width,
+      height: sf.height,
+      numChars: sf.numChars,
+      fontData: fromBase64(sf.fontData),
+      baseline: sf.baseline,
+      meta: sf.meta,
+      glyphMeta: sf.glyphMeta,
+      populated: sf.populated ? new Set(sf.populated) : null,
+      spacingMode: sf.spacingMode,
+    })),
+  }
 }
 
 export function loadContainersFromStorage(): FontContainer[] | null {
@@ -266,36 +361,16 @@ export function loadContainersFromStorage(): FontContainer[] | null {
     if (!raw) return null
     const stored: StoredContainer[] = JSON.parse(raw)
     if (!Array.isArray(stored) || stored.length === 0) return null
-    return stored.map(sc => ({
-      id: sc.id,
-      fileName: sc.fileName,
-      format: sc.format,
-      meta: sc.meta ?? null,
-      fonts: sc.fonts.map(sf => ({
-        label: sf.label,
-        codepage: sf.codepage,
-        deviceName: sf.deviceName,
-        deviceType: sf.deviceType ?? 1,
-        startChar: sf.startChar ?? 0,
-        width: sf.width,
-        height: sf.height,
-        numChars: sf.numChars,
-        fontData: fromBase64(sf.fontData),
-        baseline: sf.baseline,
-        meta: sf.meta,
-        glyphMeta: sf.glyphMeta,
-        populated: sf.populated ? new Set(sf.populated) : null,
-        spacingMode: sf.spacingMode,
-      })),
-    }))
+    return stored.map(containerFromStored)
   } catch (e) {
     console.warn('Failed to restore containers from localStorage:', e)
     return null
   }
 }
 
-function saveContainersToStorage(containerList: FontContainer[]) {
-  const stored: StoredContainer[] = containerList.map(c => ({
+/** Serialize containers to their storable form. */
+export function toStoredContainers(containerList: FontContainer[]): StoredContainer[] {
+  return containerList.map(c => ({
     id: c.id,
     fileName: c.fileName,
     format: c.format,
@@ -317,7 +392,10 @@ function saveContainersToStorage(containerList: FontContainer[]) {
       spacingMode: f.spacingMode,
     })),
   }))
-  localStorage.setItem(CONTAINER_KEY, JSON.stringify(stored))
+}
+
+function saveContainersToStorage(containerList: FontContainer[]) {
+  localStorage.setItem(CONTAINER_KEY, JSON.stringify(toStoredContainers(containerList)))
 }
 
 export function setupContainerAutoSave(getContainers: () => FontContainer[]) {

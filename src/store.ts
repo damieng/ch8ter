@@ -157,6 +157,7 @@ import {
   loadFontsFromStorage, loadLayoutFromStorage,
   loadContainersFromStorage,
   setupFontAutoSave, setupLayoutAutoSave, setupContainerAutoSave,
+  buildProjectFile, parseProjectFile, fontFromStored, containerFromStored,
 } from './persistence'
 export type { WindowRect, StoredPreview } from './persistence'
 
@@ -391,6 +392,65 @@ setupLayoutAutoSave(
 
 // Auto-save containers to localStorage
 setupContainerAutoSave(() => containers.value)
+
+// --- Project export/import ---
+
+/** Serialize all current state (fonts, containers, layout) to a project JSON string. */
+export function exportProject(): string {
+  return JSON.stringify(buildProjectFile(
+    fonts.value,
+    containers.value,
+    windowLayouts.value,
+    previews.value,
+    storedPreviews.value,
+    storedFocusedId.value,
+  ), null, 2)
+}
+
+/**
+ * Replace all state with a parsed project file. The autosave effects fire on
+ * the signal writes, so localStorage ends up consistent with the import.
+ */
+export function importProject(json: string): void {
+  const file = parseProjectFile(json)
+
+  const newFonts = file.fonts.map(fontFromStored)
+  const newContainers = file.containers.map(containerFromStored)
+
+  // Remap preview font references to the fresh runtime ids (fall back to
+  // the first font, matching the preview pane's own fallback behavior)
+  const idMap = new Map<string, string>()
+  file.fonts.forEach((s, i) => {
+    if (s.id && newFonts[i]) idMap.set(s.id, newFonts[i].id)
+  })
+  const fallbackFontId = newFonts[0]?.id ?? ''
+  const remapFontId = (id: string | undefined) =>
+    (id && idMap.get(id)) || fallbackFontId
+
+  fonts.value = newFonts
+  activeFontId.value = newFonts.length > 0 ? newFonts[0].id : ''
+  containers.value = newContainers
+
+  windowLayouts.value = file.layout.windows ?? {}
+  storedPreviews.value = (file.layout.previews ?? []).map(p => ({
+    ...p,
+    fontId: remapFontId(p.fontId),
+    selectedFontId: p.selectedFontId ? remapFontId(p.selectedFontId) : undefined,
+  }))
+  storedFocusedId.value = file.layout.focusedId ?? ''
+  previews.value = storedPreviews.value.map(p => ({ id: p.id, fontId: p.fontId }))
+
+  // Keep the runtime ID counters ahead of the restored ids so new
+  // fonts/containers/previews never collide with imported ones
+  nextContainerId = 1 + newContainers.reduce((max, c) => {
+    const n = parseInt(c.id.replace('container-', ''))
+    return isNaN(n) ? max : Math.max(max, n)
+  }, 0)
+  nextPreviewId = 1 + storedPreviews.value.reduce((max, p) => {
+    const n = parseInt(p.id.replace('preview-', ''))
+    return isNaN(n) ? max : Math.max(max, n)
+  }, 0)
+}
 
 // --- Charset (re-exported from charsets.ts) ---
 

@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { activeFontId, addFont, charset, createFont, glyphCount, removeAllFonts, switchCharset } from './store'
+import {
+  activeFontId, addFont, charset, createFont, glyphCount, removeAllFonts, switchCharset,
+  removeAllFontsAndContainers, fonts,
+  exportProject, importProject, addContainer, createContainerId, containers,
+  previews, windowLayouts, updateWindowLayout, openPreview,
+} from './store'
 
 describe('charset switching', () => {
   beforeEach(() => {
@@ -45,3 +50,65 @@ describe('charset switching', () => {
     expect(second.undoHistory.undo()).toBe(false)
   })
 })
+
+describe('project export/import', () => {
+  beforeEach(() => {
+    removeAllFontsAndContainers()
+    windowLayouts.value = {}
+    previews.value = []
+  })
+
+  it('round-trips fonts, containers, previews and layout', () => {
+    const data = new Uint8Array([1, 2, 3, 4])
+    const font = createFont(data, 'proj.bin', 32, 8, 8)
+    addFont(font)
+    addContainer({
+      id: createContainerId(),
+      fileName: 'bundle.cvt',
+      format: 'test',
+      meta: null,
+      fonts: [{
+        label: '8 pt', codepage: 0, deviceName: '', deviceType: 1,
+        startChar: 32, width: 8, height: 8, numChars: 1,
+        fontData: new Uint8Array([9, 8, 7, 6, 5, 4, 3, 2]),
+      }],
+    })
+    openPreview(font.id)
+    updateWindowLayout('grid-test', { x: 10, y: 20, w: 300, h: 200 })
+
+    const json = exportProject()
+
+    // Wipe everything, then restore
+    removeAllFontsAndContainers()
+    windowLayouts.value = {}
+    previews.value = []
+    expect(fonts.value.length).toBe(0)
+
+    importProject(json)
+
+    expect(fonts.value.length).toBe(1)
+    expect(fonts.value[0].fileName.value).toBe('proj.bin')
+    expect(glyphCount(fonts.value[0])).toBe(1)
+    expect([...fonts.value[0].fontData.value.subarray(0, 4)]).toEqual([1, 2, 3, 4])
+    expect(fonts.value[0].fontData.value.length).toBe(8) // padded to a whole glyph
+    expect(activeFontId.value).toBe(fonts.value[0].id)
+
+    expect(containers.value.length).toBe(1)
+    expect(containers.value[0].fileName).toBe('bundle.cvt')
+    expect(containers.value[0].fonts[0].fontData[0]).toBe(9)
+
+    expect(previews.value.length).toBe(1)
+    expect(previews.value[0].fontId).toBe(fonts.value[0].id)
+    expect(windowLayouts.value['grid-test']).toEqual({ x: 10, y: 20, w: 300, h: 200 })
+
+    // New containers must not collide with imported ids
+    const newId = createContainerId()
+    expect(containers.value.some(c => c.id === newId)).toBe(false)
+  })
+
+  it('rejects JSON that is not a project file', () => {
+    expect(() => importProject('{"hello":1}')).toThrow('Not a Ch8ter project')
+    expect(() => importProject('not json at all')).toThrow()
+  })
+})
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks"
+import { useEffect, useState, useRef } from "preact/hooks"
 import { signal } from "@preact/signals"
 import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import {
@@ -11,7 +11,10 @@ import {
   type Charset,
   removeAllFonts,
   removeAllFontsAndContainers,
+  exportProject,
+  importProject,
 } from "../store"
+import { parseProjectFile } from "../persistence"
 import { loadFontFile, UnknownFormatError, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
@@ -148,6 +151,7 @@ export function AppTitle() {
 
 export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
+  const projectInputRef = useRef<HTMLInputElement>(null)
   const [pngFile, setPngFile] = useState<File | null>(null)
   const [rawFile, setRawFile] = useState<File | null>(null)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
@@ -686,6 +690,59 @@ export function AppPane() {
     })
   }
 
+  function download(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleExportProject() {
+    try {
+      const json = exportProject()
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      download(new Blob([json], { type: 'application/json' }), `ch8ter-project-${date}.json`)
+    } catch (e) {
+      setError({ title: 'Failed to export project', message: (e as Error).message })
+    }
+  }
+
+  async function handleImportProject(file: File) {
+    if (confirmAction) return
+    let json: string
+    let file_: ReturnType<typeof parseProjectFile>
+    try {
+      json = await file.text()
+      file_ = parseProjectFile(json)
+    } catch (e) {
+      setError({ title: 'Failed to read project', message: (e as Error).message })
+      return
+    }
+    const exported = file_.exported ? `Exported ${file_.exported.slice(0, 10)}.` : ''
+    setConfirmAction({
+      title: 'Import project?',
+      message: `This will replace all open fonts, containers, and window layout with the project in ${file.name}. ${exported}\n\nUnsaved changes in the current fonts will be lost.`,
+      confirmLabel: 'Import project',
+      onConfirm: () => {
+        try {
+          importProject(json)
+        } catch (e) {
+          setError({ title: 'Failed to import project', message: (e as Error).message })
+        }
+        setConfirmAction(null)
+      },
+    })
+  }
+
+  function handleImportProjectInput(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (file) void handleImportProject(file)
+  }
+
   function menuItem(label: string, fn: () => void, close: () => void) {
     return (
       <button
@@ -728,6 +785,13 @@ export function AppPane() {
         <IconBtn onClick={handleOpen} title="Open font file">
           <FolderOpen size={ICON} />
         </IconBtn>
+        <input
+          ref={projectInputRef}
+          type="file"
+          accept=".json,application/json"
+          class="hidden"
+          onChange={handleImportProjectInput}
+        />
         <Dropdown
           title="More"
           button={<MoreVertical size={ICON} />}
@@ -738,6 +802,9 @@ export function AppPane() {
         >
           {(close) => (
             <>
+              {menuItem('Export project…', handleExportProject, close)}
+              {menuItem('Import project…', () => projectInputRef.current?.click(), close)}
+              <div class="border-t border-gray-200 my-1" />
               {menuItem('Close All Fonts', handleCloseAllFonts, close)}
               {menuItem('Reset Local Storage', handleResetLocalStorage, close)}
             </>
