@@ -93,6 +93,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {btn('Save as Windows .fon', 'fon', '.fon', close)}
             {btn('Save as C64 GEOS .cvt', 'geos', '.cvt', close)}
             {btn('Save as C64 .64c', '64c', '.64c', close)}
+            {btn('Save as ZX Spectrum .tap', 'tap', '.tap', close)}
           </>
         )}
       </Dropdown>
