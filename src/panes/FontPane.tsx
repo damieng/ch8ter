@@ -222,23 +222,31 @@ export function FontPane({ font }: Props) {
 
       if (ctrl && key === 'c') {
         const text = glyphToText(font, active)
-        navigator.clipboard.writeText(text)
+        // Clipboard API is unavailable in non-secure contexts and can reject
+        // on denied permission; don't crash the handler or leak rejections.
+        try {
+          navigator.clipboard?.writeText(text).catch(() => {})
+        } catch { /* clipboard unavailable */ }
         e.preventDefault()
         return
       }
 
       if (ctrl && key === 'x') {
         const text = glyphToText(font, active)
-        navigator.clipboard.writeText(text)
+        try {
+          navigator.clipboard?.writeText(text).catch(() => {})
+        } catch { /* clipboard unavailable */ }
         execClearGlyph(font, active)
         e.preventDefault()
         return
       }
 
       if (ctrl && key === 'v') {
-        navigator.clipboard.readText().then(text => {
-          execPasteGlyph(font, active, text)
-        })
+        try {
+          navigator.clipboard?.readText().then(text => {
+            execPasteGlyph(font, active, text)
+          }).catch(() => {})
+        } catch { /* clipboard unavailable */ }
         e.preventDefault()
         return
       }

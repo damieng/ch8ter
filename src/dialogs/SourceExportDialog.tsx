@@ -17,7 +17,11 @@ export function SourceExportDialog({ font, onClose }: Props) {
   const fmt = SOURCE_FORMATS.find(f => f.id === format)!
 
   function handleCopy() {
-    navigator.clipboard.writeText(source)
+    // Clipboard API is unavailable in non-secure contexts and can reject
+    // on denied permission; don't leak unhandled rejections.
+    try {
+      navigator.clipboard?.writeText(source).catch(() => {})
+    } catch { /* clipboard unavailable */ }
   }
 
   function handleDownload() {
