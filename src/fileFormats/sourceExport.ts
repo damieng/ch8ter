@@ -123,11 +123,13 @@ export function exportSource(font: FontInstance, format: SourceFormat): string {
     }
 
   } else if (format === 'x86') {
-    // MASM/TASM style: 0FFh (leading zero if first digit is A-F)
+    // MASM/TASM style: suffix h; a leading zero is required when the first
+    // digit would be A-F (or for values < 10), e.g. 0FFh, 041h
     lines.push(`\t; ${filename}`)
     for (let g = 0; g < count; g++) {
       const bytes = Array.from(data.subarray(g * bpg, (g + 1) * bpg))
-      const vals = bytes.map(b => `0x${hex2(b)}`).join(',')
+      const hex = (b: number) => b.toString(16).toUpperCase()
+      const vals = bytes.map(b => `${/^[0-9]/.test(hex(b)) ? '' : '0'}${hex(b)}h`).join(',')
       lines.push(`\tdb\t${vals} ; ${charComment(startChar + g)}`)
     }
   }
