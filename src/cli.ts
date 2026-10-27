@@ -63,6 +63,15 @@ function die(msg: string): never {
   return process.exit(1) as never
 }
 
+/** Parse an integer option value, dying with a clear message on bad input. */
+function parseIntOption(value: string, option: string, min: number): number {
+  const n = parseInt(value, 10)
+  if (isNaN(n) || n < min) {
+    die(`Invalid value for ${option}: '${value}' (expected an integer >= ${min})`)
+  }
+  return n
+}
+
 function inputBaseName(filename: string): string {
   const base = basename(filename)
   const ext = extname(base)
@@ -92,15 +101,15 @@ function main() {
   for (let i = 1; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--width' && i + 1 < args.length) {
-      width = parseInt(args[++i], 10)
+      width = parseIntOption(args[++i], arg, 1)
     } else if (arg === '--height' && i + 1 < args.length) {
-      height = parseInt(args[++i], 10)
+      height = parseIntOption(args[++i], arg, 1)
     } else if (arg === '--start-char' && i + 1 < args.length) {
-      startChar = parseInt(args[++i], 10)
+      startChar = parseIntOption(args[++i], arg, 0)
     } else if (arg === '--name' && i + 1 < args.length) {
       fontName = args[++i]
     } else if (arg === '--baseline' && i + 1 < args.length) {
-      baselineOverride = parseInt(args[++i], 10)
+      baselineOverride = parseIntOption(args[++i], arg, 0)
     } else if (arg.startsWith('-')) {
       die(`Unknown option: ${arg}`)
     } else {
@@ -165,6 +174,8 @@ function main() {
   // Apply overrides
   if (fontName) fontData.fontName = fontName
   if (baselineOverride !== undefined) fontData.baseline = baselineOverride
+  // start-char is an override for every format, not just raw inputs
+  if (startChar !== undefined) fontData.startChar = startChar
 
   // Write output
   let output: Uint8Array | string
