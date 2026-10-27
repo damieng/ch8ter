@@ -48,7 +48,8 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
 
   // Read metadata
   const copyright = readNullTermString(bytes, 6, 60)
-  const dfFace = dfVersion === 0x0300 ? view.getUint32(141, true) : view.getUint32(105, true)
+  // dfFace lives at offset 105 in every FNT version (after dfDevice at 101)
+  const dfFace = view.getUint32(105, true)
   const faceName = dfFace > 0 && dfFace < bytes.length
     ? readNullTermString(bytes, dfFace, bytes.length - dfFace)
     : ''
