@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'preact/hooks'
-import { ZoomIn } from 'lucide-preact'
+import { ZoomIn, Download } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { isFixedWidth } from '../unicodeRanges'
 import { sampleTexts } from '../sampleTexts'
@@ -284,6 +284,38 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
     }
   }, [text, cols, zoom])
 
+  function handleExportPreviewPng() {
+    const canvas = canvasRef.current
+    if (!canvas || !font) return
+    // Snapshot without cursor or selection highlight
+    renderText({
+      canvas,
+      font,
+      lines: wrappedLines,
+      attrs,
+      scale: zoom,
+      cols,
+      fg,
+      bg,
+      cursorPos: null,
+      showCursor: false,
+      selected: new Set<string>(),
+      proportional,
+      lineHeight: gh,
+    })
+    canvas.toBlob(blob => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = font.fileName.value.replace(/\.[a-zA-Z0-9]+$/i, '') + '-preview.png'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+      renderCanvas()
+    }, 'image/png')
+  }
+
   function handleTextareaInput() {
     if (textareaRef.current) {
       setText(textareaRef.current.value)
@@ -348,7 +380,14 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
             setBg(COLOR_SYSTEMS[idx].bg)
           }}
         />
-        <div class="relative ml-auto" ref={zoomRef}>
+        <div class="relative ml-auto flex items-center gap-1.5" ref={zoomRef}>
+          <button
+            class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
+            onClick={handleExportPreviewPng}
+            title="Export preview as PNG"
+          >
+            <Download size={14} />
+          </button>
           <button
             class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"
             onClick={() => setZoomOpen(!zoomOpen)}
