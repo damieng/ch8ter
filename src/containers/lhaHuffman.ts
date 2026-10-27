@@ -87,14 +87,24 @@ export function buildTable(codeLengths: Uint8Array, tableBits: number): HuffTabl
         if (bit === 0) {
           // Leaf
           arr[node] = sym
-        } else if (arr[node] < 0) {
-          // Follow existing internal node
-          node = ~arr[node]
-        } else {
-          // Create new internal node
+        } else if (arr[node] === -1) {
+          // Empty slot: create a new internal node here
           const nn = nextNode++
           arr[node] = ~nn
           left[nn] = -1
+          right[nn] = -1
+          node = nn
+        } else if (arr[node] < -1) {
+          // Existing internal node (stored as ~index, always < -1)
+          node = ~arr[node]
+        } else {
+          // Slot holds a leaf: overlapping codes (malformed stream).
+          // Displace the existing leaf one level down so the walk can
+          // continue without losing it or corrupting other subtrees.
+          const nn = nextNode++
+          const displaced = arr[node]
+          arr[node] = ~nn
+          left[nn] = typeof displaced === 'number' && displaced >= 0 ? displaced : -1
           right[nn] = -1
           node = nn
         }
