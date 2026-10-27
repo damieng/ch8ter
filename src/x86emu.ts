@@ -4,6 +4,11 @@
 // stubs found in DOS .CPX (compressed .CPI) files. No I/O, no segments,
 // flat 64 KB memory model.
 
+/** Reinterpret an unsigned 16-bit value as signed. */
+const toSigned16 = (v: number) => (v & 0x8000) !== 0 ? v - 0x10000 : v
+/** Reinterpret an unsigned 8-bit value as signed. */
+const toSigned8 = (v: number) => (v & 0x80) !== 0 ? v - 0x100 : v
+
 export class X86Emu {
   mem: Uint8Array
   ax = 0; bx = 0; cx = 0; dx = 0
@@ -137,16 +142,19 @@ export class X86Emu {
 
   // --- Flags ---
 
-  setFlagsArith16(result: number) {
+  setFlagsArith16(result: number, exactSigned: number) {
     const r = result & 0xFFFF
     this.zf = r === 0
     this.sf = (r & 0x8000) !== 0
+    // OF is set when the exact signed result does not fit in 16 bits
+    this.of = exactSigned < -0x8000 || exactSigned > 0x7FFF
   }
 
-  setFlagsArith8(result: number) {
+  setFlagsArith8(result: number, exactSigned: number) {
     const r = result & 0xFF
     this.zf = r === 0
     this.sf = (r & 0x80) !== 0
+    this.of = exactSigned < -0x80 || exactSigned > 0x7F
   }
 
   // --- Mod/RM decoding ---
@@ -267,36 +275,37 @@ export class X86Emu {
             result = val + imm
             this.cf = result > 0xFFFF
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) + toSigned16(imm))
             break
           case 1: // OR
             result = val | imm
             this.cf = false
+            this.of = false
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, 0)
             break
           case 2: // ADC
             result = val + imm + (this.cf ? 1 : 0)
             this.cf = result > 0xFFFF
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) + toSigned16(imm) + (this.cf ? 1 : 0))
             break
           case 3: // SBB
             result = val - imm - (this.cf ? 1 : 0)
             this.cf = result < 0
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) - toSigned16(imm) - (this.cf ? 1 : 0))
             break
           case 5: // SUB
             result = val - imm
             this.cf = result < 0
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) - toSigned16(imm))
             break
           case 7: // CMP
             result = val - imm
             this.cf = result < 0
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) - toSigned16(imm))
             break
           default:
             throw new Error(`Unimplemented 83 /${m.reg}`)
@@ -483,20 +492,20 @@ export class X86Emu {
             const result = val + imm
             this.cf = result > 0xFFFF
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) + toSigned16(imm))
             break
           }
           case 5: { // SUB
             const result = val - imm
             this.cf = result < 0
             this.setRM16(m, result)
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) - toSigned16(imm))
             break
           }
           case 7: { // CMP
             const result = val - imm
             this.cf = result < 0
-            this.setFlagsArith16(result)
+            this.setFlagsArith16(result, toSigned16(val) - toSigned16(imm))
             break
           }
           default:
@@ -513,7 +522,7 @@ export class X86Emu {
         const result = a + b
         this.cf = result > 0xFFFF
         this.setRM16(m, result)
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, toSigned16(a) + toSigned16(b))
         break
       }
 
@@ -525,7 +534,7 @@ export class X86Emu {
         const result = a + b + (this.cf ? 1 : 0)
         this.cf = result > 0xFFFF
         this.setRM16(m, result)
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, toSigned16(a) + toSigned16(b) + (this.cf ? 1 : 0))
         break
       }
 
@@ -537,7 +546,7 @@ export class X86Emu {
         const result = a - b - (this.cf ? 1 : 0)
         this.cf = result < 0
         this.setRM16(m, result)
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, toSigned16(a) - toSigned16(b) - (this.cf ? 1 : 0))
         break
       }
 
@@ -549,7 +558,7 @@ export class X86Emu {
         const result = a - b
         this.cf = result < 0
         this.setRM16(m, result)
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, toSigned16(a) - toSigned16(b))
         break
       }
 
@@ -560,16 +569,18 @@ export class X86Emu {
         this.cf = false
         this.of = false
         this.setRM16(m, result)
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, 0)
         break
       }
 
       // CMP r/m16, r16 (39)
       case 0x39: {
         const m = this.decodeModRM(this.fetchU8())
-        const result = this.getRM16(m) - this.getR16(m.reg)
+        const a = this.getRM16(m)
+        const b = this.getR16(m.reg)
+        const result = a - b
         this.cf = result < 0
-        this.setFlagsArith16(result)
+        this.setFlagsArith16(result, toSigned16(a) - toSigned16(b))
         break
       }
 
@@ -579,7 +590,7 @@ export class X86Emu {
         const al = this.ax & 0xFF
         const result = al - imm
         this.cf = result < 0
-        this.setFlagsArith8(result)
+        this.setFlagsArith8(result, toSigned8(al) - toSigned8(imm))
         this.ax = (this.ax & 0xFF00) | (result & 0xFF)
         break
       }
@@ -587,9 +598,10 @@ export class X86Emu {
       // CMP AL, imm8 (3C)
       case 0x3C: {
         const imm = this.fetchU8()
-        const result = (this.ax & 0xFF) - imm
+        const al = this.ax & 0xFF
+        const result = al - imm
         this.cf = result < 0
-        this.setFlagsArith8(result)
+        this.setFlagsArith8(result, toSigned8(al) - toSigned8(imm))
         break
       }
 
@@ -629,7 +641,7 @@ export class X86Emu {
           case 3: // NEG
             this.cf = val !== 0
             this.setRM16(m, (-val) & 0xFFFF)
-            this.setFlagsArith16(-val)
+            this.setFlagsArith16(-val, -toSigned16(val))
             break
           default:
             throw new Error(`Unimplemented F7 /${m.reg}`)
