@@ -279,7 +279,8 @@ export function loadFontFile(
   }
 
   if (lower.endsWith('.64c')) {
-    const dataLen = Math.min(128 * 8, buf.byteLength - 2)
+    // Full C64 character sets are 2048 bytes (256 chars x 8 rows)
+    const dataLen = Math.max(0, Math.min(256 * 8, buf.byteLength - 2))
     return makeResult({
       fontData: new Uint8Array(buf.slice(2, 2 + dataLen)), glyphWidth: 8, glyphHeight: 8,
       startChar: 0, baseline: 6, fontName: name,
