@@ -18,13 +18,29 @@ interface Props {
   zIndex?: number
 }
 
+/** Keep the window reachable: at least a strip of the title bar stays
+ *  inside the viewport (dragging and restored positions are both clamped). */
+function clampPos(p: { x: number; y: number }, w: number): { x: number; y: number } {
+  const minVisible = 60
+  const maxX = window.innerWidth - minVisible
+  const minX = Math.min(0, minVisible - Math.max(w, minVisible))
+  const maxY = window.innerHeight - minVisible
+  return {
+    x: Math.max(minX, Math.min(maxX, p.x)),
+    y: Math.max(0, Math.min(maxY, p.y)),
+  }
+}
+
 export function BasePane({
   title, children, statusBar, windowId, initialX, initialY,
   initialW, initialH, resizable, aspectRatio,
   onFocus, onClose, zIndex = 1
 }: Props) {
   const stored = windowId ? windowLayouts.value[windowId] : undefined
-  const [pos, setPos] = useState({ x: stored?.x ?? initialX, y: stored?.y ?? initialY })
+  const [pos, setPos] = useState(() => clampPos(
+    { x: stored?.x ?? initialX, y: stored?.y ?? initialY },
+    stored?.w ?? (initialW ?? 0),
+  ))
   const [size, setSize] = useState({
     w: resizable ? (stored?.w ?? (initialW ?? 0)) : (initialW ?? 0),
     h: resizable ? (stored?.h ?? (initialH ?? 0)) : (initialH ?? 0),
@@ -69,7 +85,10 @@ export function BasePane({
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (dragging.current) {
-        const next = { x: e.clientX - offset.current.x, y: e.clientY - offset.current.y }
+        const next = clampPos(
+          { x: e.clientX - offset.current.x, y: e.clientY - offset.current.y },
+          sizeRef.current.w,
+        )
         posRef.current = next
         setPos(next)
       }
