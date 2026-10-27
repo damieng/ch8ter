@@ -37,6 +37,7 @@ import { writePdbFont } from './fileFormats/pdbFontWriter'
 import { writeWindowsFnt } from './fileFormats/windowsFntWriter'
 import { writeCpi } from './fileFormats/cpiWriter'
 import { writeFon } from './fileFormats/fonWriter'
+import { writeGeosCvt } from './fileFormats/geosWriter'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -62,6 +63,7 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'com':   return exportCpm(data)
     case 'cpi':   return writeCpi(data)
     case 'fon':   return writeFon(data)
+    case 'geos':  return writeGeosCvt(data)
     default:
       throw new Error(`Unsupported output format: .${e}`)
   }

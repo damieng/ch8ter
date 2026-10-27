@@ -23,6 +23,7 @@ import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
 import { parseSbit, isSbitFont } from './fileFormats/sbitParser'
 import { pickTapFont } from './fileFormats/tapParser'
+import { parseGeosCvt } from './fileFormats/geosParser'
 import { bdfCharsetMap } from './charsets'
 import { bpr } from './bitUtils'
 
@@ -300,6 +301,22 @@ export function loadFontFile(
       fontData: entry.fontData, glyphWidth: 8, glyphHeight: 8,
       startChar: 0, baseline: 7, fontName: name,
       detectedCharset: 'zx',
+    })
+  }
+
+  // C64 GEOS font — CVT container; the app opens every point size as a
+  // container, the CLI takes the smallest (most bitmap-friendly) size
+  if (lower.endsWith('.cvt')) {
+    const sets = parseGeosCvt(new Uint8Array(buf))
+    if (sets.length === 0) {
+      throw new Error('GEOS CVT file contains no glyph data')
+    }
+    const set = sets.reduce((best, s) => (s.size < best.size ? s : best), sets[0])
+    return makeResult({
+      fontData: set.fontData, glyphWidth: set.glyphWidth, glyphHeight: set.glyphHeight,
+      startChar: 0x20, baseline: set.ascent, fontName: name,
+      glyphMeta: set.glyphMeta, populated: set.populated,
+      spacingMode: 'proportional',
     })
   }
 

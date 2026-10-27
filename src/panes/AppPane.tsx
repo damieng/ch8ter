@@ -20,6 +20,7 @@ import { parseFon } from "../fileFormats/fonParser"
 import { parseSbit, isSbitFont } from "../fileFormats/sbitParser"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { extractTapFonts } from "../fileFormats/tapParser"
+import { parseGeosCvt } from "../fileFormats/geosParser"
 import { isBmFontText, parseBmFont, buildFontFromPage } from "../fileFormats/bmFontParser"
 import { imageToData } from "../fileFormats/pngImport"
 import { IconBtn } from "../components/IconBtn"
@@ -99,6 +100,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
   { exts: '.ch8 .fzx .tap', name: 'ZX Spectrum' },
+  { exts: '.cvt',          name: 'C64 GEOS' },
 ]
 
 const HOTKEYS: { key: string; desc: string }[] = [
@@ -286,6 +288,43 @@ export function AppPane() {
         })
       } catch (e) {
         setError({ title: 'Failed to open TAP', message: (e as Error).message })
+      }
+      return
+    }
+
+    // CVT files are C64 GEOS fonts — one point size per VLIR record
+    if (lower.endsWith(".cvt")) {
+      try {
+        const sets = parseGeosCvt(new Uint8Array(buf))
+        if (sets.length === 0) {
+          setError({ title: 'No fonts in CVT', message: `${name} contains no glyph data.` })
+          return
+        }
+        const fonts: ContainerFont[] = sets.map(s => ({
+          label: s.size > 0 ? `${s.size} pt` : 'mega',
+          codepage: 0,
+          deviceName: '',
+          deviceType: 1,
+          startChar: 0x20,
+          width: s.glyphWidth,
+          height: s.glyphHeight,
+          numChars: s.populated.size,
+          fontData: s.fontData,
+          baseline: s.ascent,
+          glyphMeta: s.glyphMeta,
+          populated: s.populated,
+          spacingMode: 'proportional',
+          charsetKey: 'iso8859_1',
+        }))
+        addContainer({
+          id: createContainerId(),
+          fileName: name,
+          format: 'C64 GEOS font',
+          meta: null,
+          fonts,
+        })
+      } catch (e) {
+        setError({ title: 'Failed to open GEOS font', message: (e as Error).message })
       }
       return
     }

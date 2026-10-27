@@ -33,6 +33,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | CP/M Plus / EGA/VGA | `.com` | Source auto-detected; multi-font support |
 | BBC Micro | `.bbc` | Also detected by magic bytes |
 | Commodore 64 | `.64c` | |
+| C64 GEOS | `.cvt` | One point size per VLIR record; opens as container |
 | Amiga hunk | _(any)_ | Detected by magic bytes |
 | PNG tile sheet | `.png` | Auto-detection of scale, gaps, borders |
 | Gzip-compressed | `.gz` | Transparent decompression of any format |
@@ -57,6 +58,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | CP/M Plus | `.com` |
 | DOS codepage | `.cpi` |
 | Windows FON | `.fon` |
+| C64 GEOS | `.cvt` |
 | AngelCode BMFont | `.fnt` + `_0.png` |
 | BBC Micro | `.bbc` |
 
