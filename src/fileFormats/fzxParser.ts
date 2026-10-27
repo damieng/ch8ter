@@ -80,7 +80,12 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
     const c = chars[i]
     if (c.absDataPos < 0) continue
 
-    const nextAbsPos = i < numChars - 1 ? chars[i + 1].absDataPos : absEndPos
+    // End of this glyph's data = the next glyph that actually has data
+    // (an offset-0 blank entry has none, so look past it), or the final word.
+    let nextAbsPos = absEndPos
+    for (let j = i + 1; j < numChars; j++) {
+      if (chars[j].absDataPos >= 0) { nextAbsPos = chars[j].absDataPos; break }
+    }
     const dataLen = nextAbsPos - c.absDataPos
 
     if (dataLen <= 0) continue
