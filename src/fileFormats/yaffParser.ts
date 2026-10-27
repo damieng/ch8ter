@@ -77,6 +77,7 @@ export function parseYaff(text: string): YaffParseResult {
   }
 
   const totalSlots = maxCp - minCp + 1
+  if (totalSlots > 65536) throw new Error(`Yaff codepoint range too large (${minCp}..${maxCp}, ${totalSlots} slots). Maximum is 65536 glyphs.`)
   const rowBytes = bpr(glyphWidth)
   const bpg = glyphHeight * rowBytes
   const fontData = new Uint8Array(totalSlots * bpg)
