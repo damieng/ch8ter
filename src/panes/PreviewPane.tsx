@@ -35,6 +35,9 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [focused, setFocused] = useState(false)
   const [cursorVisible, setCursorVisible] = useState(true)
+  /** Bumped on every caret/selection move so the canvas redraws even when
+   *  the blink state doesn't change (setCursorVisible(true) is a no-op). */
+  const [selectionTick, setSelectionTick] = useState(0)
   const dragging = useRef(false)
   const dragAnchor = useRef(0)
   const clickCount = useRef(0)
@@ -104,6 +107,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
 
   const resetBlink = useCallback(() => {
     setCursorVisible(true)
+    setSelectionTick(t => t + 1)
   }, [])
 
   // Click-outside for zoom and color pickers
@@ -152,7 +156,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       proportional,
       lineHeight: gh,
     })
-  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh])
+  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh, selectionTick])
 
   // Normal reactive render
   useEffect(renderCanvas, [renderCanvas])
