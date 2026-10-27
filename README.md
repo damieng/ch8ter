@@ -26,6 +26,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Yaff | `.yaff` | |
 | Acorn Draw | `.draw` | |
 | ZX Spectrum FZX | `.fzx` | Proportional spacing |
+| ZX Spectrum TAP | `.tap` | Extracts font-sized CODE blocks; multi-font opens as container |
 | Atari ST GDOS / Atari 8-bit / Windows FNT | `.fnt` | Source auto-detected |
 | PalmOS | `.pdb` | Proportional spacing |
 | CP/M Plus / EGA/VGA | `.com` | Source auto-detected; multi-font support |

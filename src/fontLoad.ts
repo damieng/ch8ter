@@ -22,6 +22,7 @@ import { parseCh8 } from './fileFormats/ch8Format'
 import { parseAmigaFont, isAmigaHunk } from './fileFormats/amigaFontParser'
 import { parseBbc, isBbcFont } from './fileFormats/bbcParser'
 import { parseSbit, isSbitFont } from './fileFormats/sbitParser'
+import { pickTapFont } from './fileFormats/tapParser'
 import { bdfCharsetMap } from './charsets'
 import { bpr } from './bitUtils'
 
@@ -285,6 +286,20 @@ export function loadFontFile(
       fontData: new Uint8Array(buf.slice(2, 2 + dataLen)), glyphWidth: 8, glyphHeight: 8,
       startChar: 0, baseline: 6, fontName: name,
       detectedCharset: 'c64',
+    })
+  }
+
+  // ZX Spectrum TAP — largest font-sized CODE block (multiple fonts open as
+  // a container in the app; the CLI takes the best candidate)
+  if (lower.endsWith('.tap')) {
+    const entry = pickTapFont(new Uint8Array(buf))
+    if (!entry) {
+      throw new Error('No font-sized CODE blocks (768/1024/2048 bytes) found in TAP file')
+    }
+    return makeResult({
+      fontData: entry.fontData, glyphWidth: 8, glyphHeight: 8,
+      startChar: 0, baseline: 7, fontName: name,
+      detectedCharset: 'zx',
     })
   }
 

@@ -290,6 +290,8 @@ export interface ContainerFont {
   glyphMeta?: (GlyphMeta | null)[] | null
   populated?: Set<number> | null
   spacingMode?: SpacingMode
+  /** Explicit charset key (e.g. 'zx'); overrides the cp<codepage> mapping. */
+  charsetKey?: string
 }
 
 export interface ContainerMeta {

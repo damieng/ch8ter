@@ -19,6 +19,7 @@ import { decompressCpx } from "../fileFormats/cpxDecoder"
 import { parseFon } from "../fileFormats/fonParser"
 import { parseSbit, isSbitFont } from "../fileFormats/sbitParser"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
+import { extractTapFonts } from "../fileFormats/tapParser"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
@@ -94,7 +95,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.fnt .fon',     name: 'Windows FNT' },
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
-  { exts: '.ch8 .fzx',     name: 'ZX Spectrum' },
+  { exts: '.ch8 .fzx .tap', name: 'ZX Spectrum' },
 ]
 
 const HOTKEYS: { key: string; desc: string }[] = [
@@ -249,6 +250,39 @@ export function AppPane() {
         })
       } catch (e) {
         setError({ title: 'Failed to open CPI', message: (e as Error).message })
+      }
+      return
+    }
+
+    // TAP files are ZX Spectrum tape images; extract font-sized CODE blocks
+    if (lower.endsWith(".tap")) {
+      try {
+        const entries = extractTapFonts(new Uint8Array(buf))
+        if (entries.length === 0) {
+          setError({ title: 'No fonts in TAP', message: `${name} contains no font-sized CODE blocks (768/1024/2048 bytes of 8x8 glyphs).` })
+          return
+        }
+        const fonts: ContainerFont[] = entries.map(f => ({
+          label: f.label,
+          codepage: 0,
+          deviceName: '',
+          deviceType: 1,
+          startChar: 0,
+          width: 8,
+          height: 8,
+          numChars: f.numChars,
+          fontData: f.fontData,
+          charsetKey: 'zx',
+        }))
+        addContainer({
+          id: createContainerId(),
+          fileName: name,
+          format: 'ZX Spectrum TAP',
+          meta: null,
+          fonts,
+        })
+      } catch (e) {
+        setError({ title: 'Failed to open TAP', message: (e as Error).message })
       }
       return
     }

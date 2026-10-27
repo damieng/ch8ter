@@ -101,8 +101,8 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
     font.sourceContainerId = container.id
 
-    const cpKey = `cp${cf.codepage}` as Charset
-    switchCharset(cpKey in CHARSETS ? cpKey : 'cp437' as Charset)
+    const cpKey = cf.charsetKey ?? `cp${cf.codepage}`
+    switchCharset(cpKey in CHARSETS ? (cpKey as Charset) : 'cp437' as Charset)
     recalcMetrics(font)
     addFont(font)
   }
