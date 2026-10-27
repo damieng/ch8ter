@@ -13,6 +13,7 @@ import {
   removeAllFontsAndContainers,
   exportProject,
   importProject,
+  fonts,
 } from "../store"
 import { parseProjectFile } from "../persistence"
 import { loadFontFile, UnknownFormatError, type FontConversionData } from "../fontLoad"
@@ -152,6 +153,18 @@ export function AppTitle() {
 export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
   const projectInputRef = useRef<HTMLInputElement>(null)
+
+  // Warn before leaving with unsaved fonts
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (fonts.value.some(f => f.dirty.value)) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
   const [pngFile, setPngFile] = useState<File | null>(null)
   const [rawFile, setRawFile] = useState<File | null>(null)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
