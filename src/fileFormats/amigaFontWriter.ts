@@ -26,6 +26,11 @@ export function writeAmigaFont(params: FontWriteData): Uint8Array {
   const bpg = glyphHeight * rowBytes
   const loChar = startChar
   const hiChar = startChar + glyphCount - 1
+  // tf_LoChar/tf_HiChar are bytes; wrapping them silently would produce a
+  // font whose visible range differs from the source.
+  if (hiChar > 255) {
+    throw new Error(`Amiga fonts support at most 256 glyphs (char range ${loChar}..${hiChar})`)
+  }
   const numChars = glyphCount
   const numEntries = numChars + 1 // +1 for replacement glyph
 
@@ -154,6 +159,9 @@ export function writeAmigaFont(params: FontWriteData): Uint8Array {
 
   // CharLoc table: {bitOffset: u16, bitWidth: u16} per entry
   for (let i = 0; i < numEntries; i++) {
+    if (bitOffsets[i] > 0xFFFF) {
+      throw new Error('Amiga font bitmap data too large (CharLoc bit offsets are 16-bit)')
+    }
     hv.setUint16(charLocOff + i * 4, bitOffsets[i], false)
     hv.setUint16(charLocOff + i * 4 + 2, bitWidths[i], false)
   }
