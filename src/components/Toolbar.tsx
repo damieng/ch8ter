@@ -89,6 +89,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {btn('Save as BBC Micro .bbc', 'bbc', '.bbc', close)}
             {btn('Save as CP/M Plus .com', 'com', '.com', close)}
             {btn('Save as DOS .cpi', 'cpi', '.cpi', close)}
+            {btn('Save as Windows .fon', 'fon', '.fon', close)}
           </>
         )}
       </Dropdown>

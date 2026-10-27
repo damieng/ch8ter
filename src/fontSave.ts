@@ -36,6 +36,7 @@ import { writeAtari8Bit } from './fileFormats/atari8BitWriter'
 import { writePdbFont } from './fileFormats/pdbFontWriter'
 import { writeWindowsFnt } from './fileFormats/windowsFntWriter'
 import { writeCpi } from './fileFormats/cpiWriter'
+import { writeFon } from './fileFormats/fonWriter'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -60,6 +61,7 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'bbc':   return writeBbc(data)
     case 'com':   return exportCpm(data)
     case 'cpi':   return writeCpi(data)
+    case 'fon':   return writeFon(data)
     default:
       throw new Error(`Unsupported output format: .${e}`)
   }

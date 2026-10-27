@@ -54,6 +54,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | EGA/VGA | `.com` |
 | CP/M Plus | `.com` |
 | DOS codepage | `.cpi` |
+| Windows FON | `.fon` |
 | BBC Micro | `.bbc` |
 
 **Export**:
