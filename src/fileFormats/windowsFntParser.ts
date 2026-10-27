@@ -91,9 +91,12 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
   if (dfVersion === 0x0300) {
     headerSize = 148
     charEntrySize = 6 // width: u16, offset: u32
-  } else {
-    // v1 and v2
+  } else if (dfVersion === 0x0200) {
     headerSize = 118
+    charEntrySize = 4 // width: u16, offset: u16
+  } else {
+    // v1: 117-byte header (no dfReserved byte), same 4-byte entries as v2
+    headerSize = 117
     charEntrySize = 4 // width: u16, offset: u16
   }
 
