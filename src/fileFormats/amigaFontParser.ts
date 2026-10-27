@@ -130,7 +130,7 @@ export function parseAmigaFont(buf: ArrayBuffer): AmigaFontParseResult {
   for (let i = 0; i < numChars; i++) {
     const bitWidth = view.getUint16(charLocOff + i * 4 + 2, false)
     if (bitWidth > maxWidth) maxWidth = bitWidth
-    if (charSpaceOff) {
+    if (charSpaceOff && charSpaceOff + (i + 1) * 2 <= d.length) {
       const space = view.getInt16(charSpaceOff + i * 2, false)
       if (space > maxWidth) maxWidth = space
     }
