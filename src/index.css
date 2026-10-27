@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: the theme module toggles `dark` on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
   margin: 0;
   background: #f0f2f5;
@@ -12,3 +15,69 @@ body {
 #app {
   min-height: 100vh;
 }
+
+/* ------------------------------------------------------------------ */
+/* Dark mode. The app styles its chrome with light-mode utility classes */
+/* directly, so the dark theme remaps those utilities globally instead  */
+/* of sprinkling `dark:` variants through every component. Unlayered    */
+/* CSS wins over Tailwind's layered utilities, so plain overrides here  */
+/* apply everywhere at once. Canvas contents keep their own colors.     */
+/* ------------------------------------------------------------------ */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+
+/* Surfaces */
+html.dark .bg-white { background-color: #1e293b; }
+html.dark .bg-gray-50 { background-color: #131c2e; }
+html.dark .bg-gray-100 { background-color: #232f47; }
+html.dark .bg-gray-200 { background-color: #334155; }
+html.dark .bg-gray-300 { background-color: #475569; }
+html.dark .bg-gray-800 { background-color: #0f172a; }
+html.dark .bg-black\/40 { background-color: rgb(0 0 0 / 0.65); }
+
+html.dark .bg-blue-50 { background-color: #1c2a44; }
+html.dark .bg-blue-100 { background-color: #1e3a5f; }
+html.dark .hover\:bg-blue-50:hover { background-color: #253552; }
+html.dark .hover\:bg-blue-100:hover { background-color: #25476f; }
+html.dark .hover\:bg-gray-50:hover { background-color: #1a2740; }
+html.dark .hover\:bg-gray-100:hover { background-color: #2a3852; }
+
+html.dark .bg-red-50 { background-color: #2a1215; }
+html.dark .bg-red-100 { background-color: #3b1519; }
+
+/* Text */
+html.dark .text-gray-300 { color: #94a3b8; }
+html.dark .text-gray-400 { color: #94a3b8; }
+html.dark .text-gray-500 { color: #a3b2c7; }
+html.dark .text-gray-600 { color: #cbd5e1; }
+html.dark .text-gray-700 { color: #e2e8f0; }
+html.dark .text-blue-500 { color: #7fb1fa; }
+html.dark .text-blue-600 { color: #93c5fd; }
+html.dark .text-blue-700 { color: #bfdbfe; }
+html.dark .text-red-500 { color: #f87171; }
+html.dark .text-red-800 { color: #fca5a5; }
+html.dark .text-green-700 { color: #86efac; }
+html.dark .text-amber-600 { color: #fcd34d; }
+html.dark .hover\:text-blue-500:hover { color: #93c5fd; }
+html.dark .hover\:text-blue-700:hover { color: #bfdbfe; }
+html.dark .hover\:text-gray-700:hover { color: #e2e8f0; }
+
+/* Borders */
+html.dark .border-gray-100 { border-color: #1c2941; }
+html.dark .border-gray-50 { border-color: #16213a; }
+html.dark .border-gray-200 { border-color: #2b3a55; }
+html.dark .border-gray-300 { border-color: #3b4d6b; }
+html.dark .border-gray-400 { border-color: #526180; }
+html.dark .border-blue-300 { border-color: #2f4d7a; }
+html.dark .border-blue-400 { border-color: #3b82f6; }
+html.dark .border-blue-500 { border-color: #3b82f6; }
+html.dark .border-blue-600 { border-color: #2563eb; }
+html.dark .border-red-400 { border-color: #b91c1c; }
+html.dark .hover\:border-blue-400:hover { border-color: #60a5fa; }
