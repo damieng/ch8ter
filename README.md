@@ -1,6 +1,6 @@
 # Ch8ter
 
-An online bitmap font editor for retro computing character sets. Edit pixel-level glyphs in variable-size fonts, preview text with authentic color palettes, and import/export across 20+ formats.
+An online bitmap font editor for retro computing character sets. Edit pixel-level glyphs in variable-size fonts, preview text with authentic color palettes, and import/export across 25+ formats.
 
 Try it now at https://damieng.github.io/ch8ter/
 
@@ -29,6 +29,9 @@ Try it now at https://damieng.github.io/ch8ter/
 | ZX Spectrum TAP | `.tap` | Extracts font-sized CODE blocks; multi-font opens as container |
 | AngelCode BMFont | `.fnt` + `.png` | Text descriptor format; drop descriptor and page PNGs together |
 | Atari ST GDOS / Atari 8-bit / Windows FNT | `.fnt` | Source auto-detected |
+| Windows FON | `.fon` | NE container; each FNT resource opens as a container entry |
+| DOS codepage | `.cpi`, `.cpx` | FONT, FONT.NT and DRFONT variants; opens as container |
+| TTF/OTF embedded bitmaps | `.ttf`, `.otf` | EBLC/EBDT/EBSC strikes; multi-strike opens as container |
 | PalmOS | `.pdb` | Proportional spacing |
 | CP/M Plus / EGA/VGA | `.com` | Source auto-detected; multi-font support |
 | BBC Micro | `.bbc` | Also detected by magic bytes |
@@ -50,7 +53,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Acorn Draw | `.draw` |
 | ZX Spectrum FZX | `.fzx` |
 | Atari ST GDOS | `.fnt` |
-| Windows FNT v2 | `.fnt` |
+| Windows FNT v2/v3 | `.fnt` |
 | Atari 8-bit | `.fnt` |
 | PalmOS | `.pdb` |
 | Amiga | _(height suffix)_ |
@@ -97,7 +100,7 @@ Try it now at https://damieng.github.io/ch8ter/
 
 ### Proportional spacing
 
-- Per-glyph advance widths loaded from BDF, FZX, PCF, PDB, Amiga, and Atari ST GDOS fonts
+- Per-glyph advance widths loaded from BDF, FZX, PCF, PDB, Amiga, GEOS, BMFont, and Atari ST GDOS fonts
 - Drag the green advance-width guide in the glyph editor to adjust a character's width
 - Unicode fixed-width ranges (box drawing, block elements, etc.) always render at full cell width
 - Proportional and monospace preview rendering
@@ -145,7 +148,7 @@ Batch convert fonts from the command line:
 ch8ter convert <input-file> <format> [output-file] [options]
 ```
 
-Output formats: `ch8`, `bdf`, `psf`, `yaff`, `draw`, `fzx`, `gdos`, `pcf`, `pdb`, `atari8`, `amiga`, `ega`, `bbc`, `cpm`
+Output formats: `ch8`, `bdf`, `psf`, `yaff`, `draw`, `fzx`, `gdos`, `windows`, `pcf`, `pdb`, `atari8`, `amiga`, `ega`, `bbc`, `cpm`, `cpi`, `fon`, `geos`
 
 Options: `--width`, `--height`, `--start-char`, `--name`, `--baseline`
 

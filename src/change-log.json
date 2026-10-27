@@ -1,5 +1,28 @@
 [
   {
+    "version": "0.9.13",
+    "date": "2026-10-27",
+    "changes": [
+      "C64 GEOS font load and save (.cvt) — every point size opens as a container entry, mega fonts supported",
+      "ZX Spectrum TAP loading — extracts font-sized CODE blocks, multi-font files open as a container",
+      "AngelCode BMFont: load text descriptors with their PNG pages, export packed atlas + descriptor",
+      "DOS .cpi codepage save (FONT variant, codepage derived from charset)",
+      "Windows .fon save (NE container wrapping FNT resources)",
+      "Windows FNT export falls back to v3 when v2's 64K offsets would overflow",
+      "x86 source export now emits MASM/TASM-compatible hex literals",
+      "Fixed fonts opened from a container sharing memory with the container (edits corrupted the container)",
+      "Fixed LHA Huffman decoding for codes longer than the lookup table (corrupted archive contents)",
+      "Fixed hangs on malformed LHA headers (zero-size level-3 headers, oversized filenames)",
+      "Fixed Windows FNT v1 files loading garbled and v3 face names being lost",
+      "Fixed FZX glyph loss when followed by an offset-0 blank entry",
+      "Fixed x86 emulator overflow flag so signed branches run UPX/NRV stubs correctly",
+      "Fixed .64c loading only the first 128 of 256 characters",
+      "CLI: validates numeric options, --start-char applies to all formats, runs under Node again",
+      "UI fixes: Escape closes only the topmost dialog, preview caret redraws immediately, Ctrl shortcuts work with CapsLock/Shift, clipboard errors handled, windows stay on-screen, corrupt PNG/RAW imports show errors",
+      "Hardened sbit, yaff, Amiga and PCF parsers against malformed files"
+    ]
+  },
+  {
     "version": "0.9.12",
     "date": "2026-04-26",
     "changes": [
