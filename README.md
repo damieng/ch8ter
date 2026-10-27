@@ -27,6 +27,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Acorn Draw | `.draw` | |
 | ZX Spectrum FZX | `.fzx` | Proportional spacing |
 | ZX Spectrum TAP | `.tap` | Extracts font-sized CODE blocks; multi-font opens as container |
+| AngelCode BMFont | `.fnt` + `.png` | Text descriptor format; drop descriptor and page PNGs together |
 | Atari ST GDOS / Atari 8-bit / Windows FNT | `.fnt` | Source auto-detected |
 | PalmOS | `.pdb` | Proportional spacing |
 | CP/M Plus / EGA/VGA | `.com` | Source auto-detected; multi-font support |
@@ -56,6 +57,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | CP/M Plus | `.com` |
 | DOS codepage | `.cpi` |
 | Windows FON | `.fon` |
+| AngelCode BMFont | `.fnt` + `_0.png` |
 | BBC Micro | `.bbc` |
 
 **Export**:

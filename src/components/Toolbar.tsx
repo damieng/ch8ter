@@ -26,6 +26,7 @@ import { ErrorDialog } from '../dialogs/ErrorDialog'
 import { Dropdown } from './Dropdown'
 import { baseName } from '../fontLoad'
 import { saveFontFile, TEXT_FORMATS } from '../fontSave'
+import { packBmFontAtlas, renderAtlasRgba, bmFontDescriptorText } from '../fileFormats/bmFontWriter'
 
 const ICON = 18
 
@@ -101,11 +102,36 @@ export function SaveBar({ font }: { font: FontInstance }) {
 export function ExportBar({ font }: { font: FontInstance }) {
   const [sourceOpen, setSourceOpen] = useState(false)
   const [pngOpen, setPngOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function exportTtfFile() {
     saveFont(font)
     const buf = exportTtf(font)
     download(new Blob([buf]), baseName(font.fileName.value) + '.ttf')
+  }
+
+  async function exportBmFont() {
+    try {
+      saveFont(font)
+      const conv = fontToConversionData(font)
+      const atlas = packBmFontAtlas(conv)
+      const base = baseName(font.fileName.value)
+      const pageFile = `${base}_0.png`
+      const rgba = renderAtlasRgba(conv, atlas)
+      const canvas = document.createElement('canvas')
+      canvas.width = atlas.scaleW
+      canvas.height = atlas.scaleH
+      const ctx = canvas.getContext('2d')!
+      const imageData = ctx.createImageData(atlas.scaleW, atlas.scaleH)
+      imageData.data.set(rgba)
+      ctx.putImageData(imageData, 0, 0)
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) throw new Error('Could not encode atlas PNG')
+      download(blob, pageFile)
+      download(new Blob([bmFontDescriptorText(conv, atlas, pageFile)], { type: 'text/plain' }), base + '.fnt')
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
 
   async function exportWoff() {
@@ -143,6 +169,7 @@ export function ExportBar({ font }: { font: FontInstance }) {
       extra={<>
         {pngOpen && <PngExportDialog font={font} onClose={() => setPngOpen(false)} />}
         {sourceOpen && <SourceExportDialog font={font} onClose={() => setSourceOpen(false)} />}
+        {error !== null && <ErrorDialog title="Failed to export BMFont" message={error} onClose={() => setError(null)} />}
       </>}
     >
       {(close) => (
@@ -154,6 +181,7 @@ export function ExportBar({ font }: { font: FontInstance }) {
           <div class="border-t border-gray-200 my-1" />
           {btn('Export PNG...', () => setPngOpen(true), close)}
           {btn('Export Source...', () => setSourceOpen(true), close)}
+          {btn('Export BMFont (.fnt + .png)', () => { void exportBmFont() }, close)}
         </>
       )}
     </Dropdown>

@@ -20,6 +20,8 @@ import { parseFon } from "../fileFormats/fonParser"
 import { parseSbit, isSbitFont } from "../fileFormats/sbitParser"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { extractTapFonts } from "../fileFormats/tapParser"
+import { isBmFontText, parseBmFont, buildFontFromPage } from "../fileFormats/bmFontParser"
+import { imageToData } from "../fileFormats/pngImport"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
 import { PngImportDialog } from "../dialogs/PngImportDialog"
@@ -93,6 +95,7 @@ const FORMATS: { exts: string; name: string }[] = [
   { exts: '.bin .raw',     name: 'RAW binary' },
   { exts: '.ttf .otf',     name: 'TTF/OTF embedded bitmap' },
   { exts: '.fnt .fon',     name: 'Windows FNT' },
+  { exts: '.fnt .png',     name: 'BMFont (drop both)' },
   { exts: '.bdf .pcf',     name: 'X11' },
   { exts: '.yaff',         name: 'YAFF' },
   { exts: '.ch8 .fzx .tap', name: 'ZX Spectrum' },
@@ -358,6 +361,12 @@ export function AppPane() {
       return
     }
 
+    // BMFont text descriptors need their PNG pages; tell the user how to open them
+    if (lower.endsWith(".fnt") && isBmFontText(buf)) {
+      setError({ title: 'BMFont descriptor', message: `${name} is an AngelCode BMFont descriptor.\n\nDrop the .fnt file together with its PNG texture page(s) to open it.` })
+      return
+    }
+
     try {
       const result = loadFontFile(name, buf)
       applyLoadResult(name, result)
@@ -367,6 +376,101 @@ export function AppPane() {
       } else {
         setError({ title: 'Failed to open font', message: (e as Error).message })
       }
+    }
+  }
+
+  /** Load an image File into ImageData via an object URL. */
+  function loadPageImage(file: File): Promise<ImageData> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const image = new Image()
+      image.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve(imageToData(image))
+      }
+      image.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error(`Could not read image: ${file.name}`))
+      }
+      image.src = url
+    })
+  }
+
+  /** Open an AngelCode BMFont descriptor together with its PNG page files. */
+  async function openBmFont(name: string, buf: ArrayBuffer, pageFiles: File[]) {
+    try {
+      const desc = parseBmFont(new TextDecoder().decode(buf))
+
+      // Resolve each page to a dropped PNG by file name (case-insensitive)
+      const byName = new Map(pageFiles.map(f => [f.name.toLowerCase(), f]))
+      const missing: string[] = []
+      const loaded = new Map<number, ImageData>()
+      for (const page of desc.pages) {
+        const base = page.file.replace(/^.*[\\/]/, '').toLowerCase()
+        const file = byName.get(base)
+        if (!file) { missing.push(page.file); continue }
+        loaded.set(page.id, await loadPageImage(file))
+      }
+      if (missing.length > 0) {
+        setError({ title: 'Missing BMFont pages', message: `${name} references pages that were not found in the drop:\n\n${missing.join('\n')}\n\nDrop the descriptor together with its PNG page files.` })
+        return
+      }
+
+      const build = (pageId: number) => {
+        const imageData = loaded.get(pageId)!
+        return buildFontFromPage(desc, pageId, imageData)
+      }
+
+      if (desc.pages.length === 1) {
+        const built = build(desc.pages[0].id)
+        const bpg = built.glyphHeight * Math.ceil(built.glyphWidth / 8)
+        applyLoadResult(name, {
+          fontData: built.fontData,
+          glyphWidth: built.glyphWidth,
+          glyphHeight: built.glyphHeight,
+          startChar: built.startChar,
+          glyphCount: bpg > 0 ? Math.floor(built.fontData.length / bpg) : 0,
+          baseline: built.baseline,
+          meta: { format: 'BMFont', properties: {}, family: built.fontName || undefined },
+          encodings: null,
+          glyphMeta: built.glyphMeta,
+          populated: built.populated,
+          fontName: built.fontName || name,
+          spacingMode: built.spacingMode,
+          detectedCharset: 'win1252',
+          useCalcMissing: false,
+        })
+      } else {
+        const fonts: ContainerFont[] = desc.pages.map(page => {
+          const built = build(page.id)
+          return {
+            label: page.file.replace(/^.*[\\/]/, ''),
+            codepage: 1252,
+            deviceName: '',
+            deviceType: 1,
+            startChar: built.startChar,
+            width: built.glyphWidth,
+            height: built.glyphHeight,
+            numChars: built.populated.size,
+            fontData: built.fontData,
+            baseline: built.baseline,
+            meta: { properties: {}, family: built.fontName || undefined },
+            glyphMeta: built.glyphMeta,
+            populated: built.populated,
+            spacingMode: built.spacingMode,
+            charsetKey: 'win1252',
+          }
+        })
+        addContainer({
+          id: createContainerId(),
+          fileName: name,
+          format: 'AngelCode BMFont',
+          meta: null,
+          fonts,
+        })
+      }
+    } catch (e) {
+      setError({ title: 'Failed to open BMFont', message: (e as Error).message })
     }
   }
 
@@ -472,8 +576,20 @@ export function AppPane() {
       const files = Array.from(dt.files ?? [])
       const urls = extractDropUrls(dt)
 
+      // BMFont descriptors consume their PNG pages from the same drop
+      const used = new Set<File>()
       for (const file of files) {
-        await openFontFile(file)
+        if (!file.name.toLowerCase().endsWith('.fnt')) continue
+        const buf = await file.arrayBuffer()
+        if (!isBmFontText(buf)) continue
+        used.add(file)
+        const pages = files.filter(f => !used.has(f) && f.name.toLowerCase().endsWith('.png'))
+        await openBmFont(file.name, buf, pages)
+        for (const p of pages) used.add(p)
+      }
+
+      for (const file of files) {
+        if (!used.has(file)) await openFontFile(file)
       }
       for (const url of urls) {
         await openFontUrl(url)
