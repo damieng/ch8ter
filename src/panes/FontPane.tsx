@@ -198,33 +198,36 @@ export function FontPane({ font }: Props) {
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
 
       const active = font.lastClickedGlyph.value
+      const ctrl = e.ctrlKey || e.metaKey
+      // toLowerCase so shortcuts work with CapsLock or Shift held (key becomes 'Z')
+      const key = e.key.toLowerCase()
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if (ctrl && key === 'z') {
         undo(font)
         e.preventDefault()
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      if (ctrl && key === 'y') {
         redo(font)
         e.preventDefault()
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      if (ctrl && key === 'a') {
         selectAll(font)
         e.preventDefault()
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (ctrl && key === 'c') {
         const text = glyphToText(font, active)
         navigator.clipboard.writeText(text)
         e.preventDefault()
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+      if (ctrl && key === 'x') {
         const text = glyphToText(font, active)
         navigator.clipboard.writeText(text)
         execClearGlyph(font, active)
@@ -232,7 +235,7 @@ export function FontPane({ font }: Props) {
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      if (ctrl && key === 'v') {
         navigator.clipboard.readText().then(text => {
           execPasteGlyph(font, active, text)
         })
@@ -247,7 +250,7 @@ export function FontPane({ font }: Props) {
       }
 
       // Ctrl+Arrow: navigate glyphs in the grid
-      if ((e.ctrlKey || e.metaKey) && e.key.startsWith('Arrow')) {
+      if (ctrl && e.key.startsWith('Arrow')) {
         const nav = gridNavRef.current
         const slot = nav.hideEmpty ? nav.visibleIndices.indexOf(active) : active
         if (slot < 0) return
