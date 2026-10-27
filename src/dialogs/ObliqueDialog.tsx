@@ -25,6 +25,16 @@ function PreviewGrid({ font, angle }: { font: FontInstance; angle: number }) {
     .filter(i => i >= 0 && i < count)
     .slice(0, 16)
 
+  // Guard against an empty selection (font range excludes all preview
+  // glyphs): Math.ceil(0/0) would otherwise produce NaN canvas dimensions.
+  if (indices.length === 0) {
+    return (
+      <div class="flex items-center justify-center h-24 text-gray-400 text-sm">
+        No preview glyphs in this font's range
+      </div>
+    )
+  }
+
   const cols = Math.min(indices.length, 8)
   const rows = Math.ceil(indices.length / cols)
   const scale = 4
