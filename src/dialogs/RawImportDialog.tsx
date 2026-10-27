@@ -184,6 +184,7 @@ export function RawImportDialog({ file, onClose }: Props) {
   const [showSkipSlider, setShowSkipSlider] = useState(false)
   const skipSliderDragging = useRef(false)
   const [codepage, setCodepage] = useState<Charset>('iso8859_1')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   function handleCodepageChange(cs: Charset) {
     setCodepage(cs)
@@ -194,7 +195,10 @@ export function RawImportDialog({ file, onClose }: Props) {
   }
 
   useEffect(() => {
-    file.arrayBuffer().then(buf => setRaw(new Uint8Array(buf)))
+    setLoadError(null)
+    file.arrayBuffer()
+      .then(buf => setRaw(new Uint8Array(buf)))
+      .catch(() => setLoadError(`Could not read file: ${file.name}`))
   }, [file])
 
   const result = raw ? convertAllGlyphs(raw, settings) : { fontData: new Uint8Array(0), outBytesPerRow: 0, effectiveWidth: 0, totalGlyphs: 0, srcBytesPerGlyph: 0 }
@@ -359,6 +363,10 @@ export function RawImportDialog({ file, onClose }: Props) {
                 <span class="text-gray-400">No glyphs (file too small or settings incorrect)</span>
               </div>
             )
+          ) : loadError ? (
+            <div class="flex items-center justify-center h-32 px-4 text-center">
+              <span class="text-red-500 text-sm">{loadError}</span>
+            </div>
           ) : (
             <div class="flex items-center justify-center h-32">
               <span class="text-gray-400">Loading...</span>

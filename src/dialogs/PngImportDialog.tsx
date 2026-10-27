@@ -24,6 +24,7 @@ export function PngImportDialog({ file, onClose }: Props) {
   const [detected, setDetected] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [codepage, setCodepage] = useState<Charset>('iso8859_1')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Load image
   useEffect(() => {
@@ -37,6 +38,9 @@ export function PngImportDialog({ file, onClose }: Props) {
       setSettings({ ...auto, glyphWidth: 8, glyphHeight: 8 })
       setDetected(true)
       setZoom(4)
+    }
+    image.onerror = () => {
+      setLoadError(`Could not read image: ${file.name}`)
     }
     image.src = url
     return () => URL.revokeObjectURL(url)
@@ -175,6 +179,10 @@ export function PngImportDialog({ file, onClose }: Props) {
               class="block"
               style={{ imageRendering: 'pixelated' }}
             />
+          ) : loadError ? (
+            <div class="flex items-center justify-center h-full px-4 text-center">
+              <span class="text-red-500 text-sm">{loadError}</span>
+            </div>
           ) : (
             <div class="flex items-center justify-center h-full">
               <span class="text-gray-400">Loading...</span>
