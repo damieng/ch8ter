@@ -7,12 +7,20 @@ interface Props {
   label?: string
 }
 
+/** Registration order of open dialogs; only the last (topmost) one may
+ *  react to Escape. Multiple overlays can stack (e.g. drag-drop while a
+ *  dialog is open), and document listeners all receive the event. */
+const dialogStack: object[] = []
+
 export function DialogOverlay({ children, onClose, label }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const previousFocus = useRef<Element | null>(null)
 
   useEffect(() => {
     previousFocus.current = document.activeElement
+
+    const token = {}
+    dialogStack.push(token)
 
     // Focus the first focusable element inside the dialog
     const overlay = overlayRef.current
@@ -25,6 +33,7 @@ export function DialogOverlay({ children, onClose, label }: Props) {
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        if (dialogStack[dialogStack.length - 1] !== token) return
         e.stopPropagation()
         onClose()
         return
@@ -51,6 +60,8 @@ export function DialogOverlay({ children, onClose, label }: Props) {
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
+      const idx = dialogStack.indexOf(token)
+      if (idx >= 0) dialogStack.splice(idx, 1)
       // Restore focus to the element that was focused before the dialog opened
       if (previousFocus.current instanceof HTMLElement) {
         previousFocus.current.focus()
