@@ -80,19 +80,8 @@ export function writeWindowsFnt(params: FontWriteData): Uint8Array {
     totalBitmapSize += bytes.length
   }
 
-  const headerSize = 118
-  const tableSize = (glyphCount + 1) * 4
-  const bitsOffset = headerSize + tableSize
   const faceName = fontName || meta?.family || 'Font'
   const faceBytes = new TextEncoder().encode(faceName)
-  const faceOffset = bitsOffset + totalBitmapSize
-  const totalSize = faceOffset + faceBytes.length + 1
-  if (totalSize > 0xFFFFFFFF || faceOffset > 0xFFFF) {
-    throw new Error('Windows FNT v2 export exceeds its 64 KiB offset limit')
-  }
-
-  const out = new Uint8Array(totalSize)
-  const view = new DataView(out.buffer)
   const fixedWidth = widths.every(width => width === glyphWidth)
   const averageWidth = Math.round(widths.reduce((sum, width) => sum + width, 0) / widths.length)
   const properties = meta?.properties ?? {}
@@ -101,7 +90,50 @@ export function writeWindowsFnt(params: FontWriteData): Uint8Array {
   const xDpi = meta?.xDpi ?? 96
   const yDpi = meta?.yDpi ?? 96
 
-  view.setUint16(0, 0x0200, true)
+  // Layout: v2 (118-byte header, 4-byte char entries, u16 bitmap offsets)
+  // falls back to v3 (148-byte header, 6-byte entries, u32 offsets) when the
+  // bitmap would overflow the v2 64 KiB offset range.
+  const v2FaceOffset = 118 + (glyphCount + 1) * 4 + totalBitmapSize
+  const useV3 = v2FaceOffset > 0xFFFF
+
+  let glyphBitmaps: Uint8Array[]
+  let widthBytesField: number
+  let headerSize: number
+  let charEntrySize: number
+  if (useV3) {
+    // v3 glyphs share a uniform byte-column stride given by dfWidthBytes
+    const stride = Math.max(1, bpr(maxWidth))
+    glyphBitmaps = glyphBytes.map(bytes => {
+      const columns = bytes.length / glyphHeight
+      const out = new Uint8Array(stride * glyphHeight)
+      for (let c = 0; c < columns; c++) {
+        out.set(bytes.subarray(c * glyphHeight, (c + 1) * glyphHeight), c * glyphHeight)
+      }
+      return out
+    })
+    widthBytesField = stride
+    headerSize = 148
+    charEntrySize = 6 // width: u16, offset: u32
+  } else {
+    glyphBitmaps = glyphBytes
+    widthBytesField = fixedWidth ? bpr(glyphWidth) : 0
+    headerSize = 118
+    charEntrySize = 4 // width: u16, offset: u16
+  }
+
+  const tableSize = (glyphCount + 1) * charEntrySize
+  const bitsOffset = headerSize + tableSize
+  const totalBitmapSize3 = glyphBitmaps.reduce((sum, b) => sum + b.length, 0)
+  const faceOffset = bitsOffset + totalBitmapSize3
+  const totalSize = faceOffset + faceBytes.length + 1
+  if (totalSize > 0xFFFFFFFF || faceOffset > 0xFFFFFFFF) {
+    throw new Error('Windows FNT export exceeds its offset limits')
+  }
+
+  const out = new Uint8Array(totalSize)
+  const view = new DataView(out.buffer)
+
+  view.setUint16(0, useV3 ? 0x0300 : 0x0200, true)
   view.setUint32(2, totalSize, true)
   writeString(out, 6, 60, meta?.copyright ?? '')
   view.setUint16(66, 0, true) // raster font
@@ -120,7 +152,7 @@ export function writeWindowsFnt(params: FontWriteData): Uint8Array {
   out[96] = startChar + glyphCount - 1
   out[97] = 0 // default character relative index
   out[98] = Math.max(0, Math.min(glyphCount - 1, 32 - startChar))
-  view.setUint16(99, fixedWidth ? bpr(glyphWidth) : 0, true)
+  view.setUint16(99, widthBytesField, true)
   view.setUint32(105, faceOffset, true)
   view.setUint32(109, 0, true)
   view.setUint32(113, bitsOffset, true)
@@ -129,13 +161,21 @@ export function writeWindowsFnt(params: FontWriteData): Uint8Array {
   let bitmapPos = bitsOffset
   for (let i = 0; i < glyphCount; i++) {
     view.setUint16(tablePos, widths[i], true)
-    view.setUint16(tablePos + 2, bitmapPos, true)
-    tablePos += 4
-    out.set(glyphBytes[i], bitmapPos)
-    bitmapPos += glyphBytes[i].length
+    if (useV3) {
+      view.setUint32(tablePos + 2, bitmapPos, true)
+    } else {
+      view.setUint16(tablePos + 2, bitmapPos, true)
+    }
+    tablePos += charEntrySize
+    out.set(glyphBitmaps[i], bitmapPos)
+    bitmapPos += glyphBitmaps[i].length
   }
   view.setUint16(tablePos, 0, true)
-  view.setUint16(tablePos + 2, bitmapPos, true)
+  if (useV3) {
+    view.setUint32(tablePos + 2, bitmapPos, true)
+  } else {
+    view.setUint16(tablePos + 2, bitmapPos, true)
+  }
   out.set(faceBytes, faceOffset)
 
   return out
