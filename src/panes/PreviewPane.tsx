@@ -258,10 +258,16 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
     handleSelectionChange()
   }
 
+  // Keep a ref to the latest hitTest so drag-selection always maps clicks
+  // using the current line layout even when text/cols/zoom are unchanged
+  // (e.g. after glyph edits re-wrap the lines).
+  const hitTestRef = useRef(hitTest)
+  hitTestRef.current = hitTest
+
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (!dragging.current || !textareaRef.current) return
-      const offset = hitTest(e.clientX, e.clientY)
+      const offset = hitTestRef.current(e.clientX, e.clientY)
       const anchor = dragAnchor.current
       textareaRef.current.selectionStart = Math.min(anchor, offset)
       textareaRef.current.selectionEnd = Math.max(anchor, offset)
