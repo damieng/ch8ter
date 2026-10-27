@@ -546,7 +546,10 @@ export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RA
 // --- Charset signal + persistence ---
 
 const CHARSET_KEY = 'ch8ter-charset'
+// The CLI runs under Node where localStorage is unavailable; persistence is a no-op there.
+const hasLocalStorage = typeof localStorage !== 'undefined'
 function loadCharset(): Charset {
+  if (!hasLocalStorage) return 'zx'
   try {
     const stored = localStorage.getItem(CHARSET_KEY)
     if (stored && stored in CHARSETS_RAW) return stored as Charset
@@ -554,7 +557,9 @@ function loadCharset(): Charset {
   return 'zx'
 }
 export const charset = signal<Charset>(loadCharset())
-effect(() => { localStorage.setItem(CHARSET_KEY, charset.value) })
+if (hasLocalStorage) {
+  effect(() => { localStorage.setItem(CHARSET_KEY, charset.value) })
+}
 
 // --- Pure charset utilities ---
 
