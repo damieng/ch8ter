@@ -87,15 +87,18 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
     if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
     const font = createFont(
-      cf.fontData, container.fileName + suffix, cf.startChar,
+      // Copy: createFont stores the buffer by reference and pixel edits
+      // mutate it in place, so sharing would corrupt the container's copy
+      // (and any other instance opened from the same entry).
+      new Uint8Array(cf.fontData), container.fileName + suffix, cf.startChar,
       cf.width, cf.height,
       meta,
       undefined,
       cf.baseline,
-      cf.glyphMeta ?? undefined,
+      cf.glyphMeta ? [...cf.glyphMeta] : undefined,
       cf.spacingMode ?? 'monospace',
     )
-    if (cf.populated) font.populatedGlyphs.value = cf.populated
+    if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
     font.sourceContainerId = container.id
 
     const cpKey = `cp${cf.codepage}` as Charset
