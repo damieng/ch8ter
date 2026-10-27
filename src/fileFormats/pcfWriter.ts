@@ -177,6 +177,15 @@ export function writePcf(params: FontWriteData): Uint8Array {
   let mp = 0
   metricsView.setInt32(mp, FORMAT_MSBYTE_MSBIT | PCF_COMPRESSED_METRICS, true); mp += 4
   metricsView.setInt16(mp, numGlyphs, false); mp += 2
+  // Compressed metrics encode each value as (byte - 0x80), so values must
+  // fit in a signed byte; setUint8 would silently wrap otherwise.
+  for (const m of glyphMetrics) {
+    for (const v of [m.leftBearing, m.rightBearing, m.characterWidth, m.ascent, m.descent]) {
+      if (v < -128 || v > 127) {
+        throw new Error(`PCF compressed metrics cannot encode value ${v} (range is -128..127). Reduce the glyph dimensions.`)
+      }
+    }
+  }
   for (const m of glyphMetrics) {
     metricsView.setUint8(mp, m.leftBearing + 0x80); mp += 1
     metricsView.setUint8(mp, m.rightBearing + 0x80); mp += 1
