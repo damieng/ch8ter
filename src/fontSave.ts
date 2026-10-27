@@ -40,6 +40,7 @@ import { writeFon } from './fileFormats/fonWriter'
 import { writeGeosCvt } from './fileFormats/geosWriter'
 import { write64c } from './fileFormats/c64Writer'
 import { writeTap } from './fileFormats/tapWriter'
+import { writePsf1 } from './fileFormats/psfWriter'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -68,6 +69,7 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'geos':  return writeGeosCvt(data)
     case '64c':   return write64c(data)
     case 'tap':   return writeTap(data)
+    case 'psf1':  return writePsf1(data)
     default:
       throw new Error(`Unsupported output format: .${e}`)
   }

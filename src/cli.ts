@@ -31,6 +31,7 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   geos:     { ext: '.cvt',  key: 'geos' },
   '64c':    { ext: '.64c',  key: '64c' },
   tap:      { ext: '.tap',  key: 'tap' },
+  psf1:     { ext: '.psf',  key: 'psf1' },
 }
 
 const FORMAT_NAMES = Object.keys(OUTPUT_FORMATS).join(', ')

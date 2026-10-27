@@ -49,7 +49,8 @@ Try it now at https://damieng.github.io/ch8ter/
 | Ch8 | `.ch8` |
 | X11 BDF | `.bdf` |
 | X11 PCF | `.pcf` |
-| Linux PSF | `.psf` |
+| Linux PSF | `.psf` | |
+| Linux PSF1 | `.psf` | Legacy 256-character variant |
 | Yaff | `.yaff` |
 | Acorn Draw | `.draw` |
 | ZX Spectrum FZX | `.fzx` |

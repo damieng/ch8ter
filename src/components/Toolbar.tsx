@@ -77,6 +77,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {is8x8 && btn('Save as .ch8', 'ch8', '.ch8', close)}
             {btn('Save as .bdf', 'bdf', '.bdf', close)}
             {btn('Save as .psf', 'psf', '.psf', close)}
+            {btn('Save as .psf1', 'psf1', '.psf', close)}
             {btn('Save as .yaff', 'yaff', '.yaff', close)}
             {btn('Save as .draw', 'draw', '.draw', close)}
             {btn('Save as .fzx', 'fzx', '.fzx', close)}

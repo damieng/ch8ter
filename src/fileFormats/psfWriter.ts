@@ -1,6 +1,6 @@
 // Write PSF2 font files from our internal format.
 
-import { bpr } from '../bitUtils'
+import { bpr, getBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 import type { FontWriteData } from '../fontSave'
 
@@ -70,4 +70,38 @@ function encodeUtf8(cp: number): Uint8Array {
   if (cp < 0x800) return new Uint8Array([0xC0 | (cp >> 6), 0x80 | (cp & 0x3F)])
   if (cp < 0x10000) return new Uint8Array([0xE0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)])
   return new Uint8Array([0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)])
+}
+
+// --- PSF1 ---
+
+/**
+ * Write a legacy PSF1 font: magic $36 $04, mode byte, char height byte,
+ * then 256 fixed-8px glyphs (no Unicode table). Characters outside the
+ * font's range are emitted blank.
+ */
+export function writePsf1(params: FontWriteData): Uint8Array {
+  const { fontData, glyphWidth: w, glyphHeight: h, startChar, glyphCount } = params
+  if (w > 8) throw new Error('PSF1 fonts are fixed at 8 pixels wide')
+  if (h < 1 || h > 255) throw new Error('PSF1 height must be 1..255')
+
+  const srcRowBytes = bpr(w)
+  const out = new Uint8Array(4 + 256 * h)
+  out[0] = 0x36
+  out[1] = 0x04
+  out[2] = 0 // mode: 256 characters, no Unicode table
+  out[3] = h
+
+  for (let charCode = 0; charCode < 256; charCode++) {
+    const idx = charCode - startChar
+    if (idx < 0 || idx >= glyphCount) continue
+    const dstOff = 4 + charCode * h
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (getBit(fontData, idx * h * srcRowBytes + y * srcRowBytes, x)) {
+          out[dstOff + y] |= 0x80 >> x
+        }
+      }
+    }
+  }
+  return out
 }
