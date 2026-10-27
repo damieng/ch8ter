@@ -117,6 +117,9 @@ function parseLevel0(data: Uint8Array, pos: number): { entry: LhaRawHeader } | n
   const uncompressedSize = readU32(data, pos + 11)
   const timestamp = parseDosTimestamp(readU32(data, pos + 15))
   const filenameLen = data[pos + 21]
+  // A filename length that overflows the header means a corrupt header;
+  // reading it would produce garbage that propagates into the scan position.
+  if (22 + filenameLen > totalHeader) return null
   const filename = readString(data, pos + 22, filenameLen)
 
   let crc = 0
@@ -157,6 +160,9 @@ function parseLevel1(data: Uint8Array, pos: number): { entry: LhaRawHeader } | n
   const uncompressedSize = readU32(data, pos + 11)
   const timestamp = parseDosTimestamp(readU32(data, pos + 15))
   const filenameLen = data[pos + 21]
+  // filename + CRC + OS id must fit inside the base header (lhasa rejects
+  // these too); overflow means a corrupt header and garbage fields.
+  if (22 + filenameLen + 3 > headerSize + 2) return null
   let filename = readString(data, pos + 22, filenameLen)
   const crc = readU16(data, pos + 22 + filenameLen)
   const osId = data[pos + 24 + filenameLen]
