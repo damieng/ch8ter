@@ -53,6 +53,7 @@ Try it now at https://damieng.github.io/ch8ter/
 | Amiga | _(height suffix)_ |
 | EGA/VGA | `.com` |
 | CP/M Plus | `.com` |
+| DOS codepage | `.cpi` |
 | BBC Micro | `.bbc` |
 
 **Export**:

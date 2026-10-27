@@ -26,6 +26,7 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   ega:      { ext: '.com',  key: 'ega' },
   bbc:      { ext: '.bbc',  key: 'bbc' },
   cpm:      { ext: '.com',  key: 'com' },
+  cpi:      { ext: '.cpi',  key: 'cpi' },
 }
 
 const FORMAT_NAMES = Object.keys(OUTPUT_FORMATS).join(', ')
