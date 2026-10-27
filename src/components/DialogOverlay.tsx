@@ -15,6 +15,11 @@ const dialogStack: object[] = []
 export function DialogOverlay({ children, onClose, label }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const previousFocus = useRef<Element | null>(null)
+  // Keep the callback in a ref so the mount effect runs exactly once —
+  // call sites pass inline arrows, which would otherwise tear down and
+  // re-run this effect (re-focusing, re-registering) on every parent render.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     previousFocus.current = document.activeElement
@@ -35,7 +40,7 @@ export function DialogOverlay({ children, onClose, label }: Props) {
       if (e.key === 'Escape') {
         if (dialogStack[dialogStack.length - 1] !== token) return
         e.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
 
@@ -67,7 +72,7 @@ export function DialogOverlay({ children, onClose, label }: Props) {
         previousFocus.current.focus()
       }
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div
