@@ -300,11 +300,15 @@ export function FontPane({ font }: Props) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [font, count])
 
-  // Scroll to active glyph when it changes
+  // Scroll to active glyph when it changes (or when the grid layout changes,
+  // e.g. toggling Hide empty re-indexes the grid)
   useEffect(() => {
     const active = font.lastClickedGlyph.value
     if (active < 0 || active >= count || !scrollRef.current) return
-    const slot = hideEmpty ? visibleIndices.indexOf(active) : active
+    // Read the current visibility state from the ref so the effect does not
+    // depend on the per-render visibleIndices array identity
+    const nav = gridNavRef.current
+    const slot = nav.hideEmpty ? nav.visibleIndices.indexOf(active) : active
     if (slot < 0) return
     const row = Math.floor(slot / cols)
     const tileTop = gap + row * tileOuterH
@@ -315,7 +319,7 @@ export function FontPane({ font }: Props) {
     } else if (tileBottom > el.scrollTop + el.clientHeight) {
       el.scrollTop = tileBottom - el.clientHeight + gap
     }
-  }, [font.lastClickedGlyph.value, cols])
+  }, [font.lastClickedGlyph.value, cols, hideEmpty])
 
   return (
     <div class="flex flex-col h-full">
