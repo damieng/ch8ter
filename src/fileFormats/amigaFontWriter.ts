@@ -12,6 +12,9 @@
 //   [26..57]:   dfh_Name (32 bytes)
 //   [58..109]:  TextFont (tf_Message + fields)
 //   [110..]:    CharLoc, CharSpace, CharKern, CharData
+//
+// Also writes the accompanying `.font` directory file (FontDirHeader +
+// TFontContents entries) that makes the font visible to diskfont.library.
 
 import { bpr, getBit, setBit } from '../bitUtils'
 import type { FontWriteData } from '../fontSave'
@@ -240,4 +243,81 @@ export function writeAmigaFont(params: FontWriteData): Uint8Array {
   fv.setUint32(pos, 0x000003F2, false)
 
   return file
+}
+
+// --- .font directory file ---
+
+/** Sanitized base name shared by the .font file and its size-file paths. */
+export function amigaFontBaseName(fontName: string): string {
+  const cleaned = (fontName || 'font').replace(/[^A-Za-z0-9 _\-]/g, '').trim()
+  return cleaned.length > 0 ? cleaned.slice(0, 28) : 'font'
+}
+
+/**
+ * Write the `.font` directory file (FontDirHeader + TFontContents entries)
+ * that references the size-suffixed hunk font. diskfont.library reads this
+ * to enumerate the font; layout is big-endian:
+ *
+ *   ULONG FileID            = $0F00
+ *   UWORD numEntries
+ *   TFontContents[numEntries] (84 bytes each):
+ *     Message (20 bytes) + TextFont fields + char fileName[32]
+ */
+export function writeAmigaFontIndex(params: FontWriteData): Uint8Array {
+  const {
+    glyphWidth, glyphHeight, startChar, glyphCount,
+    glyphMeta, baseline, fontName,
+  } = params
+
+  if (glyphCount < 1) throw new Error('Amiga font index requires at least one glyph')
+  const hiChar = startChar + glyphCount - 1
+  if (startChar < 0 || hiChar > 255) {
+    throw new Error(`Amiga font index supports character codes 0..255 (got ${startChar}..${hiChar})`)
+  }
+
+  const baseName = amigaFontBaseName(fontName)
+  const entryPath = `${baseName}/${glyphHeight}`
+  const isProportional = (glyphMeta?.some(g => g?.dwidth?.[0] != null && g.dwidth[0] !== glyphWidth)) ?? false
+
+  const HEADER_SIZE = 6      // ULONG FileID + UWORD numEntries
+  const ENTRY_SIZE = 84      // 20-byte Message + TextFont fields + 32-char name
+  const out = new Uint8Array(HEADER_SIZE + ENTRY_SIZE)
+  const view = new DataView(out.buffer)
+
+  view.setUint32(0, 0x0F00, false)          // FileID
+  view.setUint16(4, 1, false)               // numEntries
+
+  const e = HEADER_SIZE                     // TFontContents at offset 6
+  // tf_Message (20 bytes) stays zero
+  view.setUint16(e + 20, glyphHeight, false)                    // tf_YSize
+  out[e + 22] = 0                                               // tf_Style
+  out[e + 23] = (isProportional ? 0x20 : 0x00) | 0x40 | 0x02    // tf_Flags
+  view.setUint16(e + 24, glyphWidth, false)                     // tf_XSize
+  view.setUint16(e + 26, baseline + 1, false)                   // tf_Baseline (1-indexed)
+  view.setUint16(e + 28, 1, false)                              // tf_BoldSmear
+  view.setUint16(e + 30, 0, false)                              // tf_Accessors
+  out[e + 32] = startChar                                       // tf_LoChar
+  out[e + 33] = hiChar                                          // tf_HiChar
+  view.setUint32(e + 34, 0, false)                              // tf_CharData (resolved on load)
+  view.setUint16(e + 38, 0, false)                              // tf_Modulo
+  view.setUint32(e + 40, 0, false)                              // tf_CharLoc
+  view.setUint32(e + 44, 0, false)                              // tf_CharSpace
+  view.setUint32(e + 48, 0, false)                              // tf_CharKern
+  const pathBytes = new TextEncoder().encode(entryPath.slice(0, 32))
+  out.set(pathBytes, e + 52)                                    // tf_FileName[32]
+
+  return out
+}
+
+/**
+ * Build the full Amiga installation file set for one font size:
+ * the `.font` directory entry plus the size-suffixed hunk font.
+ * Paths follow the standard FONTS: drawer layout.
+ */
+export function buildAmigaFontDirectory(data: FontWriteData): { path: string; data: Uint8Array }[] {
+  const baseName = amigaFontBaseName(data.fontName)
+  return [
+    { path: `Fonts/${baseName}.font`, data: writeAmigaFontIndex(data) },
+    { path: `Fonts/${baseName}/${data.glyphHeight}`, data: writeAmigaFont(data) },
+  ]
 }
