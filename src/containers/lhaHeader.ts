@@ -240,6 +240,10 @@ function parseLevel3(data: Uint8Array, pos: number): { entry: LhaRawHeader } | n
   const crc = readU16(data, pos + 21)
   const osId = data[pos + 23]
   const totalHeaderSize = readU32(data, pos + 24)
+  // Guard against a zero-size header, which would never advance the scan
+  // position in parseHeaders and loop forever (same check as level 2).
+  if (totalHeaderSize === 0) return null
+  if (pos + totalHeaderSize > data.length) return null
 
   // Extended headers with 4-byte size fields
   let filename = ''
