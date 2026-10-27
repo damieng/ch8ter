@@ -338,7 +338,7 @@ export function calcGridSize(imgW: number, imgH: number, s: PngImportSettings): 
 }
 
 // Extract glyphs from image data using given settings
-export function extractGlyphs(data: ImageData, settings: PngImportSettings): PngImportResult {
+export function extractGlyphs(data: ImageData, settings: PngImportSettings, mapping?: string): PngImportResult {
   const { scale, glyphWidth, glyphHeight, gapX, gapY, borderX, borderY } = settings
   const { cols, rows, total } = calcGridSize(data.width, data.height, settings)
 
@@ -385,6 +385,32 @@ export function extractGlyphs(data: ImageData, settings: PngImportSettings): Png
 
   // Start char: if space is found, map it to ASCII 32
   const startChar = spaceIndex >= 0 ? 32 - spaceIndex : 32
+
+  // Explicit cell→character mapping: cell i becomes the i-th character of
+  // `mapping` (by code point); cells beyond the text are dropped.
+  if (mapping && mapping.length > 0) {
+    const codes = [...mapping].map(ch => ch.codePointAt(0) ?? 0)
+    if (codes.length > 0) {
+      const minCode = Math.min(...codes)
+      const span = Math.max(...codes) - minCode + 1
+      const mapped = new Uint8Array(span * bpg)
+      const mappedPopulated = new Set<number>()
+      const count = Math.min(total, codes.length)
+      for (let i = 0; i < count; i++) {
+        const slot = codes[i] - minCode
+        mapped.set(fontData.subarray(i * bpg, i * bpg + bpg), slot * bpg)
+        if (populated.has(i)) mappedPopulated.add(slot)
+      }
+      return {
+        fontData: mapped,
+        glyphWidth,
+        glyphHeight,
+        startChar: minCode,
+        glyphCount: span,
+        populated: mappedPopulated,
+      }
+    }
+  }
 
   return {
     fontData,

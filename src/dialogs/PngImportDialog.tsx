@@ -24,6 +24,7 @@ export function PngImportDialog({ file, onClose }: Props) {
   const [detected, setDetected] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [codepage, setCodepage] = useState<Charset>('iso8859_1')
+  const [mappingText, setMappingText] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
 
   // Load image
@@ -139,10 +140,11 @@ export function PngImportDialog({ file, onClose }: Props) {
 
   function handleImport() {
     if (!imgData) return
-    const result = extractGlyphs(imgData, settings)
+    const mapping = mappingText.trim()
+    const result = extractGlyphs(imgData, settings, mapping || undefined)
     const font = createFont(result.fontData, file.name.replace(/\.png$/i, '.ch8'), result.startChar, result.glyphWidth, result.glyphHeight)
     font.populatedGlyphs.value = result.populated
-    switchCharset(codepage)
+    switchCharset(mapping ? 'iso8859_1' : codepage)
     recalcMetrics(font)
     addFont(font)
     onClose()
@@ -166,6 +168,24 @@ export function PngImportDialog({ file, onClose }: Props) {
           <CharsetSelect value={codepage} onChange={setCodepage} />
           <SizeField label="Gap" w={settings.gapX} h={settings.gapY} onW={v => update({ gapX: v })} onH={v => update({ gapY: v })} />
           <SizeField label="Border" w={settings.borderX} h={settings.borderY} onW={v => update({ borderX: v })} onH={v => update({ borderY: v })} />
+        </div>
+        <div class="flex items-center gap-2 text-xs flex-wrap">
+          <label class="flex items-center gap-1.5">
+            <span class="text-gray-600">Map to text</span>
+            <input
+              class="px-2 py-1 border border-gray-300 rounded font-mono text-xs w-56"
+              value={mappingText}
+              placeholder="e.g. ABCdef123 (cells in reading order)"
+              onInput={(e) => setMappingText((e.target as HTMLInputElement).value)}
+            />
+          </label>
+          {mappingText.trim() ? (
+            <span class="text-gray-500">
+              {[...mappingText.trim()].length} char{[...mappingText.trim()].length === 1 ? '' : 's'} for the first cells; extra cells ignored; overrides codepage
+            </span>
+          ) : (
+            <span class="text-gray-400">Optional: type the characters shown in the grid, in reading order, to map cells to them</span>
+          )}
         </div>
 
         {/* Canvas preview */}
