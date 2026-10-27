@@ -21,6 +21,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
   const [bbx, setBbx] = useState(existing?.bbx ? existing.bbx.join(' ') : '')
   const [charIdx, setCharIdx] = useState(existingCharIdx != null ? String(existingCharIdx) : '')
   const [charIdxError, setCharIdxError] = useState('')
+  const [numError, setNumError] = useState('')
 
   function handleSave() {
     // Validate charIndex uniqueness
@@ -43,15 +44,25 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
     if (name.trim()) gm.name = name.trim()
     if (swidth.trim()) {
       const parts = swidth.trim().split(/\s+/).map(Number)
-      if (parts.length === 2) gm.swidth = [parts[0], parts[1]]
+      if (parts.length === 2 && parts.every(n => Number.isFinite(n))) gm.swidth = [parts[0], parts[1]]
     }
     if (dwidth.trim()) {
       const parts = dwidth.trim().split(/\s+/).map(Number)
-      if (parts.length === 2) gm.dwidth = [parts[0], parts[1]]
+      if (parts.length === 2 && parts.every(n => Number.isFinite(n))) gm.dwidth = [parts[0], parts[1]]
     }
     if (bbx.trim()) {
       const parts = bbx.trim().split(/\s+/).map(Number)
-      if (parts.length === 4) gm.bbx = [parts[0], parts[1], parts[2], parts[3]]
+      if (parts.length === 4 && parts.every(n => Number.isFinite(n))) gm.bbx = [parts[0], parts[1], parts[2], parts[3]]
+    }
+    // Reject malformed numeric input instead of silently saving NaN
+    const numFields = [swidth, dwidth, bbx].filter(s => s.trim())
+    const allValid = numFields.every(s => {
+      const parts = s.trim().split(/\s+/).map(Number)
+      return parts.every(n => Number.isFinite(n))
+    })
+    if (!allValid) {
+      setNumError('Values must be numbers separated by spaces')
+      return
     }
 
     const arr = font.glyphMeta.value ? [...font.glyphMeta.value] : new Array(gc).fill(null)
@@ -94,28 +105,28 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono text-gray-600 w-20 shrink-0">SWIDTH</span>
             <input
-              class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
+              class={`flex-1 px-2 py-0.5 border rounded text-sm font-mono min-w-0 ${numError ? 'border-red-400' : 'border-gray-300'}`}
               value={swidth}
               placeholder="x y"
-              onInput={(e) => setSwidth((e.target as HTMLInputElement).value)}
+              onInput={(e) => { setSwidth((e.target as HTMLInputElement).value); setNumError('') }}
             />
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono text-gray-600 w-20 shrink-0">DWIDTH</span>
             <input
-              class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
+              class={`flex-1 px-2 py-0.5 border rounded text-sm font-mono min-w-0 ${numError ? 'border-red-400' : 'border-gray-300'}`}
               value={dwidth}
               placeholder="x y"
-              onInput={(e) => setDwidth((e.target as HTMLInputElement).value)}
+              onInput={(e) => { setDwidth((e.target as HTMLInputElement).value); setNumError('') }}
             />
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono text-gray-600 w-20 shrink-0">BBX</span>
             <input
-              class="flex-1 px-2 py-0.5 border border-gray-300 rounded text-sm font-mono min-w-0"
+              class={`flex-1 px-2 py-0.5 border rounded text-sm font-mono min-w-0 ${numError ? 'border-red-400' : 'border-gray-300'}`}
               value={bbx}
               placeholder="w h offX offY"
-              onInput={(e) => setBbx((e.target as HTMLInputElement).value)}
+              onInput={(e) => { setBbx((e.target as HTMLInputElement).value); setNumError('') }}
             />
           </div>
           <div class="flex items-center gap-2">
@@ -128,6 +139,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
             />
           </div>
           {charIdxError && <p class="text-xs text-red-500">{charIdxError}</p>}
+          {numError && <p class="text-xs text-red-500">{numError}</p>}
         </div>
         <div class="flex justify-end gap-2 px-5 py-2 bg-gray-100 border-t border-gray-300 rounded-b-lg">
           <button
