@@ -225,6 +225,8 @@ export function setupFontAutoSave(getFonts: () => FontInstance[]) {
       f.descender.value
       f.hideEmpty.value
       f.spacing.value
+      f.tracking.value
+      f.populatedGlyphs.value
       f.charIndex?.value
     }
     saveFontsToStorage(allFonts)
