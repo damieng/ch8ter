@@ -427,7 +427,8 @@ function parseStrike(
           if (pairOff + 4 > bytes.length) break
           const glyphID = view.getUint16(pairOff)
           const sbitOff = view.getUint16(pairOff + 2)
-          if (i < numGlyphs - 1) {
+          if (i < numGlyphs - 1 && pairOff + 8 <= bytes.length) {
+            // Look-ahead needs bytes pairOff+6..+7 for the next sbit offset
             const nextSbitOff = view.getUint16(pairOff + 4 + 2)
             const dataSize = nextSbitOff - sbitOff
             if (dataSize <= 0) continue
