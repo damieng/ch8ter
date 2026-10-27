@@ -90,6 +90,9 @@ function parseCmapSubtable(view: DataView, bytes: Uint8Array, off: number): Map<
   return new Map()
 }
 
+// Cap on total cmap mappings to bound work on malformed tables.
+const MAX_CMAP_MAPPINGS = 1 << 20
+
 function parseCmapFormat4(view: DataView, bytes: Uint8Array, off: number): Map<number, number> {
   // glyphID → codepoint (reverse map)
   const map = new Map<number, number>()
@@ -108,8 +111,9 @@ function parseCmapFormat4(view: DataView, bytes: Uint8Array, off: number): Map<n
     const idRangeOffset = view.getUint16(idRangeOffsetsOff + seg * 2)
 
     if (startCode === 0xFFFF) break
+    if (map.size >= MAX_CMAP_MAPPINGS) break
 
-    for (let cp = startCode; cp <= endCode; cp++) {
+    for (let cp = startCode; cp <= endCode && map.size < MAX_CMAP_MAPPINGS; cp++) {
       let glyphID: number
       if (idRangeOffset === 0) {
         glyphID = (cp + idDelta) & 0xFFFF
@@ -135,10 +139,12 @@ function parseCmapFormat12(view: DataView, bytes: Uint8Array, off: number): Map<
   for (let i = 0; i < numGroups; i++) {
     const grpOff = off + 16 + i * 12
     if (grpOff + 12 > bytes.length) break
+    if (map.size >= MAX_CMAP_MAPPINGS) break
     const startCharCode = view.getUint32(grpOff)
-    const endCharCode = view.getUint32(grpOff + 4)
+    // Clamp to the Unicode range so a malformed group can't spin for 4 billion iterations
+    const endCharCode = Math.min(view.getUint32(grpOff + 4), 0x10FFFF)
     const startGlyphID = view.getUint32(grpOff + 8)
-    for (let cp = startCharCode; cp <= endCharCode; cp++) {
+    for (let cp = startCharCode; cp <= endCharCode && map.size < MAX_CMAP_MAPPINGS; cp++) {
       const gid = startGlyphID + (cp - startCharCode)
       if (!map.has(gid)) map.set(gid, cp)
     }
