@@ -38,6 +38,7 @@ import { writeWindowsFnt } from './fileFormats/windowsFntWriter'
 import { writeCpi } from './fileFormats/cpiWriter'
 import { writeFon } from './fileFormats/fonWriter'
 import { writeGeosCvt } from './fileFormats/geosWriter'
+import { write64c } from './fileFormats/c64Writer'
 
 /** Formats whose output is text (useful for setting Blob MIME type). */
 export const TEXT_FORMATS = new Set(['bdf', 'yaff', 'draw'])
@@ -64,6 +65,7 @@ export function saveFontFile(ext: string, data: FontConversionData): Uint8Array 
     case 'cpi':   return writeCpi(data)
     case 'fon':   return writeFon(data)
     case 'geos':  return writeGeosCvt(data)
+    case '64c':   return write64c(data)
     default:
       throw new Error(`Unsupported output format: .${e}`)
   }

@@ -92,6 +92,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {btn('Save as DOS .cpi', 'cpi', '.cpi', close)}
             {btn('Save as Windows .fon', 'fon', '.fon', close)}
             {btn('Save as C64 GEOS .cvt', 'geos', '.cvt', close)}
+            {btn('Save as C64 .64c', '64c', '.64c', close)}
           </>
         )}
       </Dropdown>

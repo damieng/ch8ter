@@ -29,6 +29,7 @@ const OUTPUT_FORMATS: Record<string, { ext: string; key: string }> = {
   cpi:      { ext: '.cpi',  key: 'cpi' },
   fon:      { ext: '.fon',  key: 'fon' },
   geos:     { ext: '.cvt',  key: 'geos' },
+  '64c':    { ext: '.64c',  key: '64c' },
 }
 
 const FORMAT_NAMES = Object.keys(OUTPUT_FORMATS).join(', ')
