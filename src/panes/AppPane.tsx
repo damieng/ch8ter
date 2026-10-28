@@ -234,7 +234,7 @@ export function AppPane() {
       return
     }
 
-    // .cpx files are UPX-compressed .cpi â€” decompress and handle as .cpi
+    // .cpx files are UPX-compressed .cpi  —  decompress and handle as .cpi
     if (lower.endsWith(".cpx")) {
       try {
         const cpiData = decompressCpx(new Uint8Array(buf))
@@ -245,12 +245,12 @@ export function AppPane() {
       return
     }
 
-    // .cpi files are font containers â€” show in container pane
+    // .cpi files are font containers  —  show in container pane
     if (lower.endsWith(".cpi")) {
       try {
         const result = parseCpi(buf)
         if (result.fonts.length === 0) {
-          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts â€” there are no downloadable character bitmaps to edit.` })
+          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts  —  there are no downloadable character bitmaps to edit.` })
           return
         }
         const fonts: ContainerFont[] = result.fonts.map(f => ({
@@ -310,7 +310,7 @@ export function AppPane() {
       return
     }
 
-    // CVT files are C64 GEOS fonts â€” one point size per VLIR record
+    // CVT files are C64 GEOS fonts  —  one point size per VLIR record
     if (lower.endsWith(".cvt")) {
       try {
         const sets = parseGeosCvt(new Uint8Array(buf))
@@ -347,16 +347,16 @@ export function AppPane() {
       return
     }
 
-    // TTF/OTF files â€” check for embedded bitmaps
+    // TTF/OTF files  —  check for embedded bitmaps
     if (lower.endsWith(".ttf") || lower.endsWith(".otf")) {
       if (!isSbitFont(buf)) {
-        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines â€” no embedded bitmaps found.' })
+        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines  —  no embedded bitmaps found.' })
         return
       }
       try {
         const result = parseSbit(buf)
         if (result.strikes.length === 1) {
-          // Single strike â€” open as regular font
+          // Single strike  —  open as regular font
           const s = result.strikes[0]
           const font = createFont(
             s.fontData, name, s.startChar, s.glyphWidth, s.glyphHeight,
@@ -367,9 +367,9 @@ export function AppPane() {
           calcMissingMetrics(font)
           addFont(font)
         } else {
-          // Multiple strikes â€” show as container
+          // Multiple strikes  —  show as container
           const fonts: ContainerFont[] = result.strikes.map(s => ({
-            label: `${s.ppemX}Ã—${s.ppemY}`,
+            label: `${s.ppemX}×${s.ppemY}`,
             codepage: 0,
             deviceName: '',
             deviceType: 1,
@@ -398,13 +398,13 @@ export function AppPane() {
       return
     }
 
-    // .com files can contain multiple fonts â€” handle separately
+    // .com files can contain multiple fonts  —  handle separately
     if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
         switchCharset((results[0].source === "cpm" ? "cpm" : "cp437") as Charset)
         for (const result of results) {
-          const suffix = results.length > 1 ? ` (${result.glyphWidth}Ã—${result.glyphHeight})` : ''
+          const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
           const font = createFont(
             result.fontData, name + suffix, result.startChar,
             result.glyphWidth, result.glyphHeight,
@@ -816,8 +816,8 @@ export function AppPane() {
         >
           {(close) => (
             <>
-              {menuItem('Export Workspaceâ€¦', handleExportWorkspace, close)}
-              {menuItem('Import Workspaceâ€¦', () => workspaceInputRef.current?.click(), close)}
+              {menuItem('Export Workspace…', handleExportWorkspace, close)}
+              {menuItem('Import Workspace…', () => workspaceInputRef.current?.click(), close)}
               <div class="border-t border-gray-200 my-1" />
               {menuItem(theme.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode', toggleTheme, close)}
               <div class="border-t border-gray-200 my-1" />

@@ -53,7 +53,7 @@ export interface FontInstance {
   glyphRotationLive: Map<number, { data: Uint8Array; w: number; h: number }>
   /** If opened from a container pane, the container's id. */
   sourceContainerId?: string
-  /** Original byte index for each glyph slot, if known. Sparse â€” only set for glyphs loaded from file. */
+  /** Original byte index for each glyph slot, if known. Sparse  —  only set for glyphs loaded from file. */
   charIndex?: Signal<(number | undefined)[]>
 }
 
@@ -644,7 +644,7 @@ export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance:
 /**
  * Set a pixel during a paint stroke.  Mutates the existing Uint8Array in
  * place (no allocation) and bumps paintVersion to trigger re-renders in
- * the glyph editor.  The fontData signal is NOT updated here â€” that
+ * the glyph editor.  The fontData signal is NOT updated here  —  that
  * happens in commitPaintStroke which creates the new array reference
  * needed for undo snapshots and downstream subscribers (tiles, preview).
  */
