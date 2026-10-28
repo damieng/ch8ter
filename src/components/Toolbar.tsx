@@ -1,9 +1,8 @@
 import { useState } from 'preact/hooks'
-import { createPortal } from 'preact/compat'
 import {
   FlipHorizontal, FlipVertical, Contrast, RotateCw, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  Save, TypeOutline, Info, ChevronDown
+  Save, TypeOutline, ChevronDown
 } from 'lucide-preact'
 import { CenterHIcon } from './CenterHIcon'
 import { IconBtn } from './IconBtn'
@@ -16,7 +15,6 @@ import {
   shiftUp, shiftDown, shiftLeft, shiftRight, centerHorizontalBytes,
 } from '../glyphTransforms'
 import { execTransformGlyph } from '../undoHistory'
-import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
 import { exportTtf } from '../fileFormats/ttfExport'
 import { exportVarTtf } from '../fileFormats/ttfVarExport'
 import { ttfToWoff } from '../fileFormats/woffExport'
@@ -193,8 +191,6 @@ export function ExportBar({ font }: { font: FontInstance }) {
 }
 
 export function Toolbar({ font }: { font: FontInstance }) {
-  const [glyphMetaOpen, setGlyphMetaOpen] = useState(false)
-
   return (
     <div class="flex flex-wrap gap-1">
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, flipXBytes, 'Flip X')} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
@@ -207,11 +203,6 @@ export function Toolbar({ font }: { font: FontInstance }) {
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftLeft, 'Shift Left')} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftRight, 'Shift Right')} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
       <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes, 'Center H')} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
-      <IconBtn onClick={() => setGlyphMetaOpen(true)} title="Glyph properties"><Info size={ICON} /></IconBtn>
-      {glyphMetaOpen && createPortal(
-        <GlyphPropertiesDialog font={font} glyphIdx={font.lastClickedGlyph.value} onClose={() => setGlyphMetaOpen(false)} />,
-        document.body,
-      )}
     </div>
   )
 }

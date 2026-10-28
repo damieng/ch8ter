@@ -1,9 +1,11 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
-import { Pencil, Slash, Square, Circle, PaintBucket } from 'lucide-preact'
+import { createPortal } from 'preact/compat'
+import { Pencil, Slash, Square, Circle, PaintBucket, Info } from 'lucide-preact'
 import { type FontInstance, getPixel, setPixel, glyphAdvance, setGlyphAdvance } from '../store'
 import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
 import { getCharMetrics, Metric } from '../charMetrics'
 import { linePixels, rectPixels, ellipsePixels, floodFill } from '../glyphShapes'
+import { GlyphPropertiesDialog } from '../dialogs/GlyphPropertiesDialog'
 
 type Tool = 'pencil' | 'line' | 'rect' | 'ellipse' | 'fill'
 
@@ -31,6 +33,7 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const [tool, setTool] = useState<Tool>('pencil')
   const toolRef = useRef(tool)
   toolRef.current = tool
+  const [infoOpen, setInfoOpen] = useState(false)
   // Shape drag state: start cell, current end cell, and the pixels being
   // previewed (applied to the font only on mouseup, as one undo step)
   const shapeStart = useRef<{ x: number; y: number } | null>(null)
@@ -236,8 +239,19 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
             <t.icon size={14} />
           </button>
         ))}
-        <span class="text-xs text-gray-400 ml-2">{TOOLS.find(t => t.id === tool)!.label}</span>
+        <div class="w-px h-5 bg-gray-300 mx-1" />
+        <button
+          title="Glyph properties"
+          class="p-1.5 rounded border bg-white hover:bg-blue-50 border-gray-300 text-gray-600"
+          onClick={() => setInfoOpen(true)}
+        >
+          <Info size={14} />
+        </button>
       </div>
+      {infoOpen && createPortal(
+        <GlyphPropertiesDialog font={font} glyphIdx={idx} onClose={() => setInfoOpen(false)} />,
+        document.body,
+      )}
       <div ref={containerRef} class="flex-1 min-h-0 w-full flex items-center justify-center">
         <div
           ref={gridRef}
