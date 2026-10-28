@@ -1,17 +1,32 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## Build & test
 
-- `npm run build` — TypeScript check + Vite production build
-- `npm run dev` — Dev server with HMR
-- `npm run test` — Vitest suite (`vitest run`)
-- `npm run convert` — CLI font converter (`tsx src/cli.ts convert`)
-- Any code change is NOT complete until `npm run build` passes cleanly with zero errors
+- `pnpm build` — TypeScript check + Vite production build
+- `pnpm dev` — Dev server with HMR
+- `pnpm test` — Vitest suite (`vitest run`)
+- `pnpm convert` — CLI font converter (`tsx src/cli.ts convert`)
+- Package manager is pnpm (see `packageManager` in `package.json`)
+- Any code change is NOT complete until `pnpm build` passes cleanly with zero errors
+
+## Editing files — encoding warning
+
+Never use PowerShell's `Get-Content`/`Set-Content`/`-replace` (or `>` redirection) to modify source files. PS 5.1 decodes UTF-8-without-BOM files as ANSI and re-encodes on write, silently corrupting non-ASCII characters (`…`, `—`, `×`, `±`, `↑↓←→`, `✕`) into mojibake — this actually broke menu labels, container size labels and comments once.
+
+- File changes: use the edit/write tools, or a Node script (`fs.readFileSync`/`writeFileSync` with `'utf8'`) for bulk renames
+- After any scripted multi-file edit, scan `src/` for stray non-ASCII code points and verify each is legitimate
+- PowerShell is fine for read-only greps and running commands; note its console display mangles non-ASCII (cosmetic), and `2>&1` on native commands wraps stderr into fake error records (a successful `git push` looks like an error)
 
 ## Commits
 
 - Before committing, run `git status` and ensure ALL new/untracked files are staged
 - Always `git add` every new file you created during the task
+- Run `tsc`/tests/build before committing — do not amend a broken commit after the fact
+
+## UI conventions
+
+- Menu labels are Title Case ("Export Workspace…", "Set Advances…", "Compare Fonts...")
+- Dialogs follow three archetypes via `DialogHeader`: form dialogs (blue title bar, no close button, Cancel/primary-action footer), viewer dialogs (blue title bar with ✕), and action dialogs (title bar with ✕ + action footer). Alerts stay plain.
 
 ## Stack
 
