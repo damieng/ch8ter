@@ -168,8 +168,8 @@ Input format is auto-detected. Gzip-compressed inputs (`.gz`) are decompressed t
 ## Getting Started
 
 ```sh
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 ## Tech Stack
