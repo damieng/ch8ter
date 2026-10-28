@@ -11,6 +11,9 @@ Try it now at https://damieng.github.io/ch8ter/
 - Open and edit multiple fonts simultaneously in floating, draggable windows
 - Variable glyph dimensions from 1x1 up to 32x32 pixels
 - Auto-save to browser localStorage with dirty-state tracking
+- Project export/import: save all open fonts, containers, previews and layout as one JSON file
+- Warns before closing the browser with unsaved fonts
+- Light and dark UI themes
 - Monospace and proportional spacing modes
 
 ### File formats
@@ -83,14 +86,16 @@ Try it now at https://damieng.github.io/ch8ter/
 ### Glyph editing
 
 - Interactive pixel editor opens on glyph click, follows selection, closable
+- Drawing tools: pencil, line, rectangle, ellipse and flood fill (Shift fills shapes)
 - Adjustable zoom on both the pixel editor and the character grid
 - Per-glyph transforms: flip horizontal/vertical, rotate CW/CCW, invert, shift in all directions, center horizontally
 - Multi-select glyphs with click, Shift+click range, Ctrl+click toggle
 - Quick select by category: all, numbers, uppercase, lowercase, symbols, invert selection
 - Batch transforms on entire selections
 - Clipboard support: copy/paste/cut glyph data as ASCII art
-- Undo/redo with up to 100 steps per font (Ctrl+Z / Ctrl+Y)
+- Undo/redo with up to 100 steps per font (Ctrl+Z / Ctrl+Y) plus a browsable undo history
 - Metric guidelines in the editor: baseline, ascender, cap height, x-height, numeric height, descender
+- Compare any two open fonts glyph-by-glyph with difference highlighting
 
 ### Font-wide transforms
 
@@ -106,6 +111,7 @@ Try it now at https://damieng.github.io/ch8ter/
 
 - Per-glyph advance widths loaded from BDF, FZX, PCF, PDB, Amiga, GEOS, BMFont, and Atari ST GDOS fonts
 - Drag the green advance-width guide in the glyph editor to adjust a character's width
+- Set or offset advances for the whole selection in one undoable step
 - Unicode fixed-width ranges (box drawing, block elements, etc.) always render at full cell width
 - Proportional and monospace preview rendering
 
@@ -113,6 +119,7 @@ Try it now at https://damieng.github.io/ch8ter/
 
 - Live text preview windows with custom or sample text
 - Automatic proportional or monospace rendering based on font spacing mode
+- Export the current preview as a PNG image
 - 50+ built-in sample texts: pangrams, character sets, classic game text, code samples (BASIC, C, Pascal, Z80 assembly, 6502 assembly), literature excerpts
 - Adjustable zoom and line height
 - Text selection and cursor with click, drag, double-click word select, triple-click select all
@@ -125,7 +132,7 @@ Try it now at https://damieng.github.io/ch8ter/
 
 ### PNG import & export
 
-**Import**: auto-detection of glyph dimensions, scale factor, gap and border sizes with live grid overlay preview
+**Import**: auto-detection of glyph dimensions, scale factor, gap and border sizes with live grid overlay preview; optional "map to text" field to assign cells to specific characters (screenshot → font)
 
 **Export**: configurable scale, column count, gap/border sizes, foreground/background colors, transparent background, division and border colors
 
