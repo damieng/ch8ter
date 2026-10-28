@@ -153,3 +153,45 @@ describe('UndoHistory', () => {
     expect(h.redo()).toBe(false)
   })
 })
+
+describe('UndoHistory list and jump', () => {
+  it('lists executed steps first (newest first), then redoable steps', () => {
+    const history = new UndoHistory()
+    const counter = { value: 0 }
+    history.push(makeCmd(counter, 1, 'a'))
+    history.push(makeCmd(counter, 1, 'b'))
+    history.undo()
+
+    expect(history.list().map(e => `${e.name}:${e.state}:${e.steps}`)).toEqual([
+      'a:past:1',
+      'b:future:1',
+    ])
+  })
+
+  it('jumps multiple steps in both directions', () => {
+    const history = new UndoHistory()
+    const counter = { value: 0 }
+    for (const name of ['a', 'b', 'c']) {
+      const cmd = makeCmd(counter, 1, name)
+      cmd.execute() // the editor executes commands before pushing
+      history.push(cmd)
+    }
+
+    history.jump(2, 'undo')
+    expect(counter.value).toBe(1)
+
+    history.jump(2, 'redo')
+    expect(counter.value).toBe(3)
+
+    // Jumping more steps than exist stops at the boundary
+    history.jump(99, 'undo')
+    expect(counter.value).toBe(0)
+  })
+
+  it('caps history at 100 entries for listing too', () => {
+    const history = new UndoHistory()
+    const counter = { value: 0 }
+    for (let i = 0; i < 105; i++) history.push(makeCmd(counter, 1, `s${i}`))
+    expect(history.list().length).toBe(100)
+  })
+})
