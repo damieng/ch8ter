@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.9.14",
+    "date": "2026-10-28",
+    "changes": [
+      "Project export/import: save all open fonts, containers, previews and layout as one JSON file",
+      "Warn before closing the browser with unsaved fonts",
+      "Compare any two open fonts glyph-by-glyph with difference highlighting",
+      "Drawing tools in the glyph editor: line, rectangle, ellipse and flood fill",
+      "Dark mode with a toggle in the app menu",
+      "Batch advance editor: set or offset advance widths for a selection in one undo step",
+      "Undo history browser: list recorded steps and jump to any point",
+      "Export the text preview as a PNG image",
+      "PNG import: map grid cells to typed characters (screenshot an emulator, get an editable font)",
+      "C64 .64c save, ZX Spectrum TAP save and PSF1 export",
+      "Amiga saves now produce an LHA archive with the .font index and hunk font, ready for a FONTS: drawer",
+      "Standardized dialog headers: consistent title bars, close buttons on viewer and export dialogs",
+      "Switched the build and CI from npm to pnpm"
+    ]
+  },
+  {
     "version": "0.9.13",
     "date": "2026-10-27",
     "changes": [
