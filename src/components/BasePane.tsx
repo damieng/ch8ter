@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
-import { windowLayouts, updateWindowLayout } from '../store'
+import { windowLayouts, updateWindowLayout, storedFocusedId } from '../store'
 
 interface Props {
   title: string | ComponentChildren
@@ -37,6 +37,7 @@ export function BasePane({
   onFocus, onClose, zIndex = 1
 }: Props) {
   const stored = windowId ? windowLayouts.value[windowId] : undefined
+  const focused = windowId != null && storedFocusedId.value === windowId
   const [pos, setPos] = useState(() => clampPos(
     { x: stored?.x ?? initialX, y: stored?.y ?? initialY },
     stored?.w ?? (initialW ?? 0),
@@ -146,7 +147,7 @@ export function BasePane({
     >
       <div
         ref={titleRef}
-        class={`flex items-center gap-2 px-3 py-1.5 border-b border-gray-300 cursor-move select-none shrink-0 ${zIndex > 1 ? 'bg-blue-100' : 'bg-gray-100'}`}
+        class={`flex items-center gap-2 px-3 py-1.5 border-b border-gray-300 cursor-move select-none shrink-0 ${focused ? 'bg-blue-100' : 'bg-gray-100'}`}
         onMouseDown={onTitleMouseDown}
       >
         <span class="font-bold text-sm flex-1">{title}</span>
