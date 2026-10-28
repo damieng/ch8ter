@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import { type FontInstance, glyphCount } from '../store'
 import type { GlyphMeta } from '../fileFormats/bdfParser'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 interface Props {
   font: FontInstance
@@ -89,9 +90,7 @@ export function GlyphPropertiesDialog({ font, glyphIdx, onClose }: Props) {
   return (
     <DialogOverlay onClose={onClose} label="Glyph Properties">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[350px] max-w-[450px]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
-          <h2 class="font-bold text-lg">Glyph Properties — {label}</h2>
-        </div>
+        <DialogHeader title={`Glyph Properties — ${label}`} />
         <div class="flex flex-col gap-2 px-5 pt-4 pb-3">
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono text-gray-600 w-20 shrink-0">NAME</span>

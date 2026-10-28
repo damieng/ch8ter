@@ -5,7 +5,8 @@ import { useState } from 'preact/hooks'
 import { type FontInstance } from '../store'
 import { type UndoHistoryEntry } from '../undoHistory'
 import { DialogOverlay } from '../components/DialogOverlay'
-import { CornerDownLeft, CornerDownRight, History } from 'lucide-preact'
+import { DialogHeader } from '../components/DialogHeader'
+import { CornerDownLeft, CornerDownRight } from 'lucide-preact'
 
 export function UndoHistoryDialog({ font, onClose }: { font: FontInstance; onClose: () => void }) {
   const [, setTick] = useState(0)
@@ -21,10 +22,7 @@ export function UndoHistoryDialog({ font, onClose }: { font: FontInstance; onClo
   return (
     <DialogOverlay onClose={onClose} label="Undo history">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[380px] max-h-[70vh]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg flex items-center gap-2">
-          <History size={16} />
-          <h2 class="font-bold text-lg">Undo history</h2>
-        </div>
+        <DialogHeader title="Undo History" onClose={onClose} />
         <div class="px-5 py-3 overflow-y-auto">
           {entries.length === 0 ? (
             <p class="text-sm text-gray-500 py-4 text-center">No history yet for this font.</p>

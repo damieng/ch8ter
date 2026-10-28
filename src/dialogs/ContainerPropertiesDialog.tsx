@@ -1,6 +1,7 @@
-import { useState } from 'preact/hooks'
+﻿import { useState } from 'preact/hooks'
 import type { FontContainer, ContainerMeta } from '../store'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 interface Props {
   container: FontContainer
@@ -46,9 +47,7 @@ export function ContainerPropertiesDialog({ container, onClose, onSave }: Props)
   return (
     <DialogOverlay onClose={onClose} label="Container Properties">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[400px] max-w-[500px] max-h-[80vh]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
-          <h2 class="font-bold text-lg">Container Properties</h2>
-        </div>
+        <DialogHeader title="Container Properties" />
         <div class="overflow-y-auto flex flex-col gap-1 min-h-0 px-5 pt-4 pb-2">
           {keys.length === 0 && (
             <p class="text-sm text-gray-400 italic">No properties. Add one below.</p>

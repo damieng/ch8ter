@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks'
+﻿import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { type FontInstance } from '../store'
 import { createMonospaceVariant } from '../createVariants'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 interface Props {
   font: FontInstance
@@ -22,9 +23,9 @@ export function MonospaceDialog({ font, onClose }: Props) {
 
   return createPortal(
     <DialogOverlay onClose={onClose} label="Create Monospace">
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[320px]">
-        <h2 class="font-bold text-lg">Create Monospace</h2>
-
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[320px]">
+        <DialogHeader title="Create Monospace" />
+        <div class="p-5 flex flex-col gap-4">
         <div class="flex flex-col gap-3">
           <div class="flex items-center gap-2">
             <span class="text-sm w-24 shrink-0">Width</span>
@@ -63,6 +64,7 @@ export function MonospaceDialog({ font, onClose }: Props) {
           >
             Create
           </button>
+        </div>
         </div>
       </div>
     </DialogOverlay>,

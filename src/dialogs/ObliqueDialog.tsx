@@ -4,6 +4,7 @@ import { createObliqueVariant } from '../createVariants'
 import { shearGlyphBytes } from '../glyphTransforms'
 import { drawGlyphToCtx } from '../drawGlyph'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 import { bpr } from '../bitUtils'
 
 const PREVIEW_GLYPHS = [
@@ -94,9 +95,9 @@ export function ObliqueDialog({ font, onClose }: Props) {
 
   return (
     <DialogOverlay onClose={onClose} label="Create Oblique Variant">
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-5 flex flex-col gap-4 min-w-[340px]">
-        <h2 class="font-bold text-lg">Create Oblique Variant</h2>
-
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[340px]">
+        <DialogHeader title="Create Oblique Variant" />
+        <div class="p-5 flex flex-col gap-4">
         <div class="flex items-center gap-3">
           <span class="text-sm w-12 text-right">{angle}°</span>
           <input
@@ -126,6 +127,7 @@ export function ObliqueDialog({ font, onClose }: Props) {
           >
             Create
           </button>
+        </div>
         </div>
       </div>
     </DialogOverlay>

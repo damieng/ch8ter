@@ -5,6 +5,7 @@
 import { useState, useMemo, useRef, useEffect } from 'preact/hooks'
 import { type FontInstance, glyphCount, fonts as allFonts } from '../store'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 import { getBit, bpr } from '../bitUtils'
 
 interface DiffEntry {
@@ -164,9 +165,7 @@ export function FontDiffDialog({ font, onClose }: { font: FontInstance; onClose:
   return (
     <DialogOverlay onClose={onClose} label="Compare fonts">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col w-[640px] max-h-[80vh]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
-          <h2 class="font-bold text-lg">Compare fonts</h2>
-        </div>
+        <DialogHeader title="Compare Fonts" onClose={onClose} />
         <div class="flex flex-col gap-3 px-5 py-4 overflow-hidden">
           <div class="flex items-center gap-3">
             <label class="text-sm text-gray-600">
@@ -216,7 +215,6 @@ export function FontDiffDialog({ font, onClose }: { font: FontInstance; onClose:
                 <div class="font-mono font-bold">{charLabel(picked)}</div>
                 <div class="text-xs text-gray-500 mt-1">A: {a.glyphWidth.value}×{a.glyphHeight.value}, B: {b.glyphWidth.value}×{b.glyphHeight.value}</div>
               </div>
-              <button class="ml-auto text-sm text-gray-500 hover:text-gray-700" onClick={() => setPicked(null)}>close</button>
             </div>
           )}
 

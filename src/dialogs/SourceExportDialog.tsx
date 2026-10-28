@@ -3,6 +3,7 @@ import { Copy, Download } from 'lucide-preact'
 import { type FontInstance } from '../store'
 import { exportSource, SOURCE_FORMATS, type SourceFormat } from '../fileFormats/sourceExport'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 interface Props {
   font: FontInstance
@@ -37,9 +38,10 @@ export function SourceExportDialog({ font, onClose }: Props) {
 
   return (
     <DialogOverlay onClose={onClose} label="Export Source Code">
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-3" style={{ width: 680, height: 560 }}>
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col gap-3" style={{ width: 680, height: 560 }}>
+        <DialogHeader title="Export Source Code" onClose={onClose} />
+        <div class="px-4 pb-4 flex flex-col gap-3 flex-1 min-h-0">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold">Export Source Code</h2>
           <span class="text-xs text-gray-400">{font.fileName.value}</span>
           <div class="ml-auto flex items-center gap-2">
             <button
@@ -53,13 +55,6 @@ export function SourceExportDialog({ font, onClose }: Props) {
               onClick={handleDownload}
             >
               <Download size={14} /> Download
-            </button>
-            <button
-              class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold ml-1"
-              onClick={onClose}
-              title="Close"
-            >
-              ×
             </button>
           </div>
         </div>
@@ -84,6 +79,7 @@ export function SourceExportDialog({ font, onClose }: Props) {
           spellcheck={false}
           onClick={(e) => (e.target as HTMLTextAreaElement).select()}
         />
+        </div>
       </div>
     </DialogOverlay>
   )

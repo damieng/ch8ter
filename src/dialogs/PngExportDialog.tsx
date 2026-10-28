@@ -4,6 +4,7 @@ import { type FontInstance, bytesPerRow, glyphCount } from '../store'
 import { drawGlyphToCtx } from '../drawGlyph'
 import { ZoomControl } from '../components/ZoomControl'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 import { SizeField } from '../components/SizeField'
 import { NumField } from '../components/NumField'
 import { useClickOutside } from '../hooks/useClickOutside'
@@ -310,17 +311,11 @@ export function PngExportDialog({ font, onClose }: Props) {
 
   return (
     <DialogOverlay onClose={onClose} label="Export PNG">
-      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 p-4 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
+      <div class="bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col gap-2 max-h-[90vh]" style={{ width: 900 }}>
+        <DialogHeader title="Export PNG" onClose={onClose} />
+        <div class="px-4 pb-4 flex flex-col gap-2 flex-1 min-h-0">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold">Export PNG</h2>
           <span class="text-xs text-gray-500">{font.fileName.value}</span>
-          <div class="ml-auto">
-            <button
-              class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
-              onClick={onClose}
-              title="Close"
-            >×</button>
-          </div>
         </div>
 
         {/* Settings */}
@@ -363,6 +358,7 @@ export function PngExportDialog({ font, onClose }: Props) {
           >
             <Download size={14} /> Download PNG
           </button>
+        </div>
         </div>
       </div>
     </DialogOverlay>

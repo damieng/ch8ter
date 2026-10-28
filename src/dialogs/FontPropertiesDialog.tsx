@@ -1,7 +1,8 @@
-import { useState } from 'preact/hooks'
+﻿import { useState } from 'preact/hooks'
 import { type FontInstance } from '../store'
 import type { FontMeta } from '../fileFormats/bdfParser'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 interface Props {
   font: FontInstance
@@ -61,9 +62,7 @@ export function FontPropertiesDialog({ font, onClose }: Props) {
   return (
     <DialogOverlay onClose={onClose} label="Font Properties">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[400px] max-w-[500px] max-h-[80vh]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
-          <h2 class="font-bold text-lg">Font Properties</h2>
-        </div>
+        <DialogHeader title="Font Properties" />
         <div class="px-5 pt-4 pb-2 flex flex-col gap-2">
           <div class="flex items-center gap-1">
             <span class="text-xs font-mono text-gray-600 w-28 shrink-0">NAME</span>

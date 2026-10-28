@@ -1,10 +1,11 @@
-// Set or offset the advance widths of the selected glyphs (or the whole
+﻿// Set or offset the advance widths of the selected glyphs (or the whole
 // font) as a single undoable step.
 
 import { useState } from 'preact/hooks'
 import { type FontInstance, glyphCount, glyphAdvance } from '../store'
 import { execSetAdvances } from '../undoHistory'
 import { DialogOverlay } from '../components/DialogOverlay'
+import { DialogHeader } from '../components/DialogHeader'
 
 export function AdvanceDialog({ font, onClose }: { font: FontInstance; onClose: () => void }) {
   const selection = [...font.selectedGlyphs.value].sort((x, y) => x - y)
@@ -42,9 +43,7 @@ export function AdvanceDialog({ font, onClose }: { font: FontInstance; onClose: 
   return (
     <DialogOverlay onClose={onClose} label="Set advances">
       <div class="bg-gray-50 rounded-lg shadow-2xl border border-gray-300 flex flex-col min-w-[360px]">
-        <div class="px-5 py-2 bg-blue-100 border-b border-gray-300 rounded-t-lg">
-          <h2 class="font-bold text-lg">Set advances</h2>
-        </div>
+        <DialogHeader title="Set Advances" />
         <div class="flex flex-col gap-3 px-5 py-4 text-sm">
           <div class="flex flex-col gap-1">
             <span class="text-xs font-mono text-gray-600">SCOPE</span>
@@ -68,7 +67,7 @@ export function AdvanceDialog({ font, onClose }: { font: FontInstance; onClose: 
             </label>
             <label class="flex items-center gap-2">
               <input type="radio" name="mode" checked={mode === 'offset'} onChange={() => setMode('offset')} />
-              <span>Offset every advance by (± pixels)</span>
+              <span>Offset every advance by (Â± pixels)</span>
             </label>
           </div>
           <div class="flex items-center gap-2">
