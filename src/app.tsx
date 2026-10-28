@@ -11,6 +11,7 @@ import { EditorTitle } from './components/EditorTitle'
 import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer } from './store'
+import { signal } from '@preact/signals'
 import { PreviewPane } from './panes/PreviewPane'
 import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/ContainerPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
@@ -19,17 +20,25 @@ import { sampleTexts } from './sampleTexts'
 export function App() {
   const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
   const [confirmContainerClose, setConfirmContainerClose] = useState<{ containerId: string; font: typeof allFonts[0] } | null>(null)
-  const focusedId = storedFocusedId.value
 
   const allFonts = fonts.value
-  const TOP = 100
+
+  // Window stacking: most-recently-focused window ids first. Every window
+  // gets a distinct z-index from its recency position, so previously
+  // focused windows keep their relative order instead of tying.
+  const windowOrder = signal<string[]>([])
 
   function getZIndex(windowId: string): number {
-    return windowId === focusedId ? TOP : 1
+    const idx = windowOrder.value.indexOf(windowId)
+    // Cap below the dialog layer (z-200); stale ids sink to the bottom
+    return idx < 0 ? 1 : Math.min(99, windowOrder.value.length - idx)
   }
 
   function setFocus(id: string) {
     storedFocusedId.value = id
+    const order = windowOrder.value.filter(x => x !== id)
+    order.unshift(id)
+    windowOrder.value = order
   }
 
   function focusFont(windowId: string, fontId: string) {
