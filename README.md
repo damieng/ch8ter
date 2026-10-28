@@ -18,59 +18,33 @@ Try it now at https://damieng.github.io/ch8ter/
 
 ### File formats
 
-**Load** (auto-detected from extension and content):
+Auto-detected on load. ✓ = supported, ✗ = not supported.
 
-| Format | Extension | Notes |
-|--------|-----------|-------|
-| Ch8 | `.ch8` | Configurable dimensions, default 8x8 |
-| X11 BDF | `.bdf` | Preserves metrics, proportional spacing, charset |
-| X11 PCF | `.pcf` | Preserves metrics, proportional spacing, charset |
-| Linux PSF | `.psf`, `.psfu` | Unicode map layout support |
-| Yaff | `.yaff` | |
-| Acorn Draw | `.draw` | |
-| ZX Spectrum FZX | `.fzx` | Proportional spacing |
-| ZX Spectrum TAP | `.tap` | Extracts font-sized CODE blocks; multi-font opens as container |
-| AngelCode BMFont | `.fnt` + `.png` | Text descriptor format; drop descriptor and page PNGs together |
-| Atari ST GDOS / Atari 8-bit / Windows FNT | `.fnt` | Source auto-detected |
-| Windows FON | `.fon` | NE container; each FNT resource opens as a container entry |
-| DOS codepage | `.cpi`, `.cpx` | FONT, FONT.NT and DRFONT variants; opens as container |
-| TTF/OTF embedded bitmaps | `.ttf`, `.otf` | EBLC/EBDT/EBSC strikes; multi-strike opens as container |
-| PalmOS | `.pdb` | Proportional spacing |
-| CP/M Plus / EGA/VGA | `.com` | Source auto-detected; multi-font support |
-| BBC Micro | `.bbc` | Also detected by magic bytes |
-| Commodore 64 | `.64c` | |
-| C64 GEOS | `.cvt` | One point size per VLIR record; opens as container |
-| C64 GEOS | `.cvt` | One point size per VLIR record; opens as container |
-| Amiga hunk | _(any)_ | Detected by magic bytes |
-| PNG tile sheet | `.png` | Auto-detection of scale, gaps, borders |
-| Gzip-compressed | `.gz` | Transparent decompression of any format |
-
-**Save**:
-
-| Format | Extension |
-|--------|-----------|
-| Ch8 | `.ch8` |
-| X11 BDF | `.bdf` |
-| X11 PCF | `.pcf` |
-| Linux PSF | `.psf` | |
-| Linux PSF1 | `.psf` | Legacy 256-character variant |
-| Yaff | `.yaff` |
-| Acorn Draw | `.draw` |
-| ZX Spectrum FZX | `.fzx` |
-| Atari ST GDOS | `.fnt` |
-| Windows FNT v2/v3 | `.fnt` |
-| Atari 8-bit | `.fnt` |
-| PalmOS | `.pdb` |
-| Amiga | `.lha` | Archive with `.font` index + hunk font in `Fonts/<name>/` |
-| EGA/VGA | `.com` |
-| CP/M Plus | `.com` |
-| Commodore 64 | `.64c` |
-| ZX Spectrum TAP | `.tap` |
-| DOS codepage | `.cpi` |
-| Windows FON | `.fon` |
-| C64 GEOS | `.cvt` |
-| AngelCode BMFont | `.fnt` + `_0.png` |
-| BBC Micro | `.bbc` |
+| Format | Extension | Load | Save | Notes |
+|--------|-----------|:----:|:----:|-------|
+| Acorn Draw | `.draw` | ✓ | ✓ | |
+| Amiga hunk | _(any)_ → `.lha` | ✓ | ✓ | Save = LHA archive with `.font` index + hunk font |
+| AngelCode BMFont | `.fnt` + `.png` | ✓ | ✓ | Text descriptor + PNG atlas; drop descriptor and pages together |
+| Atari 8-bit | `.fnt` | ✓ | ✓ | |
+| Atari ST GDOS | `.fnt` | ✓ | ✓ | Source auto-detected |
+| BBC Micro | `.bbc` | ✓ | ✓ | Also detected by magic bytes |
+| C64 GEOS | `.cvt` | ✓ | ✓ | One point size per VLIR record; opens as container |
+| Ch8 | `.ch8` | ✓ | ✓ | Configurable dimensions, default 8x8 |
+| Commodore 64 | `.64c` | ✓ | ✓ | |
+| CP/M Plus / EGA/VGA | `.com` | ✓ | ✓ | Source auto-detected; multi-font support |
+| DOS codepage | `.cpi`, `.cpx` | ✓ | ✓ | FONT, FONT.NT and DRFONT variants; opens as container |
+| Linux PSF | `.psf`, `.psfu` | ✓ | ✓ | PSF1 and PSF2; unicode map support |
+| PalmOS | `.pdb` | ✓ | ✓ | Proportional spacing |
+| PNG tile sheet | `.png` | ✓ | ✗ | Auto-detection of scale, gaps, borders |
+| TTF/OTF embedded bitmaps | `.ttf`, `.otf` | ✓ | ✗ | EBLC/EBDT/EBSC strikes; opens as container |
+| Windows FNT | `.fnt` | ✓ | ✓ | v1/v2/v3 load; v2/v3 save |
+| Windows FON | `.fon` | ✓ | ✓ | NE container; opens as container |
+| X11 BDF | `.bdf` | ✓ | ✓ | Preserves metrics, proportional spacing, charset |
+| X11 PCF | `.pcf` | ✓ | ✓ | Preserves metrics, proportional spacing, charset |
+| Yaff | `.yaff` | ✓ | ✓ | |
+| ZX Spectrum FZX | `.fzx` | ✓ | ✓ | Proportional spacing |
+| ZX Spectrum TAP | `.tap` | ✓ | ✓ | Font-sized CODE blocks; opens as container |
+| Gzip-compressed | `.gz` | ✓ | ✗ | Transparent decompression of any format |
 
 **Export**:
 
