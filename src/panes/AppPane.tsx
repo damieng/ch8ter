@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "preact/hooks"
 import { signal } from "@preact/signals"
-import { FilePlus, FolderOpen, MoreVertical, Sun, Moon } from "lucide-preact"
+import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import { theme, toggleTheme } from "../theme"
 import {
   createFont,
@@ -818,18 +818,13 @@ export function AppPane() {
             <>
               {menuItem('Export project…', handleExportProject, close)}
               {menuItem('Import project…', () => projectInputRef.current?.click(), close)}
+              {menuItem(theme.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode', toggleTheme, close)}
               <div class="border-t border-gray-200 my-1" />
               {menuItem('Close All Fonts', handleCloseAllFonts, close)}
               {menuItem('Reset Local Storage', handleResetLocalStorage, close)}
             </>
           )}
         </Dropdown>
-        <IconBtn
-          onClick={() => toggleTheme()}
-          title={theme.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme.value === 'dark' ? <Sun size={ICON} /> : <Moon size={ICON} />}
-        </IconBtn>
         <span class="w-px h-6 bg-gray-300 mx-0.5" />
         <div class="flex flex-col">
           <span class="text-sm text-gray-600">Online Bitmap Font Editor</span>
