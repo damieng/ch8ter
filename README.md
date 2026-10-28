@@ -11,7 +11,7 @@ Try it now at https://damieng.github.io/ch8ter/
 - Open and edit multiple fonts simultaneously in floating, draggable windows
 - Variable glyph dimensions from 1x1 up to 32x32 pixels
 - Auto-save to browser localStorage with dirty-state tracking
-- Project export/import: save all open fonts, containers, previews and layout as one JSON file
+- Workspace export/import: save all open fonts, containers, previews and layout as one JSON file
 - Warns before closing the browser with unsaved fonts
 - Light and dark UI themes
 - Monospace and proportional spacing modes

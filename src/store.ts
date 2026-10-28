@@ -1,4 +1,4 @@
-import { signal, type Signal } from '@preact/signals'
+﻿import { signal, type Signal } from '@preact/signals'
 import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
@@ -53,7 +53,7 @@ export interface FontInstance {
   glyphRotationLive: Map<number, { data: Uint8Array; w: number; h: number }>
   /** If opened from a container pane, the container's id. */
   sourceContainerId?: string
-  /** Original byte index for each glyph slot, if known. Sparse — only set for glyphs loaded from file. */
+  /** Original byte index for each glyph slot, if known. Sparse â€” only set for glyphs loaded from file. */
   charIndex?: Signal<(number | undefined)[]>
 }
 
@@ -157,7 +157,7 @@ import {
   loadFontsFromStorage, loadLayoutFromStorage,
   loadContainersFromStorage,
   setupFontAutoSave, setupLayoutAutoSave, setupContainerAutoSave,
-  buildProjectFile, parseProjectFile, fontFromStored, containerFromStored,
+  buildWorkspaceFile, parseWorkspaceFile, fontFromStored, containerFromStored,
 } from './persistence'
 export type { WindowRect, StoredPreview } from './persistence'
 
@@ -395,9 +395,9 @@ setupContainerAutoSave(() => containers.value)
 
 // --- Project export/import ---
 
-/** Serialize all current state (fonts, containers, layout) to a project JSON string. */
-export function exportProject(): string {
-  return JSON.stringify(buildProjectFile(
+/** Serialize all current state (fonts, containers, layout) to a workspace JSON string. */
+export function exportWorkspace(): string {
+  return JSON.stringify(buildWorkspaceFile(
     fonts.value,
     containers.value,
     windowLayouts.value,
@@ -408,11 +408,11 @@ export function exportProject(): string {
 }
 
 /**
- * Replace all state with a parsed project file. The autosave effects fire on
+ * Replace all state with a parsed workspace file. The autosave effects fire on
  * the signal writes, so localStorage ends up consistent with the import.
  */
-export function importProject(json: string): void {
-  const file = parseProjectFile(json)
+export function importWorkspace(json: string): void {
+  const file = parseWorkspaceFile(json)
 
   const newFonts = file.fonts.map(fontFromStored)
   const newContainers = file.containers.map(containerFromStored)
@@ -644,7 +644,7 @@ export function setGlyphAdvance(font: FontInstance, glyphIndex: number, advance:
 /**
  * Set a pixel during a paint stroke.  Mutates the existing Uint8Array in
  * place (no allocation) and bumps paintVersion to trigger re-renders in
- * the glyph editor.  The fontData signal is NOT updated here — that
+ * the glyph editor.  The fontData signal is NOT updated here â€” that
  * happens in commitPaintStroke which creates the new array reference
  * needed for undo snapshots and downstream subscribers (tiles, preview).
  */

@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+﻿import { describe, it, expect, beforeEach } from 'vitest'
 import {
   activeFontId, addFont, charset, createFont, glyphCount, removeAllFonts, switchCharset,
   removeAllFontsAndContainers, fonts,
-  exportProject, importProject, addContainer, createContainerId, containers,
+  exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
 } from './store'
 import { execSetAdvances } from './undoHistory'
@@ -52,7 +52,7 @@ describe('charset switching', () => {
   })
 })
 
-describe('project export/import', () => {
+describe('workspace export/import', () => {
   beforeEach(() => {
     removeAllFontsAndContainers()
     windowLayouts.value = {}
@@ -77,7 +77,7 @@ describe('project export/import', () => {
     openPreview(font.id)
     updateWindowLayout('grid-test', { x: 10, y: 20, w: 300, h: 200 })
 
-    const json = exportProject()
+    const json = exportWorkspace()
 
     // Wipe everything, then restore
     removeAllFontsAndContainers()
@@ -85,7 +85,7 @@ describe('project export/import', () => {
     previews.value = []
     expect(fonts.value.length).toBe(0)
 
-    importProject(json)
+    importWorkspace(json)
 
     expect(fonts.value.length).toBe(1)
     expect(fonts.value[0].fileName.value).toBe('proj.bin')
@@ -107,9 +107,9 @@ describe('project export/import', () => {
     expect(containers.value.some(c => c.id === newId)).toBe(false)
   })
 
-  it('rejects JSON that is not a project file', () => {
-    expect(() => importProject('{"hello":1}')).toThrow('Not a Ch8ter project')
-    expect(() => importProject('not json at all')).toThrow()
+  it('rejects JSON that is not a workspace file', () => {
+    expect(() => importWorkspace('{"hello":1}')).toThrow('Not a Ch8ter workspace')
+    expect(() => importWorkspace('not json at all')).toThrow()
   })
 })
 

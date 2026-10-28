@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "preact/hooks"
+﻿import { useEffect, useState, useRef } from "preact/hooks"
 import { signal } from "@preact/signals"
 import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import { theme, toggleTheme } from "../theme"
@@ -12,11 +12,11 @@ import {
   type Charset,
   removeAllFonts,
   removeAllFontsAndContainers,
-  exportProject,
-  importProject,
+  exportWorkspace,
+  importWorkspace,
   fonts,
 } from "../store"
-import { parseProjectFile } from "../persistence"
+import { parseWorkspaceFile } from "../persistence"
 import { loadFontFile, UnknownFormatError, type FontConversionData } from "../fontLoad"
 import { openCom } from "../fileFormats/comOpener"
 import { parseCpi } from "../fileFormats/cpiParser"
@@ -116,8 +116,8 @@ const HOTKEYS: { key: string; desc: string }[] = [
   { key: 'Ctrl+X', desc: 'Cut glyph' },
   { key: 'Ctrl+V', desc: 'Paste glyph' },
   { key: 'Delete', desc: 'Clear glyph' },
-  { key: '↑ ↓ ← →', desc: 'Shift glyph pixels' },
-  { key: 'Ctrl+↑ ↓ ← →', desc: 'Navigate glyph grid' },
+  { key: 'â†‘ â†“ â† â†’', desc: 'Shift glyph pixels' },
+  { key: 'Ctrl+â†‘ â†“ â† â†’', desc: 'Navigate glyph grid' },
   { key: 'A-Z, 0-9', desc: 'Jump to that glyph' },
 ]
 
@@ -153,7 +153,7 @@ export function AppTitle() {
 
 export function AppPane() {
   const [showNewDialog, setShowNewDialog] = useState(false)
-  const projectInputRef = useRef<HTMLInputElement>(null)
+  const workspaceInputRef = useRef<HTMLInputElement>(null)
 
   // Warn before leaving with unsaved fonts
   useEffect(() => {
@@ -234,7 +234,7 @@ export function AppPane() {
       return
     }
 
-    // .cpx files are UPX-compressed .cpi — decompress and handle as .cpi
+    // .cpx files are UPX-compressed .cpi â€” decompress and handle as .cpi
     if (lower.endsWith(".cpx")) {
       try {
         const cpiData = decompressCpx(new Uint8Array(buf))
@@ -245,12 +245,12 @@ export function AppPane() {
       return
     }
 
-    // .cpi files are font containers — show in container pane
+    // .cpi files are font containers â€” show in container pane
     if (lower.endsWith(".cpi")) {
       try {
         const result = parseCpi(buf)
         if (result.fonts.length === 0) {
-          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts — there are no downloadable character bitmaps to edit.` })
+          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts â€” there are no downloadable character bitmaps to edit.` })
           return
         }
         const fonts: ContainerFont[] = result.fonts.map(f => ({
@@ -310,7 +310,7 @@ export function AppPane() {
       return
     }
 
-    // CVT files are C64 GEOS fonts — one point size per VLIR record
+    // CVT files are C64 GEOS fonts â€” one point size per VLIR record
     if (lower.endsWith(".cvt")) {
       try {
         const sets = parseGeosCvt(new Uint8Array(buf))
@@ -347,16 +347,16 @@ export function AppPane() {
       return
     }
 
-    // TTF/OTF files — check for embedded bitmaps
+    // TTF/OTF files â€” check for embedded bitmaps
     if (lower.endsWith(".ttf") || lower.endsWith(".otf")) {
       if (!isSbitFont(buf)) {
-        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines — no embedded bitmaps found.' })
+        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines â€” no embedded bitmaps found.' })
         return
       }
       try {
         const result = parseSbit(buf)
         if (result.strikes.length === 1) {
-          // Single strike — open as regular font
+          // Single strike â€” open as regular font
           const s = result.strikes[0]
           const font = createFont(
             s.fontData, name, s.startChar, s.glyphWidth, s.glyphHeight,
@@ -367,9 +367,9 @@ export function AppPane() {
           calcMissingMetrics(font)
           addFont(font)
         } else {
-          // Multiple strikes — show as container
+          // Multiple strikes â€” show as container
           const fonts: ContainerFont[] = result.strikes.map(s => ({
-            label: `${s.ppemX}×${s.ppemY}`,
+            label: `${s.ppemX}Ã—${s.ppemY}`,
             codepage: 0,
             deviceName: '',
             deviceType: 1,
@@ -398,13 +398,13 @@ export function AppPane() {
       return
     }
 
-    // .com files can contain multiple fonts — handle separately
+    // .com files can contain multiple fonts â€” handle separately
     if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
         switchCharset((results[0].source === "cpm" ? "cpm" : "cp437") as Charset)
         for (const result of results) {
-          const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
+          const suffix = results.length > 1 ? ` (${result.glyphWidth}Ã—${result.glyphHeight})` : ''
           const font = createFont(
             result.fontData, name + suffix, result.startChar,
             result.glyphWidth, result.glyphHeight,
@@ -713,48 +713,48 @@ export function AppPane() {
     URL.revokeObjectURL(url)
   }
 
-  function handleExportProject() {
+  function handleExportWorkspace() {
     try {
-      const json = exportProject()
+      const json = exportWorkspace()
       const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      download(new Blob([json], { type: 'application/json' }), `ch8ter-project-${date}.json`)
+      download(new Blob([json], { type: 'application/json' }), `ch8ter-workspace-${date}.json`)
     } catch (e) {
-      setError({ title: 'Failed to export project', message: (e as Error).message })
+      setError({ title: 'Failed to export workspace', message: (e as Error).message })
     }
   }
 
-  async function handleImportProject(file: File) {
+  async function handleImportWorkspace(file: File) {
     if (confirmAction) return
     let json: string
-    let file_: ReturnType<typeof parseProjectFile>
+    let file_: ReturnType<typeof parseWorkspaceFile>
     try {
       json = await file.text()
-      file_ = parseProjectFile(json)
+      file_ = parseWorkspaceFile(json)
     } catch (e) {
-      setError({ title: 'Failed to read project', message: (e as Error).message })
+      setError({ title: 'Failed to read workspace', message: (e as Error).message })
       return
     }
     const exported = file_.exported ? `Exported ${file_.exported.slice(0, 10)}.` : ''
     setConfirmAction({
-      title: 'Import project?',
-      message: `This will replace all open fonts, containers, and window layout with the project in ${file.name}. ${exported}\n\nUnsaved changes in the current fonts will be lost.`,
-      confirmLabel: 'Import project',
+      title: 'Import workspace?',
+      message: `This will replace all open fonts, containers, and window layout with the workspace in ${file.name}. ${exported}\n\nUnsaved changes in the current fonts will be lost.`,
+      confirmLabel: 'Import workspace',
       onConfirm: () => {
         try {
-          importProject(json)
+          importWorkspace(json)
         } catch (e) {
-          setError({ title: 'Failed to import project', message: (e as Error).message })
+          setError({ title: 'Failed to import workspace', message: (e as Error).message })
         }
         setConfirmAction(null)
       },
     })
   }
 
-  function handleImportProjectInput(e: Event) {
+  function handleImportWorkspaceInput(e: Event) {
     const input = e.target as HTMLInputElement
     const file = input.files?.[0]
     input.value = ''
-    if (file) void handleImportProject(file)
+    if (file) void handleImportWorkspace(file)
   }
 
   function menuItem(label: string, fn: () => void, close: () => void) {
@@ -800,11 +800,11 @@ export function AppPane() {
           <FolderOpen size={ICON} />
         </IconBtn>
         <input
-          ref={projectInputRef}
+          ref={workspaceInputRef}
           type="file"
           accept=".json,application/json"
           class="hidden"
-          onChange={handleImportProjectInput}
+          onChange={handleImportWorkspaceInput}
         />
         <Dropdown
           title="More"
@@ -816,8 +816,8 @@ export function AppPane() {
         >
           {(close) => (
             <>
-              {menuItem('Export Project…', handleExportProject, close)}
-              {menuItem('Import Project…', () => projectInputRef.current?.click(), close)}
+              {menuItem('Export Workspaceâ€¦', handleExportWorkspace, close)}
+              {menuItem('Import Workspaceâ€¦', () => workspaceInputRef.current?.click(), close)}
               <div class="border-t border-gray-200 my-1" />
               {menuItem(theme.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode', toggleTheme, close)}
               <div class="border-t border-gray-200 my-1" />

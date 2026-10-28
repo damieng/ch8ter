@@ -1,4 +1,4 @@
-// localStorage persistence for fonts, containers, window layout, and preview state.
+﻿// localStorage persistence for fonts, containers, window layout, and preview state.
 
 import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
@@ -62,7 +62,7 @@ interface StoredLayout {
 }
 
 /** Portable bundle of everything the app persists. */
-export interface ProjectFile {
+export interface WorkspaceFile {
   app: 'ch8ter'
   version: 1
   exported: string
@@ -231,17 +231,17 @@ export function toStoredLayout(
   }
 }
 
-// --- Project export/import ---
+// --- Workspace export/import ---
 
-/** Bundle all persisted state into a portable project file. */
-export function buildProjectFile(
+/** Bundle all persisted state into a portable workspace file. */
+export function buildWorkspaceFile(
   fontList: FontInstance[],
   containerList: FontContainer[],
   windows: Record<string, WindowRect>,
   previews: { id: string; fontId: string }[],
   storedPreviewSettings: StoredPreview[],
   focusedId: string,
-): ProjectFile {
+): WorkspaceFile {
   return {
     app: 'ch8ter',
     version: 1,
@@ -252,14 +252,14 @@ export function buildProjectFile(
   }
 }
 
-/** Parse and validate a project file's JSON. */
-export function parseProjectFile(json: string): ProjectFile {
+/** Parse and validate a workspace file's JSON. */
+export function parseWorkspaceFile(json: string): WorkspaceFile {
   const file = JSON.parse(json)
   if (!file || file.app !== 'ch8ter' || typeof file.version !== 'number') {
-    throw new Error('Not a Ch8ter project file')
+    throw new Error('Not a Ch8ter workspace file')
   }
   if (file.version > 1) {
-    throw new Error(`Project file version ${file.version} is newer than this app supports`)
+    throw new Error(`Workspace file version ${file.version} is newer than this app supports`)
   }
   return {
     app: 'ch8ter',
