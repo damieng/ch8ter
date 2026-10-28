@@ -77,7 +77,7 @@ export function DialogOverlay({ children, onClose, label }: Props) {
   return (
     <div
       ref={overlayRef}
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center z-[100000]"
       role="dialog"
       aria-modal="true"
       aria-label={label}

@@ -17,29 +17,38 @@ import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/C
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
 
+// Window stacking: a monotonically increasing counter. New windows raise
+// on mount, clicking a window raises it again — highest z wins. These live
+// at module scope so they survive component re-renders.
+const windowZ = signal<Record<string, number>>({})
+let zTop = 0
+
+function raiseWindow(windowId: string): void {
+  windowZ.value = { ...windowZ.value, [windowId]: ++zTop }
+  if (zTop > 5000) {
+    // Renormalize so z values stay well below the dialog layer (100000)
+    const sorted = Object.entries(windowZ.value).sort((a, b) => a[1] - b[1])
+    const normalized: Record<string, number> = {}
+    sorted.forEach(([id], i) => { normalized[id] = i + 1 })
+    zTop = sorted.length
+    windowZ.value = normalized
+  }
+}
+
+function getZIndex(windowId: string): number {
+  return windowZ.value[windowId] ?? 1
+}
+
+function setFocus(id: string) {
+  storedFocusedId.value = id
+  raiseWindow(id)
+}
+
 export function App() {
   const [confirmClose, setConfirmClose] = useState<{ fontId: string; font: typeof allFonts[0] } | null>(null)
   const [confirmContainerClose, setConfirmContainerClose] = useState<{ containerId: string; font: typeof allFonts[0] } | null>(null)
 
   const allFonts = fonts.value
-
-  // Window stacking: most-recently-focused window ids first. Every window
-  // gets a distinct z-index from its recency position, so previously
-  // focused windows keep their relative order instead of tying.
-  const windowOrder = signal<string[]>([])
-
-  function getZIndex(windowId: string): number {
-    const idx = windowOrder.value.indexOf(windowId)
-    // Cap below the dialog layer (z-200); stale ids sink to the bottom
-    return idx < 0 ? 1 : Math.min(99, windowOrder.value.length - idx)
-  }
-
-  function setFocus(id: string) {
-    storedFocusedId.value = id
-    const order = windowOrder.value.filter(x => x !== id)
-    order.unshift(id)
-    windowOrder.value = order
-  }
 
   function focusFont(windowId: string, fontId: string) {
     setFocus(windowId)

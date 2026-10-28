@@ -72,7 +72,7 @@ export function Dropdown({
           )
           : (
             <div
-              class={`absolute top-full ${alignClass} mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-1 ${popupClass ?? ''}`}
+              class={`absolute top-full ${alignClass} mt-1 bg-white border border-gray-300 rounded shadow-lg z-[6000] py-1 ${popupClass ?? ''}`}
             >
               {children(close)}
             </div>

@@ -74,6 +74,12 @@ export function BasePane({
     onFocus?.()
   }
 
+  // New windows pop up on top of everything else
+  useEffect(() => {
+    onFocus?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function onResizeMouseDown(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
