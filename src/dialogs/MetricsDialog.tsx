@@ -1,4 +1,4 @@
-﻿import { useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { Ruler } from 'lucide-preact'
 import { type FontInstance, resizeFont } from '../store'
 import { DialogOverlay } from '../components/DialogOverlay'

@@ -1,4 +1,4 @@
-﻿import { useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import type { FontContainer, ContainerMeta } from '../store'
 import { DialogOverlay } from '../components/DialogOverlay'
 import { DialogHeader } from '../components/DialogHeader'

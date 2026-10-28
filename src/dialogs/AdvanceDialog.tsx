@@ -1,4 +1,4 @@
-﻿// Set or offset the advance widths of the selected glyphs (or the whole
+// Set or offset the advance widths of the selected glyphs (or the whole
 // font) as a single undoable step.
 
 import { useState } from 'preact/hooks'
@@ -67,7 +67,7 @@ export function AdvanceDialog({ font, onClose }: { font: FontInstance; onClose: 
             </label>
             <label class="flex items-center gap-2">
               <input type="radio" name="mode" checked={mode === 'offset'} onChange={() => setMode('offset')} />
-              <span>Offset every advance by (Â± pixels)</span>
+              <span>Offset every advance by (± pixels)</span>
             </label>
           </div>
           <div class="flex items-center gap-2">

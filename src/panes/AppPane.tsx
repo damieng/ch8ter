@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "preact/hooks"
+import { useEffect, useState, useRef } from "preact/hooks"
 import { signal } from "@preact/signals"
 import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import { theme, toggleTheme } from "../theme"
@@ -116,8 +116,8 @@ const HOTKEYS: { key: string; desc: string }[] = [
   { key: 'Ctrl+X', desc: 'Cut glyph' },
   { key: 'Ctrl+V', desc: 'Paste glyph' },
   { key: 'Delete', desc: 'Clear glyph' },
-  { key: 'â†‘ â†“ â† â†’', desc: 'Shift glyph pixels' },
-  { key: 'Ctrl+â†‘ â†“ â† â†’', desc: 'Navigate glyph grid' },
+  { key: '↑ ↓ ← →', desc: '↑ ↓ ← →' },
+  { key: 'Ctrl+↑ ↓ ← →', desc: 'Navigate glyph grid' },
   { key: 'A-Z, 0-9', desc: 'Jump to that glyph' },
 ]
 

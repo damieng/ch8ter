@@ -1,4 +1,4 @@
-﻿import { signal, type Signal } from '@preact/signals'
+import { signal, type Signal } from '@preact/signals'
 import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'

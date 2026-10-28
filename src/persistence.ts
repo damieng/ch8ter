@@ -1,4 +1,4 @@
-﻿// localStorage persistence for fonts, containers, window layout, and preview state.
+// localStorage persistence for fonts, containers, window layout, and preview state.
 
 import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'

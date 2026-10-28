@@ -1,4 +1,4 @@
-﻿import { useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { type FontInstance } from '../store'
 import { createMonospaceVariant } from '../createVariants'

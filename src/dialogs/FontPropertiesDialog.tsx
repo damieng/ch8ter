@@ -1,4 +1,4 @@
-﻿import { useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { type FontInstance } from '../store'
 import type { FontMeta } from '../fileFormats/bdfParser'
 import { DialogOverlay } from '../components/DialogOverlay'
