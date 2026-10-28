@@ -87,11 +87,11 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
             {iconBtn(<RotateCcw size={ICON} />, 'Rotate CCW', () => execTransformSelection(font, rotateCCWBytes, 'Rotate CCW'), close)}
           </div>
           <div class="flex items-center gap-0 px-2 py-1">
-            {iconBtn(<ArrowUp size={ICON} />, 'Shift up', () => execTransformSelection(font, shiftUp, 'Shift Up'), close)}
-            {iconBtn(<ArrowDown size={ICON} />, 'Shift down', () => execTransformSelection(font, shiftDown, 'Shift Down'), close)}
-            {iconBtn(<ArrowLeft size={ICON} />, 'Shift left', () => execTransformSelection(font, shiftLeft, 'Shift Left'), close)}
-            {iconBtn(<ArrowRight size={ICON} />, 'Shift right', () => execTransformSelection(font, shiftRight, 'Shift Right'), close)}
-            {iconBtn(<CenterHIcon size={ICON} />, 'Center horizontal', () => execTransformSelection(font, centerHorizontalBytes, 'Center H'), close)}
+            {iconBtn(<ArrowUp size={ICON} />, 'Shift Up', () => execTransformSelection(font, shiftUp, 'Shift Up'), close)}
+            {iconBtn(<ArrowDown size={ICON} />, 'Shift Down', () => execTransformSelection(font, shiftDown, 'Shift Down'), close)}
+            {iconBtn(<ArrowLeft size={ICON} />, 'Shift Left', () => execTransformSelection(font, shiftLeft, 'Shift Left'), close)}
+            {iconBtn(<ArrowRight size={ICON} />, 'Shift Right', () => execTransformSelection(font, shiftRight, 'Shift Right'), close)}
+            {iconBtn(<CenterHIcon size={ICON} />, 'Center Horizontal', () => execTransformSelection(font, centerHorizontalBytes, 'Center H'), close)}
           </div>
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Copy Upper to Lower', () => execCopyRange(font, 65, 90, 97, 'Copy Upper→Lower'), close)}
@@ -102,10 +102,10 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Create Oblique...', () => setObliqueOpen(true), close)}
           {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font), close)}
           {font.spacing.value === 'proportional' && menuItem('Create Monospace...', () => setMonospaceOpen(true), close)}
-          {font.spacing.value === 'proportional' && menuItem('Set advances...', () => setAdvanceOpen(true), close)}
+          {font.spacing.value === 'proportional' && menuItem('Set Advances...', () => setAdvanceOpen(true), close)}
           <div class="border-t border-gray-200 my-1" />
-          {menuItem('Undo history...', () => setHistoryOpen(true), close)}
-          {menuItem('Compare fonts...', () => setDiffOpen(true), close)}
+          {menuItem('Undo History...', () => setHistoryOpen(true), close)}
+          {menuItem('Compare Fonts...', () => setDiffOpen(true), close)}
         </>
       )}
     </Dropdown>

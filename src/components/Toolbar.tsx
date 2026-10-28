@@ -86,7 +86,7 @@ export function SaveBar({ font }: { font: FontInstance }) {
             {btn('Save as X11 .pcf', 'pcf', '.pcf', close)}
             {btn('Save as Palm .pdb', 'pdb', '.pdb', close)}
             {btn('Save as Atari 8-bit .fnt', 'atari8', '.fnt', close)}
-            {btn('Save as Amiga font (.lha)', 'amiga', '.lha', close)}
+            {btn('Save as Amiga Font (.lha)', 'amiga', '.lha', close)}
             {btn('Save as EGA/VGA .com', 'ega', '.com', close)}
             {btn('Save as BBC Micro .bbc', 'bbc', '.bbc', close)}
             {btn('Save as CP/M Plus .com', 'com', '.com', close)}

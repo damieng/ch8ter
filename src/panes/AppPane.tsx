@@ -816,9 +816,10 @@ export function AppPane() {
         >
           {(close) => (
             <>
-              {menuItem('Export project…', handleExportProject, close)}
-              {menuItem('Import project…', () => projectInputRef.current?.click(), close)}
-              {menuItem(theme.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode', toggleTheme, close)}
+              {menuItem('Export Project…', handleExportProject, close)}
+              {menuItem('Import Project…', () => projectInputRef.current?.click(), close)}
+              <div class="border-t border-gray-200 my-1" />
+              {menuItem(theme.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode', toggleTheme, close)}
               <div class="border-t border-gray-200 my-1" />
               {menuItem('Close All Fonts', handleCloseAllFonts, close)}
               {menuItem('Reset Local Storage', handleResetLocalStorage, close)}
