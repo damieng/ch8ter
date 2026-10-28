@@ -15,6 +15,7 @@ import { execTransformSelection, execCopyRange } from '../undoHistory'
 import { ObliqueDialog } from '../dialogs/ObliqueDialog'
 import { MonospaceDialog } from '../dialogs/MonospaceDialog'
 import { FontDiffDialog } from '../dialogs/FontDiffDialog'
+import { AdvanceDialog } from '../dialogs/AdvanceDialog'
 import { Dropdown } from './Dropdown'
 
 const ICON = 16
@@ -23,6 +24,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
   const [obliqueOpen, setObliqueOpen] = useState(false)
   const [monospaceOpen, setMonospaceOpen] = useState(false)
   const [diffOpen, setDiffOpen] = useState(false)
+  const [advanceOpen, setAdvanceOpen] = useState(false)
 
   function iconBtn(icon: any, title: string, fn: () => void, close: () => void) {
     return (
@@ -63,6 +65,10 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           <FontDiffDialog font={font} onClose={() => setDiffOpen(false)} />,
           document.body,
         )}
+        {advanceOpen && createPortal(
+          <AdvanceDialog font={font} onClose={() => setAdvanceOpen(false)} />,
+          document.body,
+        )}
       </>}
     >
       {(close) => (
@@ -90,6 +96,7 @@ export function ToolsDropdown({ font }: { font: FontInstance }) {
           {menuItem('Create Oblique...', () => setObliqueOpen(true), close)}
           {font.spacing.value === 'monospace' && menuItem('Create Proportional', () => createProportionalVariant(font), close)}
           {font.spacing.value === 'proportional' && menuItem('Create Monospace...', () => setMonospaceOpen(true), close)}
+          {font.spacing.value === 'proportional' && menuItem('Set advances...', () => setAdvanceOpen(true), close)}
           <div class="border-t border-gray-200 my-1" />
           {menuItem('Compare fonts...', () => setDiffOpen(true), close)}
         </>

@@ -5,6 +5,7 @@ import {
   exportProject, importProject, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
 } from './store'
+import { execSetAdvances } from './undoHistory'
 
 describe('charset switching', () => {
   beforeEach(() => {
@@ -112,3 +113,36 @@ describe('project export/import', () => {
   })
 })
 
+
+describe('execSetAdvances', () => {
+  it('sets advances and undoes/redoes as one step', () => {
+    removeAllFontsAndContainers()
+    const font = createFont(new Uint8Array(64), 'adv.bin', 32, 8, 8)
+    addFont(font)
+
+    const updates = new Map<number, number>([[0, 5], [2, 9]])
+    execSetAdvances(font, updates)
+
+    expect(font.glyphMeta.value?.[0]?.dwidth).toEqual([5, 0])
+    expect(font.glyphMeta.value?.[2]?.dwidth).toEqual([9, 0])
+    expect(font.glyphMeta.value?.[1] ?? null).toBeNull()
+
+    font.undoHistory.undo()
+    expect(font.glyphMeta.value?.[0] ?? null).toBeNull()
+
+    font.undoHistory.redo()
+    expect(font.glyphMeta.value?.[2]?.dwidth).toEqual([9, 0])
+  })
+
+  it('preserves other glyph metadata while updating advances', () => {
+    removeAllFontsAndContainers()
+    const font = createFont(new Uint8Array(32), 'adv.bin', 32, 8, 8)
+    addFont(font)
+    font.glyphMeta.value = [null, { swidth: [8, 8], dwidth: [4, 0] }, null, null]
+
+    execSetAdvances(font, new Map<number, number>([[1, 7]]))
+
+    expect(font.glyphMeta.value?.[1]?.swidth).toEqual([8, 8])
+    expect(font.glyphMeta.value?.[1]?.dwidth).toEqual([7, 0])
+  })
+})

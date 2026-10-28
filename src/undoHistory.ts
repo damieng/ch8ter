@@ -1,4 +1,4 @@
-import { type FontInstance, bytesPerGlyph, bytesPerRow, markDirty } from './store'
+import { type FontInstance, bytesPerGlyph, bytesPerRow, markDirty, glyphCount } from './store'
 import { getBit, setBit, bpr as calcBpr } from './bitUtils'
 import { type GlyphTransform, type TransformResult, rotateCWBytes, rotateCCWBytes } from './glyphTransforms'
 
@@ -354,6 +354,33 @@ export function commitPaintStroke(font: FontInstance) {
 }
 
 // --- Undo/Redo entry points ---
+
+/**
+ * Set per-glyph advance widths in one undoable step. `updates` maps glyph
+ * indices to new advance values; glyphs without an entry keep theirs.
+ */
+export function execSetAdvances(font: FontInstance, updates: Map<number, number>, name = 'Set advances') {
+  const len = glyphCount(font)
+  const before = font.glyphMeta.value ? [...font.glyphMeta.value] : new Array(len).fill(null)
+  const after = [...before]
+  for (const [idx, adv] of updates) {
+    const existing = after[idx]
+    after[idx] = existing ? { ...existing, dwidth: [adv, 0] } : { dwidth: [adv, 0] }
+  }
+  const cmd: UndoCommand = {
+    name,
+    execute() {
+      font.glyphMeta.value = after
+      font.dirty.value = true
+    },
+    undo() {
+      font.glyphMeta.value = before
+      font.dirty.value = true
+    },
+  }
+  cmd.execute()
+  font.undoHistory.push(cmd)
+}
 
 export function undo(font: FontInstance) {
   font.undoHistory.undo()
