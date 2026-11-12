@@ -69,6 +69,8 @@ export interface WorkspaceFile {
   fonts: StoredFont[]
   containers: StoredContainer[]
   layout: StoredLayout
+  /** Active codepage key (e.g. 'cpm'). Absent in files exported before it was recorded. */
+  charset?: string
 }
 
 // --- Storage keys ---
@@ -241,6 +243,7 @@ export function buildWorkspaceFile(
   previews: { id: string; fontId: string }[],
   storedPreviewSettings: StoredPreview[],
   focusedId: string,
+  charset?: string,
 ): WorkspaceFile {
   return {
     app: 'ch8ter',
@@ -249,6 +252,7 @@ export function buildWorkspaceFile(
     fonts: toStoredFonts(fontList),
     containers: toStoredContainers(containerList),
     layout: toStoredLayout(windows, previews, storedPreviewSettings, focusedId),
+    charset,
   }
 }
 
@@ -268,6 +272,7 @@ export function parseWorkspaceFile(json: string): WorkspaceFile {
     fonts: Array.isArray(file.fonts) ? file.fonts : [],
     containers: Array.isArray(file.containers) ? file.containers : [],
     layout: file.layout && typeof file.layout === 'object' ? file.layout : { windows: {}, previews: [], focusedId: '' },
+    charset: typeof file.charset === 'string' ? file.charset : undefined,
   }
 }
 

@@ -108,6 +108,40 @@ describe('workspace export/import', () => {
     expect(containers.value.some(c => c.id === newId)).toBe(false)
   })
 
+  it('records the codepage and restores it without remapping glyphs', () => {
+    const original = charset.value
+    try {
+      const font = createFont(new Uint8Array([0xAA, 0, 0, 0, 0, 0, 0, 0]), 'cpm.bin', 0, 8, 8)
+      addFont(font)
+      charset.value = 'cpm'
+      const json = exportWorkspace()
+      expect(JSON.parse(json).charset).toBe('cpm')
+
+      charset.value = 'zx'
+      importWorkspace(json)
+
+      expect(charset.value).toBe('cpm')
+      expect(fonts.value[0].startChar.value).toBe(0)
+      expect(fonts.value[0].fontData.value[0]).toBe(0xAA)
+    } finally {
+      charset.value = original
+    }
+  })
+
+  it('leaves the codepage alone when importing an older file without one', () => {
+    const original = charset.value
+    try {
+      addFont(createFont())
+      const file = JSON.parse(exportWorkspace())
+      delete file.charset
+      charset.value = 'cp437'
+      importWorkspace(JSON.stringify(file))
+      expect(charset.value).toBe('cp437')
+    } finally {
+      charset.value = original
+    }
+  })
+
   it('rejects JSON that is not a workspace file', () => {
     expect(() => importWorkspace('{"hello":1}')).toThrow('Not a Ch8ter workspace')
     expect(() => importWorkspace('not json at all')).toThrow()

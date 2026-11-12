@@ -445,6 +445,7 @@ export function exportWorkspace(): string {
     previews.value,
     storedPreviews.value,
     storedFocusedId.value,
+    charset.value,
   ), null, 2)
 }
 
@@ -467,6 +468,13 @@ export function importWorkspace(json: string): void {
   const fallbackFontId = newFonts[0]?.id ?? ''
   const remapFontId = (id: string | undefined) =>
     (id && idMap.get(id)) || fallbackFontId
+
+  // The stored fonts are already laid out for this codepage, so set it
+  // directly rather than via switchCharset (which would remap the glyphs).
+  // Files exported before the codepage was recorded keep the current one.
+  if (file.charset && file.charset in CHARSETS) {
+    charset.value = file.charset as Charset
+  }
 
   fonts.value = newFonts
   activeFontId.value = newFonts.length > 0 ? newFonts[0].id : ''
