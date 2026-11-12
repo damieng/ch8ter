@@ -12,6 +12,9 @@ export interface SampleGroup {
   items: SampleText[]
 }
 
+/** Join rows into a multi-line sample; keeps the source one row per line. */
+const lines = (...rows: string[]) => rows.join('\n')
+
 const PANGRAMS = [
   'The quick brown fox jumps over the lazy dog.',
   'Pack my box with five dozen liquor jugs.',
@@ -119,6 +122,131 @@ export const sampleTexts: SampleGroup[] = [
       {
         name: 'RPG status',
         text: `${INV}  HERO STATUS      Floor: 7  ${INV}\nName:  Sir Aldric   Class: Knight\nHP:    142/180      MP:    35/50\nSTR: 18  DEX: 12  INT: 10\nGold: 1,247    EXP: 8,420\n${INV}  INVENTORY                  ${INV}\n  Iron Sword (+12 ATK)\n  Chain Mail (+8 DEF)\n  Healing Potion x3\n  Dungeon Map`,
+      },
+    ],
+  },
+  // Unicode coverage pages: previews are Unicode text mapped through the
+  // active codepage, so these show which character ranges a font/codepage has.
+  // Keep this group last so stored previews' group indices stay valid.
+  {
+    group: 'Codepage coverage',
+    items: [
+      {
+        name: 'Western European prose',
+        text: lines(
+          'Français : être, où, déjà, élève, garçon, hôtel, Noël, œuvre, cœur.',
+          'Español : mañana, día, menú, niño, ¿qué? ¡sí!, árbol, pingüino.',
+          'Deutsch : schön, Größe, über, Mädchen, spät, Straße, Fuß.',
+          'Svenska : blåbär, Åland, öl, räksmörgås, Göteborg.',
+          'Dansk : rødgrød, æble, øl, København, Århus.',
+          'Norsk : fjord, blåbær, ø, å, æ, Brønnøysund.',
+          'Italiano : perché, città, più, così, però, è, à.',
+          'Português : coração, não, limões, irmãos, ação, São Paulo.',
+          'Íslenska : Þingvellir, ð, þ, ý, Ý, Þ, Ð, æ, ö.',
+          'Català : Catalunya, àrea, èxit, íntegre, raïm, òpera, únic.',
+          'Nederlands : financiën, reünie, coördinatie, België.',
+          'Uppercase : À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö Ø Ù Ú Û Ü Ý Þ Ÿ Œ.',
+          '1252 extras : Škoda, Žižek, Œuvre, cœur, “quoted”, ‘single’.',
+        ),
+      },
+      {
+        name: 'Typography, legal & commerce',
+        text: lines(
+          '“Curly quotes” and ‘single quotes’ — Windows-1252.',
+          'En dash – and em dash —; ellipsis …; bullet •; dagger † and ‡.',
+          'Section §4.2, paragraph ¶3, per mille 50‰, trademark ™, registered ®, copyright ©.',
+          'Prices: £12.99, €19.50, ¥1,200, ¢99, ₧1.500, ƒ10, ¤ (generic currency).',
+          'Fractions: ¼ ½ ¾; powers: ¹ ² ³; degree: 20°C; micro: 5 µm; plus-minus: ±0.5.',
+          'Ordinals: 1ª 2ª 3ª; 1º 2º 3º; No. 7.',
+          'Typography: naïve, résumé, jalapeño, coöperate, reëlect.',
+          'Legal: © 2026 Acme® Widget™ — all rights reserved.',
+        ),
+      },
+      {
+        name: 'Arithmetic & algebra',
+        text: lines(
+          '3 + 4 = 7      10 - 3 = 7      6 × 7 = 42      20 ÷ 4 = 5',
+          '±5   ½   ¼   ¾   ⅛   ⅜   ⅝   ⅞',
+          'x ≥ 10,  y ≤ 20,  z ≠ 0',
+          'a ≃ 3.14159,  b ≈ 2.71828',
+          'x + 1 ≡ 3 (mod 2)',
+          'p ⇒ q,  q ⇐ p,  p ⇔ q',
+          '√16 = 4,  ∞,  ∑,  ∏,  ∫,  ∂,  ∆,  ∇',
+          '¬(p ∧ q) ⇔ ¬p ∨ ¬q',
+        ),
+      },
+      {
+        name: 'Geometry & logic',
+        text: lines(
+          'Circle: ○ ● ◘ ◙',
+          'Area = πr²,  Volume = 4/3 πr³',
+          'A ∪ B,  A ∩ B,  A ⊂ B,  A ⊆ B',
+          '0 ≤ x ≤ 10,  x ∈ ℝ,  x ∉ ∅',
+          '∀x ∃y : x + y = 0',
+          '∠ABC = 90°,  ∆ABC ≅ ∆DEF',
+          '∑ i = n(n+1)/2',
+        ),
+      },
+      {
+        name: 'Box drawing',
+        text: lines(
+          '┌────────┬────────┬────────┐',
+          '│ Single │ Double │ Mixed  │',
+          '├────────┼────────┼────────┤',
+          '│ ┌─┬─┐  │ ╔═╦═╗  │ ╒═╤═╕  │',
+          '│ ├─┼─┤  │ ╠═╬═╣  │ ╞═╪═╡  │',
+          '│ └─┴─┘  │ ╚═╩═╝  │ ╘═╧═╛  │',
+          '└────────┴────────┴────────┘',
+          '',
+          'Mixed pieces: ╒ ╓ ╔ ╕ ╖ ╗ ╘ ╙ ╚ ╛ ╜ ╝ ╞ ╟ ╠ ╡ ╢ ╣ ╤ ╥ ╦ ╧ ╨ ╩ ╪ ╫ ╬',
+          'CP/M+ stubs : ╵ ╶ ╷ ╴ · ◾',
+        ),
+      },
+      {
+        name: 'Shading & blocks',
+        text: lines(
+          'Shading:  ░░░  ▒▒▒  ▓▓▓  ███',
+          'Blocks:   ▄▄▄  ███  ▀▀▀   ▌▌▌  ███  ▐▐▐',
+          'Progress: [░░░░░░░░░░]   0%',
+          '          [███░░░░░░░]  30%',
+          '          [██████░░░░]  60%',
+          '          [██████████] 100%',
+          'Eighths:  ▁▂▃▄▅▆▇█   ▏▎▍▌▋▊▉█',
+          'Quarters: ▖▗▘▝▚▞▙▛▜▟',
+        ),
+      },
+      {
+        name: 'Arrows & direction',
+        text: lines(
+          '← ↑ → ↓ ↔ ↕    ⇐ ⇒ ⇔    ↖ ↗ ↘ ↙',
+          '▲ ▼ ► ◄        ◀ ▶        ⬆ ⬇ ⬅ ➡',
+          'North ↑  South ↓  East →  West ←',
+          'Undo ↶  Redo ↷  Return ↵  Tab ⇥',
+          'Long: ⟵ ⟶ ⟷  Double: ⇇ ⇈ ⇉ ⇊  Harpoon: ↼ ⇀ ↽ ⇁',
+        ),
+      },
+      {
+        name: 'Cards, games & dingbats',
+        text: lines(
+          'Card suits: ♠ ♣ ♥ ♦',
+          'Hand: A♠ K♥ Q♣ J♦ 10♠ 9♥ 8♣ 7♦',
+          'Faces: ☺ ☻   Circles: ○ ● ◘ ◙   Music: ♪ ♫',
+          'Marks: ✓ ✔ ✗ ✘   Stars: ★ ☆ ✦ ✧   Squares: ■ □ ▪ ▫',
+          'Game: ▲ ▼ ◄ ►   ● ○   ⚀ ⚁ ⚂ ⚃ ⚄ ⚅',
+          'Chess: ♔ ♕ ♖ ♗ ♘ ♙ ♚ ♛ ♜ ♝ ♞ ♟',
+          'Weather: ☀ ☁ ☂ ☃ ☼   Gender: ♂ ♀',
+        ),
+      },
+      {
+        name: 'Greek & technical',
+        text: lines(
+          'Greek: α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ τ υ φ χ ψ ω',
+          'Upper: Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω',
+          'CP437: α ß Γ π Σ σ µ τ Φ Θ Ω δ ∞ φ ε ∩',
+          'CP/M+: α β γ δ ε θ λ μ π ρ σ τ φ χ ψ ω',
+          'Units: 5 µm, 20 °C, 3 Ω, 2 µF, 1 kΩ, 50 Hz',
+          'Math: ∞ ∑ ∏ ∫ ∂ ∆ ∇ √ ≈ ≠ ≤ ≥ ≡ ± × ÷',
+        ),
       },
     ],
   },
