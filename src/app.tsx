@@ -10,7 +10,7 @@ import { BasePane } from './components/BasePane'
 import { EditorTitle } from './components/EditorTitle'
 import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer, closePinnedEditor } from './store'
 import { raiseWindow, getZIndex } from './windowStack'
 import { PreviewPane } from './panes/PreviewPane'
 import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/ContainerPane'
@@ -69,17 +69,43 @@ export function App() {
       {/* Per-font: Glyph Editor + Font windows */}
       {allFonts.map((font, i) => (
         <Fragment key={font.id}>
+          {/* Pinned editors: each fixed on one glyph, left behind by a double-click */}
+          {font.pinnedEditors.value.map((ed, k) => (
+            <BasePane
+              key={ed.id}
+              title={<EditorTitle font={font} glyph={ed.glyph} />}
+              windowId={ed.id}
+              initialX={46 + i * 30 + k * 30}
+              initialY={150 + i * 30 + k * 30}
+              initialW={380}
+              initialH={440}
+              resizable
+              zIndex={getZIndex(ed.id)}
+              onFocus={() => focusFont(ed.id, font.id)}
+              onClose={() => closePinnedEditor(font, ed.id)}
+            >
+              <div class="flex flex-col gap-2 p-2 h-full">
+                <div class="flex-1 min-h-0">
+                  <GlyphEditor font={font} glyph={ed.glyph} />
+                </div>
+                <Toolbar font={font} glyph={ed.glyph} />
+              </div>
+            </BasePane>
+          ))}
+
+          {/* Tracking editor: follows the last-clicked glyph */}
           {font.editorOpen.value && (
             <BasePane
+              key={font.trackerId.value}
               title={<EditorTitle font={font} />}
-              windowId={`editor-${font.id}`}
+              windowId={font.trackerId.value}
               initialX={16 + i * 30}
               initialY={120 + i * 30}
               initialW={380}
               initialH={440}
               resizable
-              zIndex={getZIndex(`editor-${font.id}`)}
-              onFocus={() => focusFont(`editor-${font.id}`, font.id)}
+              zIndex={getZIndex(font.trackerId.value)}
+              onFocus={() => focusFont(font.trackerId.value, font.id)}
               onClose={() => { font.editorOpen.value = false }}
             >
               <div class="flex flex-col gap-2 p-2 h-full">

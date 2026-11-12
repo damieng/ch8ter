@@ -190,19 +190,21 @@ export function ExportBar({ font }: { font: FontInstance }) {
   )
 }
 
-export function Toolbar({ font }: { font: FontInstance }) {
+export function Toolbar({ font, glyph }: { font: FontInstance; glyph?: number }) {
+  // Pinned editors operate on their own glyph; the tracker follows the selection
+  const g = () => glyph ?? font.lastClickedGlyph.value
   return (
     <div class="flex flex-wrap gap-1">
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, flipXBytes, 'Flip X')} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, flipYBytes, 'Flip Y')} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, invertBytes, 'Invert')} title="Invert"><Contrast size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, rotateCWBytes, 'Rotate CW')} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, rotateCCWBytes, 'Rotate CCW')} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftUp, 'Shift Up')} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftDown, 'Shift Down')} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftLeft, 'Shift Left')} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, shiftRight, 'Shift Right')} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
-      <IconBtn onClick={() => execTransformGlyph(font, font.lastClickedGlyph.value, centerHorizontalBytes, 'Center H')} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), flipXBytes, 'Flip X')} title="Flip X"><FlipHorizontal size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), flipYBytes, 'Flip Y')} title="Flip Y"><FlipVertical size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), invertBytes, 'Invert')} title="Invert"><Contrast size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), rotateCWBytes, 'Rotate CW')} title="Rotate CW"><RotateCw size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), rotateCCWBytes, 'Rotate CCW')} title="Rotate CCW"><RotateCcw size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), shiftUp, 'Shift Up')} title="Shift up"><ArrowUp size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), shiftDown, 'Shift Down')} title="Shift down"><ArrowDown size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), shiftLeft, 'Shift Left')} title="Shift left"><ArrowLeft size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), shiftRight, 'Shift Right')} title="Shift right"><ArrowRight size={ICON} /></IconBtn>
+      <IconBtn onClick={() => execTransformGlyph(font, g(), centerHorizontalBytes, 'Center H')} title="Center horizontal"><CenterHIcon size={ICON} /></IconBtn>
     </div>
   )
 }

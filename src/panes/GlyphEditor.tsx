@@ -23,7 +23,8 @@ function shapePixels(tool: Tool, x0: number, y0: number, x1: number, y1: number,
   return ellipsePixels(x0, y0, x1, y1, filled)
 }
 
-export function GlyphEditor({ font }: { font: FontInstance }) {
+/** `glyph` pins the editor to one glyph; omitted, it tracks the font's last-clicked glyph. */
+export function GlyphEditor({ font, glyph }: { font: FontInstance; glyph?: number }) {
   const painting = useRef<boolean | null>(null)
   const draggingGuide = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -41,7 +42,7 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   const previewPixels = useRef<Set<string>>(new Set())
   const [preview, setPreview] = useState<{ pixels: Set<string>; on: boolean } | null>(null)
 
-  const idx = font.lastClickedGlyph.value
+  const idx = glyph ?? font.lastClickedGlyph.value
   const w = font.glyphWidth.value
   const h = font.glyphHeight.value
 
@@ -183,7 +184,7 @@ export function GlyphEditor({ font }: { font: FontInstance }) {
   }
 
   // Determine which guidelines to show based on the current character
-  const charCode = font.startChar.value + font.lastClickedGlyph.value
+  const charCode = font.startChar.value + idx
   const charFlags = getCharMetrics(charCode)
 
   // Guide sits at top edge of row: row 0 = top of grid, row h = bottom of grid

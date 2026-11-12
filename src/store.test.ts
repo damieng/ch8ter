@@ -4,6 +4,7 @@ import {
   removeAllFontsAndContainers, fonts,
   exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
+  openGlyphEditor, openNewGlyphEditor, closePinnedEditor,
 } from './store'
 import { execSetAdvances } from './undoHistory'
 
@@ -144,5 +145,38 @@ describe('execSetAdvances', () => {
 
     expect(font.glyphMeta.value?.[1]?.swidth).toEqual([8, 8])
     expect(font.glyphMeta.value?.[1]?.dwidth).toEqual([7, 0])
+  })
+})
+
+describe('multiple glyph editors', () => {
+  it('double-click pins the old tracker to its glyph and opens a new tracker', () => {
+    const font = createFont()
+    openGlyphEditor(font)
+    const oldId = font.trackerId.value
+    updateWindowLayout(oldId, { x: 10, y: 20, w: 380, h: 440 })
+
+    openNewGlyphEditor(font, 3, true)
+
+    expect(font.pinnedEditors.value).toEqual([{ id: oldId, glyph: 3 }])
+    expect(font.trackerId.value).not.toBe(oldId)
+    expect(font.editorOpen.value).toBe(true)
+    expect(windowLayouts.value[font.trackerId.value]).toMatchObject({ x: 40, y: 50 })
+  })
+
+  it('double-click with no open tracker just opens one without pinning', () => {
+    const font = createFont()
+    openNewGlyphEditor(font, 3, false)
+    expect(font.pinnedEditors.value).toEqual([])
+    expect(font.editorOpen.value).toBe(true)
+  })
+
+  it('closePinnedEditor removes only that editor', () => {
+    const font = createFont()
+    openGlyphEditor(font)
+    openNewGlyphEditor(font, 1, true)
+    openNewGlyphEditor(font, 2, true)
+    const [first, second] = font.pinnedEditors.value
+    closePinnedEditor(font, first.id)
+    expect(font.pinnedEditors.value).toEqual([second])
   })
 })

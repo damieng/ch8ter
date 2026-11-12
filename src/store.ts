@@ -15,6 +15,12 @@ import {
 
 export type SpacingMode = 'monospace' | 'proportional'
 
+export interface PinnedEditor {
+  /** Window id (also the key for the window's stored layout). */
+  id: string
+  glyph: number
+}
+
 export interface FontInstance {
   id: string
   fontData: Signal<Uint8Array>
@@ -40,7 +46,12 @@ export interface FontInstance {
   dirty: Signal<boolean>
   spacing: Signal<SpacingMode>
   tracking: Signal<number>
+  /** Whether the tracking glyph editor window (the one that follows lastClickedGlyph) is open. */
   editorOpen: Signal<boolean>
+  /** Window id of the tracking glyph editor. Changes when a double-click spawns a new tracker. */
+  trackerId: Signal<string>
+  /** Extra glyph editor windows pinned to one glyph each. They stop following the selection. */
+  pinnedEditors: Signal<PinnedEditor[]>
   savedSnapshot: Signal<Uint8Array>
   /** Bumped on each in-place pixel edit; lets the glyph editor re-render without copying fontData. */
   paintVersion: Signal<number>
@@ -140,6 +151,8 @@ export function createFont(
     spacing: signal(spacingMode),
     tracking: signal(tracking),
     editorOpen: signal(false),
+    trackerId: signal(`editor-${id}`),
+    pinnedEditors: signal<PinnedEditor[]>([]),
     dirty: signal(false),
     savedSnapshot: signal(new Uint8Array(initial)),
     paintVersion: signal(0),
@@ -254,8 +267,34 @@ export function addFont(font: FontInstance) {
 
 export function openGlyphEditor(font: FontInstance) {
   font.editorOpen.value = true
-  storedFocusedId.value = `editor-${font.id}`
-  raiseWindow(`editor-${font.id}`)
+  storedFocusedId.value = font.trackerId.value
+  raiseWindow(font.trackerId.value)
+}
+
+let nextEditorId = 1
+
+/**
+ * Double-click on a glyph: the open tracking editor is left behind pinned to
+ * `pinnedGlyph` (the glyph it was showing), and a fresh tracking editor opens
+ * just offset from it. If no tracking editor was open there is nothing to pin,
+ * so this does nothing beyond the ordinary single-click behaviour.
+ */
+export function openNewGlyphEditor(font: FontInstance, pinnedGlyph: number, trackerWasOpen: boolean) {
+  if (!trackerWasOpen) {
+    openGlyphEditor(font)
+    return
+  }
+  const oldId = font.trackerId.value
+  const newId = `editor-${font.id}-${nextEditorId++}`
+  font.pinnedEditors.value = [...font.pinnedEditors.value, { id: oldId, glyph: pinnedGlyph }]
+  const oldRect = windowLayouts.value[oldId]
+  if (oldRect) updateWindowLayout(newId, { ...oldRect, x: oldRect.x + 30, y: oldRect.y + 30 })
+  font.trackerId.value = newId
+  openGlyphEditor(font)
+}
+
+export function closePinnedEditor(font: FontInstance, id: string) {
+  font.pinnedEditors.value = font.pinnedEditors.value.filter(e => e.id !== id)
 }
 
 export function removeFont(id: string) {
