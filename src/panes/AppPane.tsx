@@ -812,7 +812,6 @@ export function AppPane() {
           buttonClass="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
           popupClass="w-48"
           align="left"
-          portal
         >
           {(close) => (
             <>

@@ -5,6 +5,9 @@
 
 import { signal } from '@preact/signals'
 
+// Pop-up menus and pickers sit above every window and dialog (dialogs are 100000).
+export const POPUP_Z = 200000
+
 export const windowZ = signal<Record<string, number>>({})
 let zTop = 0
 

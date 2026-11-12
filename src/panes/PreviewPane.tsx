@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'preact/hooks'
-import { ZoomIn, Download } from 'lucide-preact'
+import { Download } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { isFixedWidth } from '../unicodeRanges'
 import { glyphCodeForChar, charset } from '../charsets'
@@ -10,6 +10,7 @@ import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { bpr } from '../bitUtils'
 import { ColorSwatch } from '../components/ColorSwatch'
+import { ZoomControl } from '../components/ZoomControl'
 
 interface Props {
   previewId: string
@@ -21,7 +22,6 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   const [selectedFontId, setSelectedFontId] = useState(stored?.selectedFontId ?? initialFontId)
   const [textKey, setTextKey] = useState(stored?.textKey ?? '0-0')
   const [zoom, setZoom] = useState(stored?.zoom ?? 2)
-  const [zoomOpen, setZoomOpen] = useState(false)
   const rawSysIdx = stored?.systemIdx ?? COLOR_SYSTEMS.findIndex(s => s.name === 'Sinclair ZX Spectrum')
   const initSysIdx = rawSysIdx >= 0 && rawSysIdx < COLOR_SYSTEMS.length ? rawSysIdx : 0
   const [systemIdx, setSystemIdx] = useState(initSysIdx)
@@ -30,7 +30,6 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   const [colorOpen, setColorOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const zoomRef = useRef<HTMLDivElement>(null)
   const colorRef = useRef<HTMLDivElement>(null)
   const colorPopupRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -112,7 +111,6 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   }, [])
 
   // Click-outside for zoom and color pickers
-  useClickOutside(zoomRef, () => setZoomOpen(false))
   useClickOutside([colorRef, colorPopupRef], () => setColorOpen(false))
 
   const selStart = textareaRef.current?.selectionStart ?? 0
@@ -383,7 +381,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
             setBg(COLOR_SYSTEMS[idx].bg)
           }}
         />
-        <div class="relative ml-auto flex items-center gap-1.5" ref={zoomRef}>
+        <div class="ml-auto flex items-center gap-1.5">
           <button
             class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
             onClick={handleExportPreviewPng}
@@ -391,26 +389,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
           >
             <Download size={14} />
           </button>
-          <button
-            class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-sm"
-            onClick={() => setZoomOpen(!zoomOpen)}
-          >
-            <ZoomIn size={14} />
-            {zoom * 100}%
-          </button>
-          {zoomOpen && (
-            <div class="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 py-2 px-3 flex items-center gap-2">
-              <input
-                type="range"
-                min={1}
-                max={8}
-                value={zoom}
-                onInput={(e) => setZoom(parseInt((e.target as HTMLInputElement).value))}
-                class="w-40"
-              />
-              <span class="text-sm whitespace-nowrap">{zoom * 100}%</span>
-            </div>
-          )}
+          <ZoomControl value={zoom} onChange={setZoom} max={8} />
         </div>
       </div>
       <div

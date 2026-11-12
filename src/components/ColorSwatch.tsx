@@ -3,6 +3,7 @@ import type { RefObject } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { COLOR_SYSTEMS } from '../colorSystems'
+import { POPUP_Z } from '../windowStack'
 
 export function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, systems, systemIdx, onToggle, onFgPick, onBgPick, onSystemChange }: {
   anchorRef: RefObject<HTMLDivElement | null>
@@ -61,7 +62,7 @@ export function ColorSwatch({ anchorRef, popupRef, fg, bg, open, palette, system
         <div
           ref={popupRef as preact.Ref<HTMLDivElement>}
           class="fixed bg-white border border-gray-300 rounded shadow-lg p-2"
-          style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
+          style={{ left: pos.x, top: pos.y, zIndex: POPUP_Z }}
         >
           <div class="flex gap-1 mb-2">
             <select
