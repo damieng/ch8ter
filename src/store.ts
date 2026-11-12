@@ -3,6 +3,7 @@ import { getBit, setBit, clearBit, bpr as calcBpr } from './bitUtils'
 import { UndoHistory } from './undoHistory'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import { baseName } from './fontLoad'
+import { raiseWindow } from './windowStack'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, buildGlyphLookup } from './charMetrics'
 import {
   type Charset, CHARSETS, charset,
@@ -254,6 +255,7 @@ export function addFont(font: FontInstance) {
 export function openGlyphEditor(font: FontInstance) {
   font.editorOpen.value = true
   storedFocusedId.value = `editor-${font.id}`
+  raiseWindow(`editor-${font.id}`)
 }
 
 export function removeFont(id: string) {

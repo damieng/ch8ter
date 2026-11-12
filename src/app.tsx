@@ -11,33 +11,11 @@ import { EditorTitle } from './components/EditorTitle'
 import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer } from './store'
-import { signal } from '@preact/signals'
+import { raiseWindow, getZIndex } from './windowStack'
 import { PreviewPane } from './panes/PreviewPane'
 import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/ContainerPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
 import { sampleTexts } from './sampleTexts'
-
-// Window stacking: a monotonically increasing counter. New windows raise
-// on mount, clicking a window raises it again — highest z wins. These live
-// at module scope so they survive component re-renders.
-const windowZ = signal<Record<string, number>>({})
-let zTop = 0
-
-function raiseWindow(windowId: string): void {
-  windowZ.value = { ...windowZ.value, [windowId]: ++zTop }
-  if (zTop > 5000) {
-    // Renormalize so z values stay well below the dialog layer (100000)
-    const sorted = Object.entries(windowZ.value).sort((a, b) => a[1] - b[1])
-    const normalized: Record<string, number> = {}
-    sorted.forEach(([id], i) => { normalized[id] = i + 1 })
-    zTop = sorted.length
-    windowZ.value = normalized
-  }
-}
-
-function getZIndex(windowId: string): number {
-  return windowZ.value[windowId] ?? 1
-}
 
 function setFocus(id: string) {
   storedFocusedId.value = id
