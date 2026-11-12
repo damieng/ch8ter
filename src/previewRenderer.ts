@@ -3,6 +3,7 @@
 import type { FontInstance } from './store'
 import { glyphAdvance } from './store'
 import { isFixedWidth } from './unicodeRanges'
+import { glyphCodeForChar } from './charsets'
 import { drawGlyphToCtx } from './drawGlyph'
 import { bpr } from './bitUtils'
 
@@ -78,7 +79,7 @@ export function renderText({
           ctx.fillStyle = cFg
         }
 
-        const glyphIdx = line.charCodeAt(col) - startChar
+        const glyphIdx = glyphCodeForChar(line[col]) - startChar
         if (glyphIdx < 0 || glyphIdx >= gc) continue
         drawGlyph(glyphIdx, ox, oy)
       }
@@ -89,16 +90,18 @@ export function renderText({
       ctx.fillRect(cursorPos.col * cellW, cursorPos.row * rowH, scale, rowH)
     }
   } else {
-    function charAdv(gi: number) {
+    // Advance for a character of the (Unicode) preview text
+    function charAdv(ch: string) {
+      const gi = glyphCodeForChar(ch) - startChar
       if (gi < 0 || gi >= gc) return cellW
-      if (isFixedWidth(startChar + gi)) return cellW
+      if (isFixedWidth(ch.charCodeAt(0))) return cellW
       return glyphAdvance(font, gi) * scale
     }
 
     let maxLineWidth = 0
     for (const line of lines) {
       let w = 0
-      for (let i = 0; i < line.length; i++) w += charAdv(line.charCodeAt(i) - startChar)
+      for (let i = 0; i < line.length; i++) w += charAdv(line[i])
       if (w > maxLineWidth) maxLineWidth = w
     }
 
@@ -115,13 +118,13 @@ export function renderText({
       const rowAttrs = attrs[row] || []
       const oy = row * rowH
       for (let col = 0; col < lines[row].length; col++) {
-        const charCode = lines[row].charCodeAt(col)
-        const glyphIdx = charCode - startChar
+        const ch = lines[row][col]
+        const glyphIdx = glyphCodeForChar(ch) - startChar
         const isSel = selected.has(`${row},${col}`)
         const inv = rowAttrs[col] === 1
         const cFg = inv ? bg : fg
         const cBg = inv ? fg : bg
-        const advance = charAdv(glyphIdx)
+        const advance = charAdv(ch)
 
         if (inv) {
           ctx.fillStyle = cBg
@@ -153,7 +156,7 @@ export function renderText({
       if (row < lines.length && cursorPos.col < lines[row].length) {
         let xPos = 0
         for (let col = 0; col < cursorPos.col; col++) {
-          xPos += charAdv(lines[row].charCodeAt(col) - startChar)
+          xPos += charAdv(lines[row][col])
         }
         ctx.fillStyle = fg
         ctx.fillRect(xPos, row * rowH, scale, rowH)

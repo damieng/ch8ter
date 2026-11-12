@@ -591,17 +591,30 @@ export function charLabel(charCode: number): string {
   return hexLabel(charCode)
 }
 
-// Cached reverse map for O(1) charCodeFromKey lookups
+// Cached reverse map for O(1) Unicode -> code lookups
 let _reverseCache: { cs: Charset; map: Map<string, number> } | null = null
+
+function reverseMap(cs: Charset): Map<string, number> {
+  if (!_reverseCache || _reverseCache.cs !== cs) {
+    _reverseCache = { cs, map: buildUnicodeReverse(cs) }
+  }
+  return _reverseCache.map
+}
+
+/**
+ * Glyph code (before subtracting the font's startChar) for a character of
+ * preview text, which is Unicode. Characters the active codepage defines map
+ * to their position in it (e.g. U+2554 -> 0x86 in Amstrad CP/M Plus); anything
+ * else keeps its own code, so ASCII and Unicode-indexed fonts are unaffected.
+ */
+export function glyphCodeForChar(ch: string): number {
+  return reverseMap(charset.value).get(ch) ?? ch.charCodeAt(0)
+}
 
 export function charCodeFromKey(ch: string): number | null {
   const codepoints = [...ch]
   if (codepoints.length !== 1) return null
-  const cs = charset.value
-  if (!_reverseCache || _reverseCache.cs !== cs) {
-    _reverseCache = { cs, map: buildUnicodeReverse(cs) }
-  }
-  const mapped = _reverseCache.map.get(ch)
+  const mapped = reverseMap(charset.value).get(ch)
   if (mapped !== undefined) return mapped
   const code = codepoints[0].codePointAt(0)!
   if (code >= 32 && code <= 126) return code

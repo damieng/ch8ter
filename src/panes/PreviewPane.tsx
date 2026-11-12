@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } fr
 import { ZoomIn, Download } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { isFixedWidth } from '../unicodeRanges'
+import { glyphCodeForChar, charset } from '../charsets'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
@@ -117,6 +118,10 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   const selStart = textareaRef.current?.selectionStart ?? 0
   const selEnd = textareaRef.current?.selectionEnd ?? 0
 
+  // Preview text is Unicode, mapped to glyphs through the active codepage;
+  // subscribe so switching codepage re-lays-out and redraws
+  const activeCharset = charset.value
+
   const wrapResult = useMemo(() => {
     if (!proportional || !font) {
       return wrapText(text, cols)
@@ -128,12 +133,11 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
     const maxPixelWidth = cols * gw
     return wrapTextProportional(text, maxPixelWidth, (ch) => {
-      const cp = ch.charCodeAt(0)
-      const gi = cp - start
-      if (isFixedWidth(cp)) return gw
+      const gi = glyphCodeForChar(ch) - start
+      if (isFixedWidth(ch.charCodeAt(0))) return gw
       return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
     })
-  }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh])
+  }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh, activeCharset])
 
   const { lines: wrappedLines, offsets, attrs } = wrapResult
   const cursorPos = focused ? cursorPosition(offsets, selStart, text.length) : null
@@ -156,7 +160,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       proportional,
       lineHeight: gh,
     })
-  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh, selectionTick])
+  }, [font, wrappedLines, attrs, zoom, cols, fg, bg, cursorPos, cursorVisible, selected, proportional, gh, selectionTick, activeCharset])
 
   // Normal reactive render
   useEffect(renderCanvas, [renderCanvas])
@@ -188,9 +192,8 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       const line = wrappedLines[row]
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const cp = line[col].charCodeAt(0)
-        const gi = cp - start
-        const advance = (isFixedWidth(cp) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
+        const gi = glyphCodeForChar(line[col]) - start
+        const advance = (isFixedWidth(line[col].charCodeAt(0)) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break
