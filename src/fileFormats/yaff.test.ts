@@ -31,3 +31,25 @@ describe('parseYaff stacked labels', () => {
     expect(r.populated.has(0x42 - r.startChar)).toBe(true)
   })
 })
+
+describe('parseYaff cell size', () => {
+  it('sizes the cell to the widest glyph, not the first one', () => {
+    const r = parseYaff([
+      '0x20:',
+      '    ...',
+      '    ...',
+      '0x41:',
+      '    @@@@@',
+      '    @...@',
+    ].join('\n'))
+    expect(r.glyphWidth).toBe(5)
+    expect(px(r, 0x41, 4, 0)).toBe(true) // the right-hand column is not clipped
+    expect(px(r, 0x41, 4, 1)).toBe(true)
+  })
+
+  it('honours a declared cell-size larger than any glyph', () => {
+    const r = parseYaff(['cell-size: 8x4', '0x41:', '    @@', '    @.'].join('\n'))
+    expect(r.glyphWidth).toBe(8)
+    expect(r.glyphHeight).toBe(4)
+  })
+})

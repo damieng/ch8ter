@@ -69,9 +69,16 @@ export function parseYaff(text: string): YaffParseResult {
 
   if (coded.length === 0) throw new Error('No glyphs found in YAFF file')
 
-  // Determine glyph dimensions from first glyph
-  const glyphHeight = coded[0].rows.length
-  const glyphWidth = coded[0].rows[0].length
+  // The cell must hold the widest and tallest glyph (the first may be a narrow space), and
+  // at least the declared cell-size
+  const declared = /^(\d+)x(\d+)$/i.exec(meta['cell-size'] ?? '')
+  let glyphHeight = declared ? parseInt(declared[2]) : 0
+  let glyphWidth = declared ? parseInt(declared[1]) : 0
+  for (const g of coded) {
+    glyphHeight = Math.max(glyphHeight, g.rows.length)
+    for (const row of g.rows) glyphWidth = Math.max(glyphWidth, row.length)
+  }
+  if (glyphWidth === 0 || glyphHeight === 0) throw new Error('YAFF glyphs have no pixels')
 
   // Find codepoint range
   let minCp = 0x7FFFFFFF, maxCp = 0
