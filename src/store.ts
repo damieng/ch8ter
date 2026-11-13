@@ -185,6 +185,21 @@ export function updateWindowLayout(id: string, rect: Partial<WindowRect>) {
   windowLayouts.value = { ...windowLayouts.value, [id]: { ...current, ...rect } }
 }
 
+/** Forget the stored layouts of windows that no longer exist, so their ids can't leak onto later windows. */
+function dropWindowLayouts(match: (key: string) => boolean) {
+  const current = windowLayouts.value
+  const stale = Object.keys(current).filter(match)
+  if (stale.length === 0) return
+  const next = { ...current }
+  for (const k of stale) delete next[k]
+  windowLayouts.value = next
+}
+
+/** Layout keys of a font's grid window, tracking editor and extra glyph editors. */
+function isFontWindowKey(fontId: string, key: string): boolean {
+  return key === `grid-${fontId}` || key === `editor-${fontId}` || key.startsWith(`editor-${fontId}-`)
+}
+
 // Minimized windows collapse to icons on the desktop, Program Manager style.
 export const ICON_W = 88
 export const ICON_H = 76
@@ -288,6 +303,7 @@ export function addFont(font: FontInstance) {
   // If the only open font is an empty untitled, replace it
   const current = fonts.value
   if (current.length === 1 && isEmptyUntitled(current[0])) {
+    dropWindowLayouts(k => isFontWindowKey(current[0].id, k))
     fonts.value = [font]
   } else {
     fonts.value = [...current, font]
@@ -327,18 +343,22 @@ export function openNewGlyphEditor(font: FontInstance, pinnedGlyph: number, trac
 
 export function closePinnedEditor(font: FontInstance, id: string) {
   font.pinnedEditors.value = font.pinnedEditors.value.filter(e => e.id !== id)
+  dropWindowLayouts(k => k === id)
 }
 
 export function removeFont(id: string) {
   const remaining = fonts.value.filter(f => f.id !== id)
   fonts.value = remaining
+  dropWindowLayouts(k => isFontWindowKey(id, k))
   if (activeFontId.value === id) {
     activeFontId.value = remaining.length > 0 ? remaining[0].id : ''
   }
 }
 
 export function removeAllFonts() {
+  const ids = fonts.value.map(f => f.id)
   fonts.value = []
+  dropWindowLayouts(k => ids.some(id => isFontWindowKey(id, k)))
   activeFontId.value = ''
 }
 
@@ -399,11 +419,13 @@ export function removeContainer(id: string) {
   const childFontIds = fonts.value.filter(f => f.sourceContainerId === id).map(f => f.id)
   if (childFontIds.length > 0) {
     fonts.value = fonts.value.filter(f => f.sourceContainerId !== id)
+    dropWindowLayouts(k => childFontIds.some(fid => isFontWindowKey(fid, k)))
     if (childFontIds.includes(activeFontId.value)) {
       activeFontId.value = fonts.value.length > 0 ? fonts.value[0].id : ''
     }
   }
   containers.value = containers.value.filter(c => c.id !== id)
+  dropWindowLayouts(k => k === `container-${id}`)
 }
 
 export function createContainerId(): string {
@@ -436,6 +458,7 @@ export function closePreview(id: string) {
   previews.value = previews.value.filter(p => p.id !== id)
   // Clean up stored settings
   storedPreviews.value = storedPreviews.value.filter(s => s.id !== id)
+  dropWindowLayouts(k => k === id)
 }
 
 // Restore previews and layout from localStorage
