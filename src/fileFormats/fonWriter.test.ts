@@ -27,6 +27,33 @@ function toArrayBuffer(u: Uint8Array): ArrayBuffer {
 }
 
 describe('writeFon', () => {
+  it('writes a FONTDIR entry in the documented layout: ordinal, 113-byte font info, then the strings', () => {
+    const buf = writeFon(sampleFont())
+    const v = new DataView(buf.buffer)
+    const neOffset = v.getUint32(0x3C, true)
+    let pos = neOffset + v.getUint16(neOffset + 0x24, true)
+    const shift = v.getUint16(pos, true)
+    pos += 2
+    let dirOff = -1, fontOff = -1
+    while (v.getUint16(pos, true) !== 0) {
+      const type = v.getUint16(pos, true)
+      const off = v.getUint16(pos + 8, true) << shift
+      if (type === 0x8007) dirOff = off
+      if (type === 0x8008) fontOff = off
+      pos += 8 + 12
+    }
+    expect(v.getUint16(dirOff, true)).toBe(1) // one font
+    expect(v.getUint16(dirOff + 2, true)).toBe(1) // fontOrdinal
+    const info = dirOff + 4
+    expect(v.getUint16(info, true)).toBe(v.getUint16(fontOff, true)) // dfVersion copied from the FNT
+    expect(v.getUint16(info + 66, true)).toBe(0) // dfType: raster
+    expect(v.getUint32(info + 109, true)).toBe(0) // dfReserved
+    // device name (empty) then the face name
+    expect(buf[info + 113]).toBe(0)
+    expect(new TextDecoder().decode(buf.subarray(info + 114, info + 114 + 8))).toBe('TestFace')
+  });
+
+
   it('writes integer resource IDs (high bit set), not name offsets', () => {
     const buf = writeFon(sampleFont())
     const v = new DataView(buf.buffer)

@@ -17,14 +17,7 @@ export function writeFon(data: FontWriteData): Uint8Array {
   const fnt = writeWindowsFnt(data)
   const fv = new DataView(fnt.buffer, fnt.byteOffset, fnt.byteLength)
 
-  // Metrics read back from the FNT so FONTDIR stays consistent with it
-  const pointSize = fv.getUint16(68, true)
-  const yDpi = fv.getUint16(70, true)
-  const xDpi = fv.getUint16(72, true)
-  const weight = fv.getUint16(83, true)
-  const charset = fnt[85]
-  const pixWidth = fv.getUint16(86, true)
-  const pixHeight = fv.getUint16(88, true)
+  // Face name read back from the FNT, for the FONTDIR entry's trailing strings
   const faceOffset = fv.getUint32(105, true)
   let faceName = ''
   if (faceOffset > 0 && faceOffset < fnt.length) {
@@ -33,27 +26,25 @@ export function writeFon(data: FontWriteData): Uint8Array {
     faceName = new TextDecoder().decode(fnt.subarray(faceOffset, end))
   }
 
-  // --- FONTDIR resource: u16 count + FONTDIRENTRY (25-byte fixed part + names)
-  const deviceName = new Uint8Array(1) // empty device name (screen fonts)
+  // --- FONTDIR resource: WORD font count, then per font a DIRENTRY:
+  //   WORD  fontOrdinal              (the FONT resource's ID)
+  //   FONTINFO                       the first 113 bytes of the FNT header (dfVersion up to
+  //                                  dfFace), with dfBitsPointer replaced by dfReserved = 0
+  //   char  szDeviceName[]           null-terminated (empty for screen fonts)
+  //   char  szFaceName[]             null-terminated
+  const FONTINFO_SIZE = 113
+  const deviceName = new Uint8Array(1) // empty, null-terminated
   const faceBytes = new TextEncoder().encode(faceName)
-  const fontDirSize = 2 + 25 + deviceName.length + faceBytes.length + 1
+  const fontDirSize = 2 + 2 + FONTINFO_SIZE + deviceName.length + faceBytes.length + 1
   const fontDir = new Uint8Array(fontDirSize)
   const dirView = new DataView(fontDir.buffer)
   dirView.setUint16(0, 1, true) // numFonts
   let d = 2
-  dirView.setUint16(d + 0, 0, true)          // dfRate
-  dirView.setUint16(d + 2, pointSize, true)  // dfPointsize
-  dirView.setUint16(d + 4, pixWidth, true)   // dfPixWidth
-  dirView.setUint16(d + 6, pixHeight, true)  // dfPixHeight
-  dirView.setUint16(d + 8, weight, true)     // dfWeight
-  fontDir[d + 10] = charset                  // dfCharSet
-  dirView.setUint16(d + 12, yDpi, true)      // dfVertRes
-  dirView.setUint16(d + 14, xDpi, true)      // dfHorizRes
-  fontDir[d + 16] = 0                        // dfType: raster
-  fontDir[d + 17] = 0                        // dfBits
-  fontDir[d + 18] = 0                        // dfReserved1
-  dirView.setUint16(d + 19, 0, true)         // dfFlags
-  d += 25
+  dirView.setUint16(d, 1, true) // fontOrdinal: FONT resource ID 1
+  d += 2
+  fontDir.set(fnt.subarray(0, FONTINFO_SIZE), d)
+  fontDir.fill(0, d + 109, d + 113) // dfReserved
+  d += FONTINFO_SIZE
   fontDir.set(deviceName, d); d += deviceName.length
   fontDir.set(faceBytes, d); d += faceBytes.length
   fontDir[d] = 0
