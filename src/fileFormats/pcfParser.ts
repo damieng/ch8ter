@@ -107,7 +107,15 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
     if (accel.maxOverallWidth > maxW) maxW = accel.maxOverallWidth
     minLeftBearing = accel.minLeftBearing
   }
-  const cellW = maxW
+  // Glyphs are placed at (leftBearing - minLeftBearing). A negative bearing that the
+  // accelerators don't cover (or no accelerators at all) must still fit, and the cell
+  // must reach the rightmost ink measured from that origin.
+  let maxRight = 0
+  for (const m of metrics) {
+    if (m.leftBearing < minLeftBearing) minLeftBearing = m.leftBearing
+    if (m.rightBearing > maxRight) maxRight = m.rightBearing
+  }
+  const cellW = Math.max(maxW, maxRight - minLeftBearing)
   const cellH = fontAscent + fontDescent
 
   // Parse encodings
