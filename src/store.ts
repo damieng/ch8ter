@@ -355,7 +355,8 @@ export function openNewGlyphEditor(font: FontInstance, pinnedGlyph: number, trac
   const newId = `editor-${font.id}-${nextEditorId++}`
   font.pinnedEditors.value = [...font.pinnedEditors.value, { id: oldId, glyph: pinnedGlyph }]
   const oldRect = windowLayouts.value[oldId]
-  if (oldRect) updateWindowLayout(newId, { ...oldRect, x: oldRect.x + 30, y: oldRect.y + 30 })
+  // Same geometry, nudged; the new window starts un-minimized whatever the old one was
+  if (oldRect) updateWindowLayout(newId, { x: oldRect.x + 30, y: oldRect.y + 30, w: oldRect.w, h: oldRect.h })
   font.trackerId.value = newId
   openGlyphEditor(font)
 }

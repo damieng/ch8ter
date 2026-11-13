@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   windowLayouts, updateWindowLayout, minimizeWindow, restoreWindow,
-  createFont, openGlyphEditor, storedFocusedId, ICON_W, fontHasVisibleWindow,
+  createFont, openGlyphEditor, openNewGlyphEditor, storedFocusedId, ICON_W, fontHasVisibleWindow,
 } from './store'
 
 describe('minimized windows', () => {
@@ -55,6 +55,20 @@ describe('minimized windows', () => {
   it('restoreWindow does not create a layout for an unknown window', () => {
     restoreWindow('nope')
     expect(windowLayouts.value['nope']).toBeUndefined()
+  })
+
+  it('a new tracking editor does not inherit the previous editor minimized state or icon', () => {
+    const font = createFont()
+    openGlyphEditor(font)
+    updateWindowLayout(font.trackerId.value, { x: 10, y: 20, w: 380, h: 440 })
+    minimizeWindow(font.trackerId.value) // an open but minimized tracker
+    const oldId = font.trackerId.value
+    openNewGlyphEditor(font, 2, true)
+    const fresh = windowLayouts.value[font.trackerId.value]
+    expect(font.trackerId.value).not.toBe(oldId)
+    expect(fresh.minimized).toBeUndefined()
+    expect(fresh.iconX).toBeUndefined()
+    expect(fresh).toMatchObject({ x: 40, y: 50, w: 380, h: 440 })
   })
 
   it('opening the glyph editor restores a minimized tracking editor', () => {
