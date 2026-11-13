@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, openNewGlyphEditor, fontHasVisibleWindow, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, recordGlyphClick, completeGlyphDoubleClick, fontHasVisibleWindow, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter } from '../store'
 import { selectGlyph, selectAll } from '../selection'
 import { shiftUp, shiftDown, shiftLeft, shiftRight } from '../glyphTransforms'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
@@ -84,7 +84,6 @@ export function FontPane({ font }: Props) {
   const tileOuterW = canvasW + border + pad + gap
   const tileOuterH = canvasH + border + pad + labelHeight + gap
 
-  const preClick = useRef({ glyph: 0, trackerOpen: false })
   const gridNavRef = useRef({ cols: 0, visibleIndices: [] as number[], visibleCount: 0, hideEmpty: true })
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -183,12 +182,12 @@ export function FontPane({ font }: Props) {
               // First click of a (double-)click: remember what the tracking
               // editor was showing, so a double-click can leave it pinned there.
               if (e.detail <= 1) {
-                preClick.current = { glyph: font.lastClickedGlyph.value, trackerOpen: font.editorOpen.value }
+                recordGlyphClick(font, e.clientX, e.clientY, font.lastClickedGlyph.value, font.editorOpen.value)
               }
               selectGlyph(font, i, e.shiftKey, e.ctrlKey || e.metaKey)
               activeFontId.value = font.id
               if (plain && e.detail === 2) {
-                openNewGlyphEditor(font, preClick.current.glyph, preClick.current.trackerOpen)
+                if (!completeGlyphDoubleClick(font, e.clientX, e.clientY)) openGlyphEditor(font)
               } else if (plain) {
                 openGlyphEditor(font)
               }

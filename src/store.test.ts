@@ -4,7 +4,7 @@ import {
   removeAllFontsAndContainers, fonts,
   exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
-  openGlyphEditor, openNewGlyphEditor, closePinnedEditor, storedFocusedId, workspaceEpoch,
+  openGlyphEditor, openNewGlyphEditor, closePinnedEditor, storedFocusedId, workspaceEpoch, recordGlyphClick, completeGlyphDoubleClick,
 } from './store'
 import { execSetAdvances } from './undoHistory'
 
@@ -245,5 +245,26 @@ describe('multiple glyph editors', () => {
     const [first, second] = font.pinnedEditors.value
     closePinnedEditor(font, first.id)
     expect(font.pinnedEditors.value).toEqual([second])
+  })
+})
+
+describe('glyph double-click', () => {
+  it('completes from a second press elsewhere only when it is close in time and place', () => {
+    const font = createFont()
+    openGlyphEditor(font)
+    recordGlyphClick(font, 100, 100, 3, true)
+    expect(completeGlyphDoubleClick(font, 150, 100)).toBe(false) // far away: a normal click
+    expect(font.pinnedEditors.value).toEqual([])
+    expect(completeGlyphDoubleClick(font, 102, 99)).toBe(true) // lands on the editor over the tile
+    expect(font.pinnedEditors.value.map(e => e.glyph)).toEqual([3])
+    expect(completeGlyphDoubleClick(font, 102, 99)).toBe(false) // only once per double-click
+  })
+
+  it('ignores a press for a different font', () => {
+    const a = createFont()
+    const b = createFont()
+    openGlyphEditor(a)
+    recordGlyphClick(a, 10, 10, 0, true)
+    expect(completeGlyphDoubleClick(b, 10, 10)).toBe(false)
   })
 })

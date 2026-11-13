@@ -350,6 +350,33 @@ export function openNewGlyphEditor(font: FontInstance, pinnedGlyph: number, trac
   openGlyphEditor(font)
 }
 
+// A double-click on a glyph tile opens a second editor. Its first click raises the
+// tracking editor, which can sit right over the tile, so the second press may land on
+// the editor instead. Remember the first click so the editor can complete the gesture.
+interface GlyphClick { fontId: string; time: number; x: number; y: number; preGlyph: number; trackerWasOpen: boolean; done: boolean }
+let lastGlyphClick: GlyphClick | null = null
+const DOUBLE_CLICK_MS = 500
+const DOUBLE_CLICK_SLOP = 5
+
+/** First click of a possible double-click: what the tracking editor showed, and whether it was open. */
+export function recordGlyphClick(font: FontInstance, x: number, y: number, preGlyph: number, trackerWasOpen: boolean) {
+  lastGlyphClick = { fontId: font.id, time: Date.now(), x, y, preGlyph, trackerWasOpen, done: false }
+}
+
+/**
+ * Second press of a double-click (on the tile, or on an editor that now covers it):
+ * open the extra editor. False if there is no matching first click.
+ */
+export function completeGlyphDoubleClick(font: FontInstance, x: number, y: number): boolean {
+  const c = lastGlyphClick
+  if (!c || c.done || c.fontId !== font.id) return false
+  if (Date.now() - c.time > DOUBLE_CLICK_MS) return false
+  if (Math.hypot(x - c.x, y - c.y) > DOUBLE_CLICK_SLOP) return false
+  c.done = true
+  openNewGlyphEditor(font, c.preGlyph, c.trackerWasOpen)
+  return true
+}
+
 export function closePinnedEditor(font: FontInstance, id: string) {
   font.pinnedEditors.value = font.pinnedEditors.value.filter(e => e.id !== id)
   dropWindowLayouts(k => k === id)

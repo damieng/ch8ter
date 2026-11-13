@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { Pencil, Slash, Square, Circle, PaintBucket, Info } from 'lucide-preact'
-import { type FontInstance, getPixel, setPixel, glyphAdvance, setGlyphAdvance } from '../store'
+import { type FontInstance, getPixel, setPixel, glyphAdvance, setGlyphAdvance, completeGlyphDoubleClick } from '../store'
 import { beginPaintStroke, commitPaintStroke } from '../undoHistory'
 import { getCharMetrics, Metric } from '../charMetrics'
 import { linePixels, rectPixels, ellipsePixels, floodFill } from '../glyphShapes'
@@ -174,7 +174,12 @@ export function GlyphEditor({ font, glyph }: { font: FontInstance; glyph?: numbe
           key={`${x}-${y}`}
           class="cursor-crosshair"
           style={{ backgroundColor: on ? '#1e293b' : previewPixel ? '#f87171' : '#e2e8f0' }}
-          onMouseDown={(e: MouseEvent) => handleCell(x, y, e)}
+          onMouseDown={(e: MouseEvent) => {
+            // Second press of a double-click on a glyph tile that this editor now covers:
+            // open the extra editor rather than painting
+            if (completeGlyphDoubleClick(font, e.clientX, e.clientY)) { e.preventDefault(); return }
+            handleCell(x, y, e)
+          }}
           onMouseEnter={(e: MouseEvent) => {
             if (painting.current !== null || shapeStart.current !== null) handleCell(x, y, e)
           }}
