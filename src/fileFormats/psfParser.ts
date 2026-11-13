@@ -92,6 +92,14 @@ function parsePsf2(view: DataView, bytes: Uint8Array): PsfParseResult {
   const height = view.getUint32(24, true)
   const width = view.getUint32(28, true)
 
+  // The bitmaps are read as height rows of ceil(width/8) bytes, so a header claiming
+  // another glyph size would be mis-sliced by every consumer
+  if (width === 0 || height === 0 || bytesPerGlyph !== height * Math.ceil(width / 8)) {
+    throw new Error(
+      `PSF2 header is inconsistent: ${width}x${height} needs ${height * Math.ceil(width / 8)} bytes per glyph, not ${bytesPerGlyph}`,
+    )
+  }
+
   const bitmapStart = headerSize
   const bitmapSize = glyphCount * bytesPerGlyph
 
