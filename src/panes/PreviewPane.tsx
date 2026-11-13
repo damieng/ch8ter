@@ -132,7 +132,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
     const maxPixelWidth = cols * gw
     return wrapTextProportional(text, maxPixelWidth, (ch) => {
       const gi = glyphCodeForChar(ch) - start
-      if (isFixedWidth(ch.charCodeAt(0))) return gw
+      if (isFixedWidth(ch.codePointAt(0)!)) return gw
       return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
     })
   }, [text, cols, proportional, font?.fontData.value, font?.glyphMeta.value, font?.startChar.value, gw, gh, activeCharset])
@@ -187,11 +187,11 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       const bpg = gh * rowBytes
       const data = font?.fontData.value
       const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-      const line = wrappedLines[row]
+      const line = Array.from(wrappedLines[row]) // one entry per code point
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
         const gi = glyphCodeForChar(line[col]) - start
-        const advance = (isFixedWidth(line[col].charCodeAt(0)) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
+        const advance = (isFixedWidth(line[col].codePointAt(0)!) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
           break

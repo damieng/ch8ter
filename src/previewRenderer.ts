@@ -24,10 +24,12 @@ export interface RenderOptions {
 }
 
 export function renderText({
-  canvas, font, lines, attrs, scale, cols, fg, bg,
+  canvas, font, lines: rawLines, attrs, scale, cols, fg, bg,
   cursorPos, showCursor, selected, proportional, lineHeight,
 }: RenderOptions) {
   const ctx = canvas.getContext('2d')!
+  // One cell per code point, so an astral character (two UTF-16 units) is one cell
+  const lines = rawLines.map(l => Array.from(l))
   const data = font.fontData.value
   const startChar = font.startChar.value
   const gw = font.glyphWidth.value
@@ -94,7 +96,7 @@ export function renderText({
     function charAdv(ch: string) {
       const gi = glyphCodeForChar(ch) - startChar
       if (gi < 0 || gi >= gc) return cellW
-      if (isFixedWidth(ch.charCodeAt(0))) return cellW
+      if (isFixedWidth(ch.codePointAt(0)!)) return cellW
       return glyphAdvance(font, gi) * scale
     }
 

@@ -608,7 +608,7 @@ function reverseMap(cs: Charset): Map<string, number> {
  * else keeps its own code, so ASCII and Unicode-indexed fonts are unaffected.
  */
 export function glyphCodeForChar(ch: string): number {
-  return reverseMap(charset.value).get(ch) ?? ch.charCodeAt(0)
+  return reverseMap(charset.value).get(ch) ?? ch.codePointAt(0)!
 }
 
 export function charCodeFromKey(ch: string): number | null {

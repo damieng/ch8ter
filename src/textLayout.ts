@@ -35,16 +35,19 @@ export function wrapText(text: string, cols: number): WrapResult {
         let visible = ''
         const wordOffsets: number[] = []
         const wordAttrs: number[] = []
-        for (let i = 0; i < token.length; i++) {
-          if (token[i] === INVERSE_CHAR) {
+        // One cell per code point: an astral character (two UTF-16 units) is one cell
+        for (let i = 0; i < token.length;) {
+          const ch = String.fromCodePoint(token.codePointAt(i)!)
+          if (ch === INVERSE_CHAR) {
             inverse = !inverse
           } else {
-            visible += token[i]
+            visible += ch
             wordOffsets.push(tokenPos + i)
             wordAttrs.push(inverse ? 1 : 0)
           }
+          i += ch.length
         }
-        if (line.length + visible.length > cols && line.length > 0) {
+        if (lineOffsets.length + wordOffsets.length > cols && lineOffsets.length > 0) {
           lines.push(line)
           offsets.push(lineOffsets)
           attrs.push(lineAttrs)
@@ -102,17 +105,20 @@ export function wrapTextProportional(
         let visibleWidth = 0
         const wordOffsets: number[] = []
         const wordAttrs: number[] = []
-        for (let i = 0; i < token.length; i++) {
-          if (token[i] === INVERSE_CHAR) {
+        // One cell per code point: an astral character (two UTF-16 units) is one cell
+        for (let i = 0; i < token.length;) {
+          const ch = String.fromCodePoint(token.codePointAt(i)!)
+          if (ch === INVERSE_CHAR) {
             inverse = !inverse
           } else {
-            visible += token[i]
-            visibleWidth += charWidth(token[i])
+            visible += ch
+            visibleWidth += charWidth(ch)
             wordOffsets.push(tokenPos + i)
             wordAttrs.push(inverse ? 1 : 0)
           }
+          i += ch.length
         }
-        if (lineWidth + visibleWidth > maxWidth && line.length > 0) {
+        if (lineWidth + visibleWidth > maxWidth && lineOffsets.length > 0) {
           lines.push(line)
           offsets.push(lineOffsets)
           attrs.push(lineAttrs)
