@@ -46,12 +46,11 @@ export function writeTap({ fontData, glyphWidth, glyphHeight, startChar, glyphCo
       fontBytes.length & 0xFF, (fontBytes.length >> 8) & 0xFF,
       START_ADDRESS & 0xFF, (START_ADDRESS >> 8) & 0xFF,
       0x80, 0x00, // param2 (unused for CODE)
-      0,          // checksum byte (not validated by our parser)
     ],
   }
   const data: TapBlock = {
     flag: 0xFF,
-    payload: [...fontBytes, 0],
+    payload: [...fontBytes],
   }
 
   return makeTap([header, data])

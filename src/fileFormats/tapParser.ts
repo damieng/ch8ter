@@ -46,29 +46,25 @@ export function extractTapFonts(bytes: Uint8Array): TapFontEntry[] {
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
-    let length = block.data.length - 1 // minus header checksum
-    let type = -1
-    let name = ''
-    let param1 = 0
+    // parseTapBlocks has already stripped the flag and parity bytes, so a
+    // standard header payload is exactly 17 bytes. (Files written by older
+    // versions of this app carry one extra byte; reading them still works.)
+    if (block.flag !== 0x00 || block.data.length < 17) continue
 
-    if (block.flag === 0x00 && block.data.length >= 18) {
-      // Header block: describes the data block that follows
-      type = block.data[0]
-      name = Array.from(block.data.subarray(1, 11))
-        .map(b => (b >= 0x20 && b < 0x7F ? String.fromCharCode(b) : ' '))
-        .join('').trim()
-      length = block.data[11] | (block.data[12] << 8)
-      param1 = block.data[13] | (block.data[14] << 8)
-    } else if (block.flag !== 0xFF) {
-      continue
-    }
+    // Header block: describes the data block that follows
+    const type = block.data[0]
+    const name = Array.from(block.data.subarray(1, 11))
+      .map(b => (b >= 0x20 && b < 0x7F ? String.fromCharCode(b) : ' '))
+      .join('').trim()
+    const length = block.data[11] | (block.data[12] << 8)
+    const param1 = block.data[13] | (block.data[14] << 8)
 
-    if (type !== -1 && type !== 3) continue // only CODE blocks
+    if (type !== 3) continue // only CODE blocks
     if (!FONT_SIZES.includes(length)) continue
 
     // The data block follows the header block
     const dataBlock = blocks[i + 1]
-    if (!dataBlock || dataBlock.flag !== 0xFF || dataBlock.data.length - 1 < length) continue
+    if (!dataBlock || dataBlock.flag !== 0xFF || dataBlock.data.length < length) continue
 
     entries.push({
       label: `${name || 'Code'} at ${param1} (${length / 8} chars)`,

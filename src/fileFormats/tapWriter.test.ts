@@ -40,3 +40,14 @@ describe('writeTap', () => {
     expect(() => writeTap({ ...makeFont(), glyphHeight: 16 })).toThrow('8x8')
   })
 })
+
+describe('writeTap standard layout', () => {
+  it('emits a 17-byte header payload and a data block of exactly the font bytes', () => {
+    const buf = writeTap(makeFont())
+    const headerLen = buf[0] | (buf[1] << 8)
+    expect(headerLen).toBe(19) // flag + 17-byte payload + parity
+    const dataLen = buf[2 + headerLen] | (buf[3 + headerLen] << 8)
+    expect(dataLen).toBe(1 + 128 * 8 + 1) // flag + 128 chars + parity
+    expect(buf.length).toBe(2 + headerLen + 2 + dataLen)
+  })
+})

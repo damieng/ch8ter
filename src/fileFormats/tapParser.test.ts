@@ -19,12 +19,11 @@ function codeHeader(name: string, length: number, start: number): { flag: number
   payload.push(length & 0xFF, (length >> 8) & 0xFF)
   payload.push(start & 0xFF, (start >> 8) & 0xFF)
   payload.push(0, 0) // param2
-  payload.push(0)    // checksum byte (not validated by our parser)
   return { flag: 0x00, payload }
 }
 
 function dataBlock(data: number[]): { flag: number; payload: number[] } {
-  return { flag: 0xFF, payload: [...data, 0] } // trailing checksum byte
+  return { flag: 0xFF, payload: data }
 }
 
 describe('parseTapBlocks', () => {
@@ -56,7 +55,7 @@ describe('extractTapFonts', () => {
       dataBlock(font1024),
       codeHeader('', 768, 32768),
       dataBlock(font768),
-      { flag: 0x00, payload: [0, ...Array(10).fill(0x20), 100, 0, 0, 0, 0, 0, 0] }, // Program
+      { flag: 0x00, payload: [0, ...Array(10).fill(0x20), 100, 0, 0, 0, 0, 0] }, // Program
       dataBlock(program),
     ])
 
@@ -74,6 +73,33 @@ describe('extractTapFonts', () => {
   it('ignores code blocks that are not font-sized', () => {
     const code = Array.from({ length: 300 }, () => 1)
     const tap = makeTap([codeHeader('prog', 300, 24000), dataBlock(code)])
+    expect(extractTapFonts(tap).length).toBe(0)
+  })
+
+  it('reads a standard tape: 19-byte header block, data block of exactly its length', () => {
+    const font = Array.from({ length: 768 }, (_, i) => (i * 7) & 0xFF)
+    const tap = makeTap([codeHeader('std', 768, 40000), dataBlock(font)])
+    // 2-byte length + flag + 17-byte header + parity = 21; the data block is 2 + 1 + 768 + 1
+    expect(tap.length).toBe(21 + 772)
+    const fonts = extractTapFonts(tap)
+    expect(fonts.length).toBe(1)
+    expect(fonts[0].startAddress).toBe(40000)
+    expect([...fonts[0].fontData]).toEqual(font)
+  })
+
+  it('still reads tapes written by older versions with a stray extra byte per block', () => {
+    const font = Array.from({ length: 768 }, (_, i) => i & 0xFF)
+    const legacyHeader = codeHeader('old', 768, 32768)
+    legacyHeader.payload.push(0)
+    const tap = makeTap([legacyHeader, { flag: 0xFF, payload: [...font, 0] }])
+    const fonts = extractTapFonts(tap)
+    expect(fonts.length).toBe(1)
+    expect([...fonts[0].fontData]).toEqual(font)
+  })
+
+  it('does not treat the data block of a non-CODE header as a font', () => {
+    const data = Array.from({ length: 768 }, () => 5)
+    const tap = makeTap([{ flag: 0x00, payload: [0, ...Array(10).fill(0x20), 0, 3, 0, 0, 0, 0] }, dataBlock(data)])
     expect(extractTapFonts(tap).length).toBe(0)
   })
 
