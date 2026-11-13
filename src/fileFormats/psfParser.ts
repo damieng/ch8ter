@@ -64,13 +64,16 @@ function parsePsf1UnicodeTable(bytes: Uint8Array, offset: number, glyphCount: nu
   let glyph = 0
 
   while (pos < bytes.length && glyph < glyphCount) {
-    // Each entry: sequence of uint16le codepoints, terminated by 0xFFFF
-    // Sequences start with 0xFFFE (we skip those)
+    // Each entry: single codepoints (uint16le), then optional sequences, terminated by
+    // 0xFFFF. A sequence starts with 0xFFFE and runs to the next 0xFFFE or the end of the
+    // entry; its members are parts of a combining sequence, not standalone codepoints.
+    let inSequence = false
     while (pos + 1 < bytes.length) {
       const val = bytes[pos] | (bytes[pos + 1] << 8)
       pos += 2
       if (val === 0xFFFF) break // end of entry
-      if (val === 0xFFFE) continue // start of sequence, skip
+      if (val === 0xFFFE) { inSequence = true; continue }
+      if (inSequence) continue
       if (!map.has(val)) {
         map.set(val, glyph)
       }
@@ -125,11 +128,14 @@ function parsePsf2UnicodeTable(bytes: Uint8Array, offset: number, glyphCount: nu
   let glyph = 0
 
   while (pos < bytes.length && glyph < glyphCount) {
-    // Each entry: sequence of UTF-8 codepoints, separated by 0xFE, terminated by 0xFF
+    // Each entry: single UTF-8 codepoints, then optional sequences each introduced by 0xFE,
+    // terminated by 0xFF. Members of a sequence are parts of a combining sequence, not
+    // standalone codepoints, so they are decoded (to stay in step) but not mapped.
+    let inSequence = false
     while (pos < bytes.length) {
       const b = bytes[pos]
       if (b === 0xFF) { pos++; break } // end of entry
-      if (b === 0xFE) { pos++; continue } // start of sequence, skip rest
+      if (b === 0xFE) { pos++; inSequence = true; continue }
 
       // Decode one UTF-8 codepoint
       let cp: number
@@ -144,7 +150,7 @@ function parsePsf2UnicodeTable(bytes: Uint8Array, offset: number, glyphCount: nu
       }
       pos += len
 
-      if (!map.has(cp)) {
+      if (!inSequence && !map.has(cp)) {
         map.set(cp, glyph)
       }
     }

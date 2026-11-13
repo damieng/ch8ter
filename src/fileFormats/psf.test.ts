@@ -36,3 +36,25 @@ describe('parsePsf2 header validation', () => {
     expect(() => parsePsf(psf2({ width: 0, height: 0, count: 1, bytesPerGlyph: 0 }))).toThrow('inconsistent')
   })
 })
+
+describe('PSF unicode tables', () => {
+  it('PSF2: does not map the members of a combining sequence as standalone codepoints', () => {
+    // glyph 0: 'A' then a sequence 'e' + U+0301; glyph 1: 'B'
+    const table = [0x41, 0xFE, 0x65, 0xCC, 0x81, 0xFF, 0x42, 0xFF]
+    const r = parsePsf(psf2({ width: 8, height: 1, count: 2, bytesPerGlyph: 1, table }))
+    expect(r.unicodeMap!.get(0x41)).toBe(0)
+    expect(r.unicodeMap!.get(0x42)).toBe(1)
+    expect(r.unicodeMap!.has(0x65)).toBe(false) // 'e' belongs to the sequence
+    expect(r.unicodeMap!.has(0x301)).toBe(false)
+  })
+
+  it('PSF1: does not map the members of a sequence either', () => {
+    const buf = new Uint8Array(4 + 256 * 8 + 14)
+    buf[0] = 0x36; buf[1] = 0x04; buf[2] = 0x02; buf[3] = 8 // magic, mode HAS_TAB, 8 rows
+    const table = [0x41, 0x00, 0xFE, 0xFF, 0x65, 0x00, 0xFF, 0xFF] // A, then sequence (e), end
+    buf.set(table, 4 + 256 * 8)
+    const r = parsePsf(buf.buffer)
+    expect(r.unicodeMap!.get(0x41)).toBe(0)
+    expect(r.unicodeMap!.has(0x65)).toBe(false)
+  })
+})
