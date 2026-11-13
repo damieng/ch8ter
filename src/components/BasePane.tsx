@@ -1,6 +1,10 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
-import { windowLayouts, updateWindowLayout, storedFocusedId } from '../store'
+import { Minus } from 'lucide-preact'
+import {
+  windowLayouts, updateWindowLayout, storedFocusedId,
+  minimizeWindow, restoreWindow, ICON_W, ICON_H,
+} from '../store'
 
 interface Props {
   title: string | ComponentChildren
@@ -16,6 +20,81 @@ interface Props {
   onFocus?: () => void
   onClose?: () => void
   zIndex?: number
+  /** Picture shown on the desktop icon when the window is minimized. */
+  icon?: ComponentChildren
+  /** Caption under the desktop icon; defaults to the window title. */
+  iconLabel?: ComponentChildren
+}
+
+function clampIcon(p: { x: number; y: number }): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(window.innerWidth - ICON_W, p.x)),
+    y: Math.max(0, Math.min(window.innerHeight - ICON_H, p.y)),
+  }
+}
+
+/**
+ * Desktop icon for a minimized window. Drag it to move it; click (without
+ * dragging) to restore. It sits at the very bottom of the stacking order,
+ * behind every window, like an icon in the Windows 3.1 Program Manager.
+ */
+function MinimizedIcon({ windowId, title, icon, onRestore }: {
+  windowId: string
+  title: ComponentChildren
+  icon?: ComponentChildren
+  onRestore: () => void
+}) {
+  const stored = windowLayouts.value[windowId]
+  const [pos, setPos] = useState(() => clampIcon({ x: stored?.iconX ?? 16, y: stored?.iconY ?? 16 }))
+  const posRef = useRef(pos)
+  posRef.current = pos
+  const restoreRef = useRef(onRestore)
+  restoreRef.current = onRestore
+  const drag = useRef<{ dx: number; dy: number; sx: number; sy: number; moved: boolean } | null>(null)
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const d = drag.current
+      if (!d) return
+      if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return
+      d.moved = true
+      const next = clampIcon({ x: e.clientX - d.dx, y: e.clientY - d.dy })
+      posRef.current = next
+      setPos(next)
+    }
+    function onUp() {
+      const d = drag.current
+      drag.current = null
+      if (!d) return
+      if (d.moved) updateWindowLayout(windowId, { iconX: posRef.current.x, iconY: posRef.current.y })
+      else restoreRef.current()
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+  }, [windowId])
+
+  return (
+    <div
+      class="absolute flex flex-col items-center gap-1 select-none cursor-pointer"
+      style={{ left: pos.x, top: pos.y, width: ICON_W, zIndex: 0 }}
+      onMouseDown={(e: MouseEvent) => {
+        if (e.button !== 0) return
+        e.preventDefault()
+        drag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, sx: e.clientX, sy: e.clientY, moved: false }
+      }}
+    >
+      <div class="w-10 h-10 flex items-center justify-center bg-white border border-gray-400 shadow text-gray-700">
+        {icon}
+      </div>
+      <div class="w-full text-center text-[11px] leading-tight text-gray-800 line-clamp-2 break-words">
+        {title}
+      </div>
+    </div>
+  )
 }
 
 /** Keep the window reachable: at least a strip of the title bar stays
@@ -34,9 +113,10 @@ function clampPos(p: { x: number; y: number }, w: number): { x: number; y: numbe
 export function BasePane({
   title, children, statusBar, windowId, initialX, initialY,
   initialW, initialH, resizable, aspectRatio,
-  onFocus, onClose, zIndex = 1
+  onFocus, onClose, zIndex = 1, icon, iconLabel
 }: Props) {
   const stored = windowId ? windowLayouts.value[windowId] : undefined
+  const minimized = stored?.minimized === true
   const focused = windowId != null && storedFocusedId.value === windowId
   const [pos, setPos] = useState(() => clampPos(
     { x: stored?.x ?? initialX, y: stored?.y ?? initialY },
@@ -139,10 +219,23 @@ export function BasePane({
     }
   }, [aspectRatio, windowId])
 
+  // A minimized window stays mounted (so its scroll position, canvas and
+  // keyboard handling survive) but is hidden; its desktop icon stands in.
+  const hiddenStyle = minimized ? { visibility: 'hidden' as const, pointerEvents: 'none' as const } : {}
+
   return (
+    <>
+    {minimized && windowId && (
+      <MinimizedIcon
+        windowId={windowId}
+        title={iconLabel ?? title}
+        icon={icon}
+        onRestore={() => { restoreWindow(windowId); onFocus?.() }}
+      />
+    )}
     <div
       class="absolute rounded-lg shadow-xl border border-gray-300 bg-white overflow-hidden flex flex-col"
-      style={{ left: pos.x, top: pos.y, zIndex, width: size.w || undefined, height: size.h || undefined }}
+      style={{ left: pos.x, top: pos.y, zIndex, width: size.w || undefined, height: size.h || undefined, ...hiddenStyle }}
       onMouseDown={() => onFocus?.()}
     >
       <div
@@ -151,9 +244,19 @@ export function BasePane({
         onMouseDown={onTitleMouseDown}
       >
         <span class="font-bold text-sm flex-1">{title}</span>
+        {windowId && (
+          <button
+            class="ml-auto w-6 h-6 flex items-center justify-center rounded-sm text-gray-500 hover:bg-gray-300/60 hover:text-gray-800"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); minimizeWindow(windowId) }}
+            title="Minimize"
+          >
+            <Minus size={14} strokeWidth={2.5} />
+          </button>
+        )}
         {onClose && (
           <button
-            class="ml-auto text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
+            class="text-gray-400 hover:text-red-500 leading-none text-lg font-bold"
             onClick={(e) => { e.stopPropagation(); onClose() }}
             title="Close"
           >
@@ -181,5 +284,6 @@ export function BasePane({
         </div>
       )}
     </div>
+    </>
   )
 }

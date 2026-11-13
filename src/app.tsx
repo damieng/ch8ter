@@ -12,6 +12,8 @@ import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
 import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer, closePinnedEditor } from './store'
 import { raiseWindow, getZIndex } from './windowStack'
+import { Type, Pencil, Archive, Eye } from 'lucide-preact'
+import { FontIcon } from './components/FontIcon'
 import { PreviewPane } from './panes/PreviewPane'
 import { ContainerPane, ContainerPaneTitle, ContainerStatusBar } from './panes/ContainerPane'
 import { ConfirmDialog } from './dialogs/ConfirmDialog'
@@ -61,6 +63,7 @@ export function App() {
         initialY={16}
         initialW={420}
         zIndex={getZIndex('ch8ter')}
+        icon={<Type size={22} />}
         onFocus={() => setFocus('ch8ter')}
       >
         <AppPane />
@@ -81,6 +84,7 @@ export function App() {
               initialH={440}
               resizable
               zIndex={getZIndex(ed.id)}
+              icon={<Pencil size={22} />}
               onFocus={() => focusFont(ed.id, font.id)}
               onClose={() => closePinnedEditor(font, ed.id)}
             >
@@ -105,6 +109,7 @@ export function App() {
               initialH={440}
               resizable
               zIndex={getZIndex(font.trackerId.value)}
+              icon={<Pencil size={22} />}
               onFocus={() => focusFont(font.trackerId.value, font.id)}
               onClose={() => { font.editorOpen.value = false }}
             >
@@ -127,6 +132,8 @@ export function App() {
             resizable
             statusBar={<FontStatusBar font={font} />}
             zIndex={getZIndex(`grid-${font.id}`)}
+            icon={<FontIcon font={font} />}
+            iconLabel={font.fileName.value}
             onFocus={() => focusFont(`grid-${font.id}`, font.id)}
             onClose={() => handleClose(font.id)}
           >
@@ -150,6 +157,7 @@ export function App() {
           resizable
           statusBar={<ContainerStatusBar container={c} />}
           zIndex={getZIndex(`container-${c.id}`)}
+          icon={<Archive size={22} />}
           onFocus={() => setFocus(`container-${c.id}`)}
           onClose={() => handleCloseContainer(c.id)}
         >
@@ -175,6 +183,7 @@ export function App() {
           initialH={450}
           resizable
           zIndex={getZIndex(p.id)}
+          icon={<Eye size={22} />}
           onFocus={() => setFocus(p.id)}
           onClose={() => closePreview(p.id)}
         >

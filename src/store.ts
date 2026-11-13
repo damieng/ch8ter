@@ -184,6 +184,35 @@ export function updateWindowLayout(id: string, rect: Partial<WindowRect>) {
   windowLayouts.value = { ...windowLayouts.value, [id]: { ...current, ...rect } }
 }
 
+// Minimized windows collapse to icons on the desktop, Program Manager style.
+export const ICON_W = 88
+export const ICON_H = 76
+const ICON_GAP = 8
+
+/** Collapse a window to a desktop icon (remembering where the icon was last put). */
+export function minimizeWindow(id: string) {
+  const layouts = windowLayouts.value
+  const current = layouts[id]
+  let iconX = current?.iconX
+  let iconY = current?.iconY
+  if (iconX == null || iconY == null) {
+    // First free slot along the bottom edge of the desktop
+    const viewH = typeof window !== 'undefined' ? window.innerHeight : 800
+    iconY = Math.max(0, viewH - ICON_H - ICON_GAP * 2)
+    const taken = Object.entries(layouts).filter(([k, r]) => k !== id && r.minimized)
+    iconX = ICON_GAP * 2
+    while (taken.some(([, r]) => r.iconX === iconX && r.iconY === iconY)) iconX += ICON_W + ICON_GAP
+  }
+  updateWindowLayout(id, { minimized: true, iconX, iconY })
+  if (storedFocusedId.value === id) storedFocusedId.value = ''
+}
+
+export function restoreWindow(id: string) {
+  // Only touch a window that has a layout entry, so an unmounted window
+  // isn't given a bogus 0,0 layout
+  if (windowLayouts.value[id]?.minimized) updateWindowLayout(id, { minimized: false })
+}
+
 export function updatePreviewSettings(id: string, settings: Partial<StoredPreview>) {
   const list = storedPreviews.value
   const idx = list.findIndex(s => s.id === id)
@@ -267,6 +296,7 @@ export function addFont(font: FontInstance) {
 
 export function openGlyphEditor(font: FontInstance) {
   font.editorOpen.value = true
+  restoreWindow(font.trackerId.value)
   storedFocusedId.value = font.trackerId.value
   raiseWindow(font.trackerId.value)
 }

@@ -40,6 +40,11 @@ export interface WindowRect {
   y: number
   w: number
   h: number
+  /** Collapsed to a desktop icon. x/y/w/h keep the restored window geometry. */
+  minimized?: boolean
+  /** Desktop position of the icon while minimized. */
+  iconX?: number
+  iconY?: number
 }
 
 export interface StoredPreview {
