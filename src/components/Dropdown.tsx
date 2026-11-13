@@ -30,20 +30,28 @@ export function Dropdown({
   const popupRef = useRef<HTMLDivElement>(null)
   useClickOutside([ref, popupRef], () => setOpen(false))
   const close = () => setOpen(false)
-  const [popupStyle, setPopupStyle] = useState<Record<string, string | number>>({})
 
+  // Position from the button's current rect during render, so the popup's very first
+  // frame is already in place (computing it in an effect left it unpositioned for a frame)
+  let popupStyle: Record<string, string | number> = {}
+  if (open) {
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (rect) {
+      const top = rect.bottom + 4
+      popupStyle = align === 'right'
+        ? { position: 'fixed', top, right: Math.max(0, window.innerWidth - rect.right), zIndex: POPUP_Z }
+        : { position: 'fixed', top, left: rect.left, zIndex: POPUP_Z }
+    }
+  }
+
+  // The popup is fixed to where the button was when it opened; if the viewport
+  // changes under it, close it rather than leave it adrift
   useEffect(() => {
     if (!open) return
-    const rect = buttonRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const top = rect.bottom + 4
-    if (align === 'right') {
-      const right = Math.max(0, window.innerWidth - rect.right)
-      setPopupStyle({ position: 'fixed', top, right, zIndex: POPUP_Z })
-    } else {
-      setPopupStyle({ position: 'fixed', top, left: rect.left, zIndex: POPUP_Z })
-    }
-  }, [open, align])
+    const close = () => setOpen(false)
+    window.addEventListener('resize', close)
+    return () => window.removeEventListener('resize', close)
+  }, [open])
 
   return (
     <div class="relative" ref={ref}>
