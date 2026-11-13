@@ -101,6 +101,9 @@ export function parseWindowsFnt(buffer: ArrayBuffer): WindowsFntParseResult {
     charEntrySize = 4 // width: u16, offset: u16
   }
 
+  if (dfLastChar < dfFirstChar) {
+    throw new Error(`Windows FNT: last character (${dfLastChar}) is before the first (${dfFirstChar})`)
+  }
   const numChars = dfLastChar - dfFirstChar + 1
   const charTableStart = headerSize
 
