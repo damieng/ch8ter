@@ -6,7 +6,7 @@ import { baseName } from './fontLoad'
 import { raiseWindow } from './windowStack'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, buildGlyphLookup } from './charMetrics'
 import {
-  type Charset, CHARSETS, charset,
+  type Charset, CHARSETS, defaultCharset,
   charsetGlyphFilter as charsetGlyphFilterImpl,
   cpToUnicode, buildUnicodeReverse,
 } from './charsets'
@@ -67,6 +67,12 @@ export interface FontInstance {
   sourceContainerId?: string
   /** Original byte index for each glyph slot, if known. Sparse  —  only set for glyphs loaded from file. */
   charIndex?: Signal<(number | undefined)[]>
+  /**
+   * Codepage this font's byte positions map through. Per font, because two
+   * open fonts can be different platforms (a ZX Spectrum dump next to a
+   * CP437 DOS font) and each keeps its own mapping.
+   */
+  charset: Signal<Charset>
 }
 
 export function bytesPerRow(font: FontInstance): number {
@@ -101,6 +107,7 @@ export function createFont(
   glyphMeta?: (GlyphMeta | null)[],
   spacingMode: SpacingMode = 'monospace',
   tracking = 0,
+  charsetKey?: Charset,
 ): FontInstance {
   const id = `font-${nextFontId++}`
   const w = width ?? 8
@@ -159,6 +166,7 @@ export function createFont(
     charIndex: data != null
       ? signal<(number | undefined)[]>(Array.from({ length: numGlyphs }, (_, i) => (start ?? 32) + i))
       : signal<(number | undefined)[]>([]),
+    charset: signal<Charset>(charsetKey ?? defaultCharset.value),
     glyphRotationLive: new Map(),
     undoHistory: new UndoHistory(),
   }
@@ -280,7 +288,7 @@ export function calcMissingMetrics(font: FontInstance) {
   const h = font.glyphHeight.value
   const bl = font.baseline.value
   const props = font.meta.value?.properties
-  const lookup = buildGlyphLookup(start, glyphCount(font))
+  const lookup = buildGlyphLookup(start, glyphCount(font), font.charset.value)
 
   if (font.capHeight.value < 0) {
     const fromProp = props?.['CAP_HEIGHT']
@@ -302,7 +310,7 @@ export function calcMissingMetrics(font: FontInstance) {
 }
 
 export function recalcMetrics(font: FontInstance) {
-  const lookup = buildGlyphLookup(font.startChar.value, glyphCount(font))
+  const lookup = buildGlyphLookup(font.startChar.value, glyphCount(font), font.charset.value)
   const m = calcAllMetrics(font.fontData.value, font.startChar.value, font.glyphWidth.value, font.glyphHeight.value, lookup)
   font.baseline.value = m.baseline
   font.ascender.value = m.ascender
@@ -569,7 +577,8 @@ export function exportWorkspace(): string {
     previews.value,
     storedPreviews.value,
     storedFocusedId.value,
-    charset.value,
+    // Each font carries its own codepage now; this is only for older builds
+    defaultCharset.value,
   ), null, 2)
 }
 
@@ -582,6 +591,13 @@ export const workspaceEpoch = signal(0)
 
 export function importWorkspace(json: string): void {
   const file = parseWorkspaceFile(json)
+
+  // The workspace codepage seeds fonts that don't record their own (files
+  // exported before codepages were per font). It is not applied to fonts that
+  // do, and never remaps glyphs  —  the stored data is already laid out for it.
+  if (file.charset && file.charset in CHARSETS) {
+    defaultCharset.value = file.charset as Charset
+  }
 
   const newFonts = file.fonts.map(fontFromStored)
   const newContainers = file.containers.map(containerFromStored)
@@ -596,13 +612,8 @@ export function importWorkspace(json: string): void {
   const remapFontId = (id: string | undefined) =>
     (id && idMap.get(id)) || fallbackFontId
 
-  // The stored fonts are already laid out for this codepage, so set it
-  // directly rather than via switchCharset (which would remap the glyphs).
-  // Files exported before the codepage was recorded keep the current one.
-  if (file.charset && file.charset in CHARSETS) {
-    charset.value = file.charset as Charset
-  }
-
+  // The stored fonts are already laid out for their codepage; restoreFonts
+  // restores each one's own without remapping any glyph data.
   fonts.value = newFonts
   activeFontId.value = newFonts.length > 0 ? newFonts[0].id : ''
   containers.value = newContainers
@@ -635,23 +646,26 @@ export function importWorkspace(json: string): void {
 
 // --- Charset (re-exported from charsets.ts) ---
 
-export { type Charset, type CharsetDef, CHARSETS, charset, charLabel, charCodeFromKey } from './charsets'
+export { type Charset, type CharsetDef, CHARSETS, defaultCharset, charLabel, charCodeFromKey } from './charsets'
 
 export function charsetGlyphFilter(font: FontInstance): ((index: number) => boolean) | null {
-  const def = CHARSETS[charset.value]
+  const def = CHARSETS[font.charset.value]
   return charsetGlyphFilterImpl(font.startChar.value, def?.range)
 }
 
-// Switch charset with Unicode-aware glyph remapping
-export function switchCharset(newCs: Charset) {
-  const oldCs = charset.value
+/**
+ * Change one font's codepage, remapping its glyphs by Unicode identity so a
+ * character keeps its pixels (e.g. £ moves from ZX 0x60 to Amiga 0xA3).
+ * Only this font is touched  —  other open fonts keep their own codepages.
+ * Also remembers the choice as the default for fonts opened later.
+ */
+export function switchCharset(font: FontInstance, newCs: Charset) {
+  const oldCs = font.charset.value
   if (newCs === oldCs) return
 
-  for (const font of fonts.value) {
-    remapFontForCharset(font, oldCs, newCs)
-  }
-
-  charset.value = newCs
+  remapFontForCharset(font, oldCs, newCs)
+  font.charset.value = newCs
+  defaultCharset.value = newCs
 }
 
 function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset) {
@@ -956,8 +970,8 @@ export function fontToConversionData(font: FontInstance): import('./fontLoad').F
     populated: font.populatedGlyphs.value,
     fontName: font.fontName.value || baseName(font.fileName.value),
     spacingMode: font.spacing.value,
-    // The active codepage, so formats that record one (CPI) write the right number
-    detectedCharset: charset.value,
+    // This font's codepage, so formats that record one (CPI) write the right number
+    detectedCharset: font.charset.value,
     useCalcMissing: false,
     ascender: font.ascender.value >= 0 ? font.ascender.value : undefined,
     descender: font.descender.value >= 0 ? font.descender.value : undefined,

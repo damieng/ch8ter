@@ -5,10 +5,10 @@ import { theme, toggleTheme } from "../theme"
 import {
   createFont,
   addFont,
-  switchCharset,
   recalcMetrics,
   calcMissingMetrics,
   CHARSETS,
+  defaultCharset,
   type Charset,
   removeAllFonts,
   removeAllFontsAndContainers,
@@ -178,12 +178,14 @@ export function AppPane() {
   } | null>(null)
 
   function applyLoadResult(name: string, result: FontConversionData) {
+    const charsetKey = result.detectedCharset as Charset
     const font = createFont(
       result.fontData, name, result.startChar,
       result.glyphWidth, result.glyphHeight,
       result.meta ?? undefined, result.encodings ?? undefined,
       result.baseline, result.glyphMeta ?? undefined,
       result.spacingMode, result.tracking,
+      charsetKey in CHARSETS ? charsetKey : undefined,
     )
     if (result.populated) font.populatedGlyphs.value = result.populated
     if (result.source === 'gdos' && result.ascender !== undefined) {
@@ -192,7 +194,8 @@ export function AppPane() {
     if (result.source === 'gdos' && result.descender !== undefined) {
       font.descender.value = result.descender
     }
-    switchCharset(result.detectedCharset as Charset)
+    // Only this font's codepage is set; other open fonts keep theirs
+    if (charsetKey in CHARSETS) defaultCharset.value = charsetKey
     if (result.useCalcMissing) calcMissingMetrics(font)
     else recalcMetrics(font)
     addFont(font)
@@ -402,12 +405,15 @@ export function AppPane() {
     if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
-        switchCharset((results[0].source === "cpm" ? "cpm" : "cp437") as Charset)
+        const charsetKey = (results[0].source === "cpm" ? "cpm" : "cp437") as Charset
+        defaultCharset.value = charsetKey
         for (const result of results) {
           const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
           const font = createFont(
             result.fontData, name + suffix, result.startChar,
             result.glyphWidth, result.glyphHeight,
+            undefined, undefined, undefined, undefined,
+            undefined, undefined, charsetKey,
           )
           recalcMetrics(font)
           addFont(font)

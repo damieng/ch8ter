@@ -4,6 +4,7 @@ import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import type { FontInstance, SpacingMode, FontContainer, ContainerMeta } from './store'
 import { createFont } from './store'
+import { CHARSETS, type Charset } from './charsets'
 import { bpr } from './bitUtils'
 import { calcAllMetrics, buildGlyphLookup } from './charMetrics'
 
@@ -33,6 +34,8 @@ export interface StoredFont {
   tracking?: number
   sourceContainerId?: string
   charIndex?: (number | undefined)[]
+  /** Codepage key this font's byte positions map through. Absent in older saves. */
+  charset?: string
   /** Whether the tracking glyph editor window was open. */
   editorOpen?: boolean
   /** Window id of the tracking editor (changes after a double-click spawns a new one). */
@@ -130,6 +133,8 @@ export function fontFromStored(s: StoredFont): FontInstance {
     s.glyphMeta ?? undefined,
     s.spacing ?? 'monospace',
     s.tracking ?? 0,
+    // Saved before codepages were per font: fall back to the remembered default
+    s.charset && s.charset in CHARSETS ? (s.charset as Charset) : undefined,
   )
   if (s.fontName) font.fontName.value = s.fontName
   if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)
@@ -156,7 +161,7 @@ export function fontFromStored(s: StoredFont): FontInstance {
     const h = s.glyphHeight ?? 8
     const bpg = h * bpr(w)
     const count = bpg > 0 ? Math.floor(data.length / bpg) : 0
-    const lookup = buildGlyphLookup(s.startChar, count)
+    const lookup = buildGlyphLookup(s.startChar, count, font.charset.value)
     const m = calcAllMetrics(data, s.startChar, w, h, lookup)
     font.ascender.value = m.ascender
     font.capHeight.value = m.capHeight
@@ -212,6 +217,7 @@ export function toStoredFonts(fontList: FontInstance[]): StoredFont[] {
     tracking: f.tracking.value,
     sourceContainerId: f.sourceContainerId,
     charIndex: f.charIndex?.value,
+    charset: f.charset.value,
     editorOpen: f.editorOpen.value,
     trackerId: f.trackerId.value,
     pinnedEditors: f.pinnedEditors.value.map(e => ({ id: e.id, glyph: e.glyph })),
@@ -376,6 +382,7 @@ export function setupFontAutoSave(getFonts: () => FontInstance[]) {
       f.tracking.value
       f.populatedGlyphs.value
       f.charIndex?.value
+      f.charset.value
       f.editorOpen.value
       f.trackerId.value
       f.pinnedEditors.value
@@ -401,6 +408,8 @@ export interface StoredContainerFont {
   glyphMeta?: (GlyphMeta | null)[] | null
   populated?: number[] | null
   spacingMode?: SpacingMode
+  /** Explicit codepage key (e.g. 'zx'), overriding the cp<codepage> guess. */
+  charsetKey?: string
 }
 
 export interface StoredContainer {
@@ -433,6 +442,7 @@ export function containerFromStored(sc: StoredContainer): FontContainer {
       glyphMeta: sf.glyphMeta,
       populated: sf.populated ? new Set(sf.populated) : null,
       spacingMode: sf.spacingMode,
+      charsetKey: sf.charsetKey,
     })),
   }
 }
@@ -472,6 +482,7 @@ export function toStoredContainers(containerList: FontContainer[]): StoredContai
       glyphMeta: f.glyphMeta,
       populated: f.populated ? [...f.populated] : null,
       spacingMode: f.spacingMode,
+      charsetKey: f.charsetKey,
     })),
   }))
 }

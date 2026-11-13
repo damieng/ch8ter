@@ -1,4 +1,4 @@
-import { charset, cpToUnicode, type Charset } from './charsets'
+import { cpToUnicode, type Charset } from './charsets'
 import { UNICODE_NAME_DATA } from './unicodeNameData'
 
 // ISO 6429 control character names (Unicode "control" aliases)
@@ -47,8 +47,8 @@ export function unicodeName(codePoint: number): string | undefined {
   return table().get(codePoint)
 }
 
-/** Name of the symbol at a glyph's character code under a codepage (default: the active one). */
-export function charName(charCode: number, cs: Charset = charset.value): string | undefined {
+/** Name of the symbol at a glyph's character code under a codepage. */
+export function charName(charCode: number, cs: Charset): string | undefined {
   const ch = cpToUnicode(charCode, cs)
   const cps = [...ch]
   return cps.length === 1 ? unicodeName(cps[0].codePointAt(0)!) : undefined

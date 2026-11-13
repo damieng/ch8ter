@@ -4,9 +4,9 @@ import { charName } from '../unicodeNames'
 export function EditorTitle({ font, glyph }: { font: FontInstance; glyph?: number }) {
   const glyphIdx = glyph ?? font.lastClickedGlyph.value
   const charCode = font.startChar.value + glyphIdx
-  const label = charLabel(charCode)
+  const label = charLabel(charCode, font.charset.value)
   const labelStr = label ? ` "${label}"` : ''
-  const name = charName(charCode)
+  const name = charName(charCode, font.charset.value)
   const nameStr = name ? ` (${name})` : ''
   return (
     <span>

@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'preact/hooks'
 import { type FontInstance, glyphCount, glyphAdvance } from '../store'
-import { glyphCodeForChar, charset } from '../charsets'
+import { glyphCodeForChar } from '../charsets'
 import { getBit, bpr } from '../bitUtils'
 import { theme } from '../theme'
 
@@ -23,9 +23,10 @@ function layoutAZ(font: FontInstance): { pixels: [number, number][]; w: number; 
   const bpg = gh * rowBytes
 
   const pixels: [number, number][] = []
+  const cs = font.charset.value
   let x0 = 0
   for (const ch of ['A', 'Z']) {
-    const idx = glyphCodeForChar(ch) - start
+    const idx = glyphCodeForChar(ch, cs) - start
     if (idx < 0 || idx >= count) continue
     for (let y = 0; y < gh; y++) {
       for (let x = 0; x < gw; x++) {
@@ -56,7 +57,7 @@ export function FontIcon({ font }: { font: FontInstance }) {
   // Reading these signals (via layoutAZ and below) re-renders the icon
   // whenever the glyphs, spacing, codepage or theme change
   const { pixels, w, h } = layoutAZ(font)
-  const cs = charset.value
+  const cs = font.charset.value
   const themeName = theme.value
 
   const scale = Math.min(BOX / w, BOX / h)

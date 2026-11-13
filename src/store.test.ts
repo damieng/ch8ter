@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  activeFontId, addFont, charset, createFont, glyphCount, removeAllFonts, switchCharset,
+  activeFontId, addFont, createFont, glyphCount, removeAllFonts, switchCharset, defaultCharset,
   removeAllFontsAndContainers, fonts,
   exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
@@ -11,7 +11,6 @@ import { execSetAdvances } from './undoHistory'
 describe('charset switching', () => {
   beforeEach(() => {
     removeAllFonts()
-    charset.value = 'cpm'
   })
 
   it('preserves CP/M glyphs that collide by Unicode and keeps blank trailing slots', () => {
@@ -19,17 +18,17 @@ describe('charset switching', () => {
     data[0x30] = 0x30
     data[0x7F] = 0x7F
 
-    const font = createFont(data, 'cpm.bin', 0, 8, 1)
+    const font = createFont(data, 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
     addFont(font)
 
-    switchCharset('amiga')
+    switchCharset(font, 'amiga')
 
     expect(glyphCount(font)).toBe(256)
     expect(font.fontData.value[0x30]).toBe(0x30)
     expect(font.fontData.value[0x7F]).toBe(0x7F)
     expect(font.fontData.value[0xFF]).toBe(0)
 
-    switchCharset('cpm')
+    switchCharset(font, 'cpm')
 
     expect(glyphCount(font)).toBe(256)
     expect(font.fontData.value[0x30]).toBe(0x30)
@@ -38,18 +37,54 @@ describe('charset switching', () => {
     expect(activeFontId.value).toBe(font.id)
   })
 
-  it('remaps every open font when the charset changes', () => {
-    const first = createFont(new Uint8Array(256), 'first.bin', 0, 8, 1)
-    const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1)
+  it('only remaps the font whose codepage changed', () => {
+    const first = createFont(new Uint8Array(256), 'first.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
     addFont(first)
     addFont(second)
+    // Give each font a distinct glyph so a stray remap would be visible
+    first.fontData.value[0x41] = 0xAA
+    second.fontData.value[0x41] = 0xBB
+    second.fontData.value[0x41] = 0xBB
 
-    switchCharset('amiga')
+    switchCharset(first, 'amiga')
 
-    expect(glyphCount(first)).toBe(256)
+    expect(first.charset.value).toBe('amiga')
+    expect(second.charset.value).toBe('cpm')
+    // The other font keeps its codepage, start position and pixel data untouched
+    expect(second.startChar.value).toBe(0)
     expect(glyphCount(second)).toBe(256)
-    expect(first.undoHistory.undo()).toBe(false)
+    expect(second.fontData.value[0x41]).toBe(0xBB)
     expect(second.undoHistory.undo()).toBe(false)
+  })
+
+  // Opened fonts carry the codepage they were detected as, so loading one never
+  // disturbs the codepages of fonts already open next to it.
+  it('keeps every open font on its own codepage when a new font is opened', () => {
+    const cpm = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    addFont(cpm)
+    cpm.fontData.value[0x30] = 0x30 // '0' at its CP/M position
+
+    // What AppPane does for a newly loaded .ch8: build the font with the codepage
+    // it was detected as, without touching the fonts already open
+    const zx = createFont(new Uint8Array(96), 'spectrum.ch8', 32, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'zx')
+    addFont(zx)
+
+    expect(zx.charset.value).toBe('zx')
+    expect(cpm.charset.value).toBe('cpm')
+    expect(cpm.startChar.value).toBe(0)
+    expect(glyphCount(cpm)).toBe(256)
+    expect(cpm.fontData.value[0x30]).toBe(0x30)
+  })
+
+  it('remembers the codepage of the font switched last as the default for new fonts', () => {
+    const font = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    addFont(font)
+
+    switchCharset(font, 'amiga')
+
+    expect(defaultCharset.value).toBe('amiga')
+    expect(createFont(new Uint8Array(8)).charset.value).toBe('amiga')
   })
 })
 
@@ -141,38 +176,54 @@ describe('workspace export/import', () => {
     expect(workspaceEpoch.value).toBe(before + 1)
   })
 
-  it('records the codepage and restores it without remapping glyphs', () => {
-    const original = charset.value
-    try {
-      const font = createFont(new Uint8Array([0xAA, 0, 0, 0, 0, 0, 0, 0]), 'cpm.bin', 0, 8, 8)
-      addFont(font)
-      charset.value = 'cpm'
-      const json = exportWorkspace()
-      expect(JSON.parse(json).charset).toBe('cpm')
+  it('round-trips each font\'s own codepage without remapping glyphs', () => {
+    const font = createFont(
+      new Uint8Array([0xAA, 0, 0, 0, 0, 0, 0, 0]), 'cpm.bin', 0, 8, 8,
+      undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm',
+    )
+    addFont(font)
+    const json = exportWorkspace()
+    expect(JSON.parse(json).fonts[0].charset).toBe('cpm')
 
-      charset.value = 'zx'
-      importWorkspace(json)
+    defaultCharset.value = 'zx'
+    importWorkspace(json)
 
-      expect(charset.value).toBe('cpm')
-      expect(fonts.value[0].startChar.value).toBe(0)
-      expect(fonts.value[0].fontData.value[0]).toBe(0xAA)
-    } finally {
-      charset.value = original
-    }
+    expect(fonts.value[0].charset.value).toBe('cpm')
+    expect(fonts.value[0].startChar.value).toBe(0)
+    expect(fonts.value[0].fontData.value[0]).toBe(0xAA)
   })
 
-  it('leaves the codepage alone when importing an older file without one', () => {
-    const original = charset.value
-    try {
-      addFont(createFont())
-      const file = JSON.parse(exportWorkspace())
-      delete file.charset
-      charset.value = 'cp437'
-      importWorkspace(JSON.stringify(file))
-      expect(charset.value).toBe('cp437')
-    } finally {
-      charset.value = original
-    }
+  it('keeps a workspace\'s mixed codepages separate on import', () => {
+    const cpm = createFont(
+      new Uint8Array(256), 'cpm.bin', 0, 8, 1,
+      undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm',
+    )
+    const zx = createFont(
+      new Uint8Array(96), 'spectrum.ch8', 32, 8, 1,
+      undefined, undefined, undefined, undefined, 'monospace', 0, 'zx',
+    )
+    addFont(cpm)
+    addFont(zx)
+    const json = exportWorkspace()
+
+    importWorkspace(json)
+
+    expect(fonts.value.map(f => f.charset.value)).toEqual(['cpm', 'zx'])
+    expect(fonts.value.map(f => f.startChar.value)).toEqual([0, 32])
+  })
+
+  it('leaves the default codepage alone when importing an older file without one', () => {
+    addFont(createFont())
+    const file = JSON.parse(exportWorkspace())
+    // Pre-per-font-codepage saves recorded neither the workspace codepage nor
+    // a codepage on each font
+    delete file.charset
+    for (const f of file.fonts) delete f.charset
+    defaultCharset.value = 'cp437'
+    importWorkspace(JSON.stringify(file))
+    expect(defaultCharset.value).toBe('cp437')
+    // Fonts saved without a codepage still open on the remembered default
+    expect(fonts.value[0].charset.value).toBe('cp437')
   })
 
   it('rejects JSON that is not a workspace file', () => {

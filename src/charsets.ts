@@ -543,12 +543,12 @@ function resolveCharsets(raw: Record<string, CharsetDefRaw>): Record<string, Cha
 
 export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RAW) as Record<Charset, CharsetDef>
 
-// --- Charset signal + persistence ---
+// --- Default charset + persistence ---
 
 const CHARSET_KEY = 'ch8ter-charset'
 // The CLI runs under Node where localStorage is unavailable; persistence is a no-op there.
 const hasLocalStorage = typeof localStorage !== 'undefined'
-function loadCharset(): Charset {
+function loadDefaultCharset(): Charset {
   if (!hasLocalStorage) return 'zx'
   try {
     const stored = localStorage.getItem(CHARSET_KEY)
@@ -556,9 +556,16 @@ function loadCharset(): Charset {
   } catch { /* ignore */ }
   return 'zx'
 }
-export const charset = signal<Charset>(loadCharset())
+
+/**
+ * Codepage new fonts start from. Codepages are per font (see
+ * `FontInstance.charset`); this is only the remembered preference, never a
+ * source of truth for a font that is already open — treating it as one is what
+ * made opening a font remap every other font's glyphs.
+ */
+export const defaultCharset = signal<Charset>(loadDefaultCharset())
 if (hasLocalStorage) {
-  effect(() => { localStorage.setItem(CHARSET_KEY, charset.value) })
+  effect(() => { localStorage.setItem(CHARSET_KEY, defaultCharset.value) })
 }
 
 // --- Pure charset utilities ---
@@ -582,9 +589,9 @@ function hexLabel(charCode: number): string {
   return '0x' + charCode.toString(16).toUpperCase().padStart(2, '0')
 }
 
-export function charLabel(charCode: number): string {
+export function charLabel(charCode: number, cs: Charset): string {
   if (charCode === 32) return '\u2423'
-  const ch = cpToUnicode(charCode, charset.value)
+  const ch = cpToUnicode(charCode, cs)
   if (ch.length === 1 && ch.codePointAt(0)! >= 33 && ch.codePointAt(0)! < 0xFFFD) return ch
   if (charCode >= 33 && charCode <= 126) return String.fromCharCode(charCode)
   if (charCode >= 160 && charCode <= 255) return String.fromCharCode(charCode)
@@ -603,18 +610,18 @@ function reverseMap(cs: Charset): Map<string, number> {
 
 /**
  * Glyph code (before subtracting the font's startChar) for a character of
- * preview text, which is Unicode. Characters the active codepage defines map
+ * preview text, which is Unicode. Characters the font's codepage defines map
  * to their position in it (e.g. U+2554 -> 0x86 in Amstrad CP/M Plus); anything
  * else keeps its own code, so ASCII and Unicode-indexed fonts are unaffected.
  */
-export function glyphCodeForChar(ch: string): number {
-  return reverseMap(charset.value).get(ch) ?? ch.codePointAt(0)!
+export function glyphCodeForChar(ch: string, cs: Charset): number {
+  return reverseMap(cs).get(ch) ?? ch.codePointAt(0)!
 }
 
-export function charCodeFromKey(ch: string): number | null {
+export function charCodeFromKey(ch: string, cs: Charset): number | null {
   const codepoints = [...ch]
   if (codepoints.length !== 1) return null
-  const mapped = reverseMap(charset.value).get(ch)
+  const mapped = reverseMap(cs).get(ch)
   if (mapped !== undefined) return mapped
   const code = codepoints[0].codePointAt(0)!
   if (code >= 32 && code <= 126) return code

@@ -32,6 +32,7 @@ export function renderText({
   const lines = rawLines.map(l => Array.from(l))
   const data = font.fontData.value
   const startChar = font.startChar.value
+  const cs = font.charset.value
   const gw = font.glyphWidth.value
   const gh = font.glyphHeight.value
   const rowBytes = bpr(gw)
@@ -81,7 +82,7 @@ export function renderText({
           ctx.fillStyle = cFg
         }
 
-        const glyphIdx = glyphCodeForChar(line[col]) - startChar
+        const glyphIdx = glyphCodeForChar(line[col], cs) - startChar
         if (glyphIdx < 0 || glyphIdx >= gc) continue
         drawGlyph(glyphIdx, ox, oy)
       }
@@ -94,7 +95,7 @@ export function renderText({
   } else {
     // Advance for a character of the (Unicode) preview text
     function charAdv(ch: string) {
-      const gi = glyphCodeForChar(ch) - startChar
+      const gi = glyphCodeForChar(ch, cs) - startChar
       if (gi < 0 || gi >= gc) return cellW
       if (isFixedWidth(ch.codePointAt(0)!)) return cellW
       return glyphAdvance(font, gi) * scale
@@ -121,7 +122,7 @@ export function renderText({
       const oy = row * rowH
       for (let col = 0; col < lines[row].length; col++) {
         const ch = lines[row][col]
-        const glyphIdx = glyphCodeForChar(ch) - startChar
+        const glyphIdx = glyphCodeForChar(ch, cs) - startChar
         const isSel = selected.has(`${row},${col}`)
         const inv = rowAttrs[col] === 1
         const cFg = inv ? bg : fg

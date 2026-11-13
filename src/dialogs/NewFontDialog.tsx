@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks'
-import { type Charset, createFont, addFont, switchCharset } from '../store'
+import { type Charset, createFont, addFont } from '../store'
 import { bpr } from '../bitUtils'
 import { DialogOverlay } from '../components/DialogOverlay'
 import { DialogHeader } from '../components/DialogHeader'
@@ -56,9 +56,11 @@ export function NewFontDialog({ onClose }: Props) {
     const rowBytes = bpr(width)
     const bpg = height * rowBytes
     const data = new Uint8Array(cp.glyphCount * bpg)
-    const font = createFont(data, 'untitled', cp.startChar, width, height)
+    const font = createFont(
+      data, 'untitled', cp.startChar, width, height,
+      undefined, undefined, undefined, undefined, undefined, 0, codepage,
+    )
     font.hideEmpty.value = false
-    switchCharset(codepage)
     addFont(font)
     onClose()
   }

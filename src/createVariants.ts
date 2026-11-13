@@ -46,7 +46,7 @@ export function createBoldVariant(font: FontInstance) {
     bold.set(glyphBold, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
-  const newFont = createFont(bold, name, font.startChar.value, w, h)
+  const newFont = createFont(bold, name, font.startChar.value, w, h, undefined, undefined, undefined, undefined, undefined, 0, font.charset.value)
   recalcMetrics(newFont)
   addFont(newFont)
 }
@@ -79,7 +79,7 @@ export function createOutlineVariant(font: FontInstance) {
     outline.set(glyphOut, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-outline$1')
-  const newFont = createFont(outline, name, font.startChar.value, w, h)
+  const newFont = createFont(outline, name, font.startChar.value, w, h, undefined, undefined, undefined, undefined, undefined, 0, font.charset.value)
   recalcMetrics(newFont)
   addFont(newFont)
 }
@@ -97,7 +97,7 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
     oblique.set(shearGlyphBytes(bytes, angleDegrees, w, h), offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
-  const newFont = createFont(oblique, name, font.startChar.value, w, h)
+  const newFont = createFont(oblique, name, font.startChar.value, w, h, undefined, undefined, undefined, undefined, undefined, 0, font.charset.value)
   recalcMetrics(newFont)
   addFont(newFont)
 }
@@ -155,7 +155,7 @@ export function createProportionalVariant(font: FontInstance) {
   }
 
   const name = font.fileName.value.replace(/(\.\w+)$/, '-proportional$1')
-  const newFont = createFont(out, name, start, w, h, undefined, undefined, undefined, meta, 'proportional')
+  const newFont = createFont(out, name, start, w, h, undefined, undefined, undefined, meta, 'proportional', 0, font.charset.value)
   recalcMetrics(newFont)
   addFont(newFont)
 }
@@ -213,7 +213,7 @@ export function createMonospaceVariant(
   }
 
   const name = font.fileName.value.replace(/(\.\w+)$/, '-monospace$1')
-  const newFont = createFont(out, name, start, newW, h, undefined, undefined, undefined, undefined, 'monospace')
+  const newFont = createFont(out, name, start, newW, h, undefined, undefined, undefined, undefined, 'monospace', 0, font.charset.value)
   recalcMetrics(newFont)
   addFont(newFont)
 }

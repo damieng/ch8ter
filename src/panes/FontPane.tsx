@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, recordGlyphClick, completeGlyphDoubleClick, fontHasVisibleWindow, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, recordGlyphClick, completeGlyphDoubleClick, fontHasVisibleWindow, charCodeFromKey, glyphToText, CHARSETS, charsetGlyphFilter } from '../store'
 import { selectGlyph, selectAll } from '../selection'
 import { shiftUp, shiftDown, shiftLeft, shiftRight } from '../glyphTransforms'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
@@ -42,7 +42,7 @@ function SizeButton({ font }: { font: FontInstance }) {
 
 function PreviewButton({ font }: { font: FontInstance }) {
   function handleClick() {
-    const cs = CHARSETS[charset.value]
+    const cs = CHARSETS[font.charset.value]
     const sysIdx = cs?.colorSystem
       ? COLOR_SYSTEMS.findIndex(s => s.name === cs.colorSystem)
       : -1
@@ -297,7 +297,7 @@ export function FontPane({ font }: Props) {
 
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
-      const charCode = charCodeFromKey(e.key)
+      const charCode = charCodeFromKey(e.key, font.charset.value)
       if (charCode === null) return
 
       const idx = charCode - font.startChar.value

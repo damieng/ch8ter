@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } fr
 import { Download } from 'lucide-preact'
 import { fonts, storedPreviews, updatePreviewSettings, glyphAdvance } from '../store'
 import { isFixedWidth } from '../unicodeRanges'
-import { glyphCodeForChar, charset } from '../charsets'
+import { glyphCodeForChar } from '../charsets'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
 import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
@@ -116,22 +116,23 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   const selStart = textareaRef.current?.selectionStart ?? 0
   const selEnd = textareaRef.current?.selectionEnd ?? 0
 
-  // Preview text is Unicode, mapped to glyphs through the active codepage;
-  // subscribe so switching codepage re-lays-out and redraws
-  const activeCharset = charset.value
+  // Preview text is Unicode, mapped to glyphs through the previewed font's
+  // own codepage; subscribe so changing it re-lays-out and redraws
+  const activeCharset = font?.charset.value
 
   const wrapResult = useMemo(() => {
     if (!proportional || !font) {
       return wrapText(text, cols)
     }
     const start = font.startChar.value
+    const cs = font.charset.value
     const rowBytes = bpr(gw)
     const bpg = gh * rowBytes
     const data = font.fontData.value
     const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
     const maxPixelWidth = cols * gw
     return wrapTextProportional(text, maxPixelWidth, (ch) => {
-      const gi = glyphCodeForChar(ch) - start
+      const gi = glyphCodeForChar(ch, cs) - start
       if (isFixedWidth(ch.codePointAt(0)!)) return gw
       return (gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
     })
@@ -190,7 +191,7 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
       const line = Array.from(wrappedLines[row]) // one entry per code point
       let xPos = 0
       for (let col = 0; col < line.length; col++) {
-        const gi = glyphCodeForChar(line[col]) - start
+        const gi = glyphCodeForChar(line[col], font?.charset.value ?? 'zx') - start
         const advance = (isFixedWidth(line[col].codePointAt(0)!) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
         if (clickX < xPos + advance / 2) {
           if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]

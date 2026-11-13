@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
-  createFont, addFont, recalcMetrics, switchCharset, CHARSETS, containers,
+  createFont, addFont, recalcMetrics, CHARSETS, containers,
   type FontContainer, type ContainerFont, type ContainerMeta, type Charset,
 } from '../store'
 import { ContainerPropertiesDialog } from '../dialogs/ContainerPropertiesDialog'
@@ -86,6 +86,8 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     const meta = cf.meta ? { ...cf.meta } : { properties: {} as Record<string, string> }
     if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
     if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
+    const cpKey = cf.charsetKey ?? `cp${cf.codepage}`
+    const charsetKey = cpKey in CHARSETS ? (cpKey as Charset) : undefined
     const font = createFont(
       // Copy: createFont stores the buffer by reference and pixel edits
       // mutate it in place, so sharing would corrupt the container's copy
@@ -97,12 +99,11 @@ export function ContainerPane({ container }: { container: FontContainer }) {
       cf.baseline,
       cf.glyphMeta ? [...cf.glyphMeta] : undefined,
       cf.spacingMode ?? 'monospace',
+      0,
+      charsetKey,
     )
     if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
     font.sourceContainerId = container.id
-
-    const cpKey = cf.charsetKey ?? `cp${cf.codepage}`
-    switchCharset(cpKey in CHARSETS ? (cpKey as Charset) : 'cp437' as Charset)
     recalcMetrics(font)
     addFont(font)
   }

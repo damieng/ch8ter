@@ -1,19 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  charset, createFont, addFont, removeAllFonts, switchCharset, openGlyphEditor, openNewGlyphEditor, getPixel,
+  createFont, addFont, removeAllFonts, switchCharset, openGlyphEditor, openNewGlyphEditor, getPixel,
 } from './store'
 import { execTransformGlyph } from './undoHistory'
 import { rotateCWBytes } from './glyphTransforms'
 
-describe('switching codepage', () => {
-  const original = charset.value
+describe('switching a font\'s codepage', () => {
   beforeEach(() => { removeAllFonts() })
-  afterEach(() => { charset.value = original })
 
   // zx covers 32-127, cp437 covers 0-255, so switching shifts every glyph index
   function zxFont() {
-    charset.value = 'zx'
-    const f = createFont(new Uint8Array(96 * 8), 'x.bin', 32, 8, 8)
+    const f = createFont(new Uint8Array(96 * 8), 'x.bin', 32, 8, 8, undefined, undefined, undefined, undefined, 'monospace', 0, 'zx')
     // 'A' (0x41) gets a distinctive pattern: top-left pixel plus a pixel on row 3
     f.fontData.value[(0x41 - 32) * 8] = 0x80
     f.fontData.value[(0x41 - 32) * 8 + 3] = 0x40
@@ -28,7 +25,7 @@ describe('switching codepage', () => {
     openNewGlyphEditor(f, 0x41 - 32, true) // pin 'A'
     expect(f.pinnedEditors.value[0].glyph).toBe(0x41 - 32)
 
-    switchCharset('cp437')
+    switchCharset(f, 'cp437')
 
     const idx = f.pinnedEditors.value[0].glyph
     expect(f.startChar.value + idx).toBe(0x41)
@@ -41,7 +38,7 @@ describe('switching codepage', () => {
     execTransformGlyph(f, a, rotateCWBytes, 'Rotate CW') // fills glyphRotationLive[a]
     expect(f.glyphRotationLive.size).toBeGreaterThan(0)
 
-    switchCharset('cp437')
+    switchCharset(f, 'cp437')
 
     // The buffers were keyed by the old indices
     expect(f.glyphRotationLive.size).toBe(0)

@@ -1,11 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { wrapText, wrapTextProportional, cursorPosition } from './textLayout'
-import { charset, glyphCodeForChar } from './charsets'
+import { glyphCodeForChar } from './charsets'
 
 describe('astral characters are one cell', () => {
-  const original = charset.value
-  afterEach(() => { charset.value = original })
-
   const SMP = '\u{1FB00}' // a Symbols for Legacy Computing block, two UTF-16 units
 
   it('wrapText counts it as one column and keeps offsets aligned', () => {
@@ -22,7 +19,6 @@ describe('astral characters are one cell', () => {
   })
 
   it('glyphCodeForChar resolves it by code point, not a lone surrogate', () => {
-    charset.value = 'cp437'
-    expect(glyphCodeForChar(SMP)).toBe(0x1FB00)
+    expect(glyphCodeForChar(SMP, 'cp437')).toBe(0x1FB00)
   })
 })
