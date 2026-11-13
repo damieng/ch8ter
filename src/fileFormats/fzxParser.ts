@@ -97,9 +97,10 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
     populated.add(i)
     const glyphOffset = i * bpg
 
-    // Store per-glyph metadata: bbx = [width, numRows, kern, shift]
+    // Per-glyph metadata with BDF meanings: bbx = [width, height, xoff, yoff], yoff measured
+    // up from the bottom of the cell (FZX has no baseline field)
     glyphMeta[i] = {
-      bbx: [c.width, numRows, c.kern, c.shift],
+      bbx: [c.width, numRows, c.kern, height - c.shift - numRows],
       dwidth: [c.kern + c.width + tracking, 0],
     }
 

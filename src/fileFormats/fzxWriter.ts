@@ -6,39 +6,6 @@ import { bpr, getBit, setBit } from '../bitUtils'
 import { isGlyphEmpty } from './glyphUtils'
 import type { FontWriteData } from '../fontSave'
 
-function countTopAndBottomBlankRows(
-  fontData: Uint8Array, glyphOffset: number, rowBytes: number,
-  glyphWidth: number, glyphHeight: number
-): [number, number] {
-  let top = 0
-  for (let y = 0; y < glyphHeight; y++) {
-    let blank = true
-    for (let x = 0; x < glyphWidth; x++) {
-      if (getBit(fontData, glyphOffset + y * rowBytes, x)) {
-        blank = false
-        break
-      }
-    }
-    if (!blank) break
-    top++
-  }
-
-  let bottom = 0
-  for (let y = glyphHeight - 1; y > top; y--) {
-    let blank = true
-    for (let x = 0; x < glyphWidth; x++) {
-      if (getBit(fontData, glyphOffset + y * rowBytes, x)) {
-        blank = false
-        break
-      }
-    }
-    if (!blank) break
-    bottom++
-  }
-
-  return [top, bottom]
-}
-
 export function writeFzx(params: FontWriteData): Uint8Array {
   const { fontData, glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta } = params
   const tracking = params.tracking ?? 0
@@ -71,67 +38,66 @@ export function writeFzx(params: FontWriteData): Uint8Array {
   const lastChar = startChar + lastSlot
   const numChars = lastChar - 32 + 1
 
-  // Build per-character data and info
+  // Build per-character data and info. Everything is derived from the pixel grid
+  // plus the glyph's advance width, whatever format the glyph came from: bbx and
+  // dwidth carry BDF meanings, so they can't be read back as FZX fields.
   const charData: Uint8Array[] = []
-  const charInfo: { shift: number; width: number }[] = []
+  const charInfo: { kern: number; shift: number; width: number }[] = []
 
   for (let i = 0; i < numChars; i++) {
     const slotIdx = (32 - startChar) + i
     if (slotIdx < 0 || slotIdx >= glyphCount) {
       charData.push(new Uint8Array(0))
-      charInfo.push({ shift: 0, width: 1 })
+      charInfo.push({ kern: 0, shift: 0, width: 1 })
       continue
     }
 
     const glyphOffset = slotIdx * bpg
-
-    // Use stored FZX metadata if available
     const meta = glyphMeta?.[slotIdx]
-    let shift: number, width: number, topBlank: number, bottomBlank: number
 
-    if (meta?.bbx) {
-      width = meta.bbx[0]
-      shift = meta.bbx[3]
-      const numRows = meta.bbx[1]
-      topBlank = shift
-      bottomBlank = glyphHeight - shift - numRows
-    } else {
-      // Auto-detect: trim blank rows, use full glyphWidth
-      const [top, bottom] = countTopAndBottomBlankRows(fontData, glyphOffset, rowBytes, glyphWidth, glyphHeight)
-      topBlank = top
-      bottomBlank = bottom
-      shift = topBlank === glyphHeight ? 0 : topBlank
-      width = glyphWidth
+    // Ink bounds in the glyph grid
+    let top = glyphHeight, bottom = -1, left = glyphWidth, right = -1
+    for (let y = 0; y < glyphHeight; y++) {
+      for (let x = 0; x < glyphWidth; x++) {
+        if (getBit(fontData, glyphOffset + y * rowBytes, x)) {
+          if (y < top) top = y
+          if (y > bottom) bottom = y
+          if (x < left) left = x
+          if (x > right) right = x
+        }
+      }
     }
+    const hasInk = bottom >= 0
 
-    if (width <= 0 || width > 16) {
+    // FZX advance = kern + width + tracking. Honour the glyph's own advance when it
+    // has one; otherwise the glyph occupies its full cell.
+    const kernPlusWidth = meta?.dwidth ? meta.dwidth[0] - tracking : glyphWidth
+    const kern = hasInk ? Math.min(3, left) : 0
+    const inkExtent = hasInk ? right + 1 - kern : 0
+    if (inkExtent > 16) {
       throw new Error('FZX export supports per-glyph widths from 1 to 16 pixels')
+    }
+    const width = Math.min(16, Math.max(1, kernPlusWidth - kern, inkExtent))
+
+    if (!hasInk) {
+      charData.push(new Uint8Array(0))
+      charInfo.push({ kern: 0, shift: 0, width: Math.min(16, Math.max(1, kernPlusWidth)) })
+      continue
     }
 
     // The vertical shift field is 4 bits. A glyph that starts lower than row 15 keeps
     // shift 15 and stores its leading blank rows as data, rather than being moved up
-    if (shift > 15) {
-      topBlank -= shift - 15
-      shift = 15
-    }
+    const shift = Math.min(top, 15)
+    const firstRow = shift
+    const numRows = bottom - firstRow + 1
 
-    const numRows = glyphHeight - topBlank - bottomBlank
-    if (numRows <= 0) {
-      charData.push(new Uint8Array(0))
-      charInfo.push({ shift: 0, width })
-      continue
-    }
-
-    // Build row data (1 byte per row for width<=8)
+    // Row data: 1 byte per row for width<=8, else 2
     const charBytesPerRow = width <= 8 ? 1 : 2
     const data = new Uint8Array(numRows * charBytesPerRow)
-
-    const srcXStart = meta?.bbx ? meta.bbx[2] : 0 // kern = left offset into grid
     for (let row = 0; row < numRows; row++) {
-      const y = topBlank + row
-      if (y >= glyphHeight) break
+      const y = firstRow + row
       for (let px = 0; px < width; px++) {
-        const srcX = srcXStart + px
+        const srcX = kern + px
         if (srcX >= glyphWidth) break
         if (getBit(fontData, glyphOffset + y * rowBytes, srcX)) {
           setBit(data, row * charBytesPerRow, px)
@@ -140,7 +106,7 @@ export function writeFzx(params: FontWriteData): Uint8Array {
     }
 
     charData.push(data)
-    charInfo.push({ shift, width })
+    charInfo.push({ kern, shift, width })
   }
 
   // Calculate file layout
@@ -165,9 +131,7 @@ export function writeFzx(params: FontWriteData): Uint8Array {
   let dataPos = dataStart
   for (let i = 0; i < numChars; i++) {
     const entryPos = tableStart + i * 3
-    const slotIdx = (32 - startChar) + i
-    const meta = glyphMeta?.[slotIdx]
-    const kern = meta?.bbx ? (meta.bbx[2] & 3) : 0
+    const kern = charInfo[i].kern
     const relativeOffset = dataPos - entryPos
     if (relativeOffset > 0x3FFF) throw new Error('FZX font too large: character data offset exceeds 14-bit limit (16383 bytes)')
     const offsetWord = (kern << 14) | relativeOffset
