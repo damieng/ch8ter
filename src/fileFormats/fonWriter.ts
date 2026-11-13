@@ -108,7 +108,7 @@ export function writeFon(data: FontWriteData): Uint8Array {
   view.setUint16(p, fontDirDataAbs >> ALIGN_SHIFT, true); p += 2
   view.setUint16(p, alignUnits(fontDirSize), true); p += 2
   view.setUint16(p, 0x00C0, true); p += 2          // flags: preload + moveable
-  view.setUint16(p, 1, true); p += 2               // resource id (ordinal)
+  view.setUint16(p, 0x8001, true); p += 2          // resource id: integer ID (high bit set)
   p += 4                                           // handle + usage
 
   // FONT (type 8)
@@ -118,7 +118,7 @@ export function writeFon(data: FontWriteData): Uint8Array {
   view.setUint16(p, fontDataAbs >> ALIGN_SHIFT, true); p += 2
   view.setUint16(p, alignUnits(fnt.length), true); p += 2
   view.setUint16(p, 0x00C0, true); p += 2          // flags
-  view.setUint16(p, 1, true); p += 2               // resource id (ordinal)
+  view.setUint16(p, 0x8001, true); p += 2          // resource id: integer ID (high bit set)
   p += 4                                           // handle + usage
 
   view.setUint16(p, 0, true)                       // end of resource table
