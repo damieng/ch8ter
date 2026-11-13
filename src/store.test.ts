@@ -4,7 +4,7 @@ import {
   removeAllFontsAndContainers, fonts,
   exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
-  openGlyphEditor, openNewGlyphEditor, closePinnedEditor, storedFocusedId,
+  openGlyphEditor, openNewGlyphEditor, closePinnedEditor, storedFocusedId, workspaceEpoch,
 } from './store'
 import { execSetAdvances } from './undoHistory'
 
@@ -131,6 +131,14 @@ describe('workspace export/import', () => {
     expect(windowLayouts.value[`grid-${a.id}`]).toBeUndefined()
     expect(Object.keys(windowLayouts.value).some(k => /^editor-font-\d+-/.test(k))).toBe(false)
     expect(storedFocusedId.value).toBe(`grid-${na.id}`)
+  })
+
+  it('bumps the workspace epoch so the UI remounts its windows', () => {
+    addFont(createFont())
+    const json = exportWorkspace()
+    const before = workspaceEpoch.value
+    importWorkspace(json)
+    expect(workspaceEpoch.value).toBe(before + 1)
   })
 
   it('records the codepage and restores it without remapping glyphs', () => {

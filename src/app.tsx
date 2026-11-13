@@ -10,7 +10,7 @@ import { BasePane } from './components/BasePane'
 import { EditorTitle } from './components/EditorTitle'
 import { AppPane, AppTitle } from './panes/AppPane'
 import { FontStatusBar } from './components/FontStatusBar'
-import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer, closePinnedEditor } from './store'
+import { fonts, activeFontId, removeFont, previews, closePreview, storedFocusedId, storedPreviews, containers, removeContainer, closePinnedEditor, workspaceEpoch } from './store'
 import { raiseWindow, getZIndex } from './windowStack'
 import { Type, Pencil, Archive, Eye } from 'lucide-preact'
 import { FontIcon } from './components/FontIcon'
@@ -55,6 +55,9 @@ export function App() {
 
   return (
     <div class="relative w-screen h-screen overflow-hidden bg-gray-200">
+      {/* Keyed by the workspace epoch: importing a workspace remounts every window, so
+          panes that keep their own state (position, preview text, zoom) pick up the import */}
+      <Fragment key={workspaceEpoch.value}>
       {/* App pane */}
       <BasePane
         title={<AppTitle />}
@@ -191,6 +194,7 @@ export function App() {
         </BasePane>
         )
       })}
+      </Fragment>
       {confirmClose && (
         <ConfirmDialog
           font={confirmClose.font}

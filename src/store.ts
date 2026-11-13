@@ -519,6 +519,9 @@ export function exportWorkspace(): string {
  * Replace all state with a parsed workspace file. The autosave effects fire on
  * the signal writes, so localStorage ends up consistent with the import.
  */
+/** Bumped on every workspace import so the UI can remount its windows. */
+export const workspaceEpoch = signal(0)
+
 export function importWorkspace(json: string): void {
   const file = parseWorkspaceFile(json)
 
@@ -559,6 +562,8 @@ export function importWorkspace(json: string): void {
 
   // Keep the runtime ID counters ahead of the restored ids so new
   // fonts/containers/previews never collide with imported ones
+  workspaceEpoch.value++
+
   nextContainerId = 1 + newContainers.reduce((max, c) => {
     const n = parseInt(c.id.replace('container-', ''))
     return isNaN(n) ? max : Math.max(max, n)
