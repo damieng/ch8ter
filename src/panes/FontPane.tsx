@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import { Eye, Maximize2, EyeOff } from 'lucide-preact'
-import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, openNewGlyphEditor, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter } from '../store'
+import { type FontInstance, glyphCount, bytesPerGlyph, activeFontId, openPreview, openGlyphEditor, openNewGlyphEditor, fontHasVisibleWindow, charCodeFromKey, glyphToText, charset, CHARSETS, charsetGlyphFilter } from '../store'
 import { selectGlyph, selectAll } from '../selection'
 import { shiftUp, shiftDown, shiftLeft, shiftRight } from '../glyphTransforms'
 import { execClearGlyph, execPasteGlyph, execTransformGlyph, undo, redo } from '../undoHistory'
@@ -203,6 +203,8 @@ export function FontPane({ font }: Props) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (activeFontId.value !== font.id) return
+      // Don't edit a font the user can't see: all its windows are minimized
+      if (!fontHasVisibleWindow(font)) return
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
 

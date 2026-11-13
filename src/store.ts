@@ -223,6 +223,15 @@ export function minimizeWindow(id: string) {
   if (storedFocusedId.value === id) storedFocusedId.value = ''
 }
 
+/** True unless every window of this font (grid, glyph editors) is minimized to an icon. */
+export function fontHasVisibleWindow(font: FontInstance): boolean {
+  const layouts = windowLayouts.value
+  const visible = (id: string) => layouts[id]?.minimized !== true
+  if (visible(`grid-${font.id}`)) return true
+  if (font.editorOpen.value && visible(font.trackerId.value)) return true
+  return font.pinnedEditors.value.some(e => visible(e.id))
+}
+
 export function restoreWindow(id: string) {
   // Only touch a window that has a layout entry, so an unmounted window
   // isn't given a bogus 0,0 layout

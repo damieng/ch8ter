@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   windowLayouts, updateWindowLayout, minimizeWindow, restoreWindow,
-  createFont, openGlyphEditor, storedFocusedId, ICON_W,
+  createFont, openGlyphEditor, storedFocusedId, ICON_W, fontHasVisibleWindow,
 } from './store'
 
 describe('minimized windows', () => {
@@ -50,5 +50,28 @@ describe('minimized windows', () => {
     minimizeWindow(font.trackerId.value)
     openGlyphEditor(font)
     expect(windowLayouts.value[font.trackerId.value].minimized).toBe(false)
+  })
+})
+
+describe('fontHasVisibleWindow', () => {
+  beforeEach(() => { windowLayouts.value = {} })
+
+  it('is false only once the grid and every editor are minimized', () => {
+    const font = createFont()
+    updateWindowLayout(`grid-${font.id}`, { x: 0, y: 0, w: 1, h: 1 })
+    expect(fontHasVisibleWindow(font)).toBe(true)
+    minimizeWindow(`grid-${font.id}`)
+    expect(fontHasVisibleWindow(font)).toBe(false)
+
+    // An open, un-minimized tracking editor keeps the font visible
+    font.editorOpen.value = true
+    expect(fontHasVisibleWindow(font)).toBe(true)
+    updateWindowLayout(font.trackerId.value, { x: 0, y: 0, w: 1, h: 1 })
+    minimizeWindow(font.trackerId.value)
+    expect(fontHasVisibleWindow(font)).toBe(false)
+
+    // ...and so does a pinned one
+    font.pinnedEditors.value = [{ id: 'editor-pinned', glyph: 1 }]
+    expect(fontHasVisibleWindow(font)).toBe(true)
   })
 })
