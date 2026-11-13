@@ -700,6 +700,8 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
       return { ...ed, glyph: Math.max(0, cp - newStart) }
     })
   }
+  // Rotation buffers are keyed by glyph index, which just changed
+  font.glyphRotationLive.clear()
   font.undoHistory.clear()
 }
 

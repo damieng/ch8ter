@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   charset, createFont, addFont, removeAllFonts, switchCharset, openGlyphEditor, openNewGlyphEditor, getPixel,
 } from './store'
+import { execTransformGlyph } from './undoHistory'
+import { rotateCWBytes } from './glyphTransforms'
 
 describe('switching codepage', () => {
   const original = charset.value
@@ -33,4 +35,15 @@ describe('switching codepage', () => {
     expect(getPixel(f, idx, 0, 0)).toBe(true) // still showing the glyph that was 'A'
   })
 
+  it('does not carry a stale rotation buffer onto a different glyph', () => {
+    const f = zxFont()
+    const a = 0x41 - 32
+    execTransformGlyph(f, a, rotateCWBytes, 'Rotate CW') // fills glyphRotationLive[a]
+    expect(f.glyphRotationLive.size).toBeGreaterThan(0)
+
+    switchCharset('cp437')
+
+    // The buffers were keyed by the old indices
+    expect(f.glyphRotationLive.size).toBe(0)
+  })
 })
