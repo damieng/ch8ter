@@ -172,7 +172,7 @@ import {
   loadContainersFromStorage,
   setupFontAutoSave, setupLayoutAutoSave, setupContainerAutoSave,
   buildWorkspaceFile, parseWorkspaceFile, fontFromStored, containerFromStored,
-  remapWindowLayouts, remapWindowKey,
+  remapWindowLayouts, remapWindowKey, savedEditorKeys,
 } from './persistence'
 export type { WindowRect, StoredPreview } from './persistence'
 
@@ -339,6 +339,17 @@ export function openGlyphEditor(font: FontInstance) {
 }
 
 let nextEditorId = 1
+
+/** Keep new editor ids clear of the ones restored from storage or an import. */
+function syncEditorCounter(fontList: FontInstance[]) {
+  for (const f of fontList) {
+    for (const id of [f.trackerId.value, ...f.pinnedEditors.value.map(e => e.id)]) {
+      const n = /-(\d+)$/.exec(id.slice(`editor-${f.id}`.length))
+      if (n) nextEditorId = Math.max(nextEditorId, parseInt(n[1]) + 1)
+    }
+  }
+}
+syncEditorCounter(fonts.value)
 
 /**
  * Double-click on a glyph: the open tracking editor is left behind pinned to
@@ -516,7 +527,7 @@ if (restoredLayout) {
   const idMap = restoredState?.idMap ?? new Map<string, string>()
   const fallbackFontId = restored?.[0]?.id ?? ''
   const remapFontId = (id: string | undefined) => (id && idMap.get(id)) || fallbackFontId
-  if (restoredLayout.windows) windowLayouts.value = remapWindowLayouts(restoredLayout.windows, idMap)
+  if (restoredLayout.windows) windowLayouts.value = remapWindowLayouts(restoredLayout.windows, idMap, restoredState?.editorKeys)
   if (restoredLayout.previews) {
     storedPreviews.value = restoredLayout.previews.map(p => ({
       ...p,
@@ -598,7 +609,7 @@ export function importWorkspace(json: string): void {
 
   // Window layouts and the focused window are keyed by font id, so they
   // need the same old-id to new-id remapping as the previews
-  windowLayouts.value = remapWindowLayouts(file.layout.windows ?? {}, idMap)
+  windowLayouts.value = remapWindowLayouts(file.layout.windows ?? {}, idMap, savedEditorKeys(file.fonts))
   storedPreviews.value = (file.layout.previews ?? []).map(p => ({
     ...p,
     fontId: remapFontId(p.fontId),
@@ -609,6 +620,7 @@ export function importWorkspace(json: string): void {
 
   // Keep the runtime ID counters ahead of the restored ids so new
   // fonts/containers/previews never collide with imported ones
+  syncEditorCounter(newFonts)
   workspaceEpoch.value++
 
   nextContainerId = 1 + newContainers.reduce((max, c) => {

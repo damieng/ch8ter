@@ -33,6 +33,12 @@ export interface StoredFont {
   tracking?: number
   sourceContainerId?: string
   charIndex?: (number | undefined)[]
+  /** Whether the tracking glyph editor window was open. */
+  editorOpen?: boolean
+  /** Window id of the tracking editor (changes after a double-click spawns a new one). */
+  trackerId?: string
+  /** Extra glyph editors, each pinned to one glyph. */
+  pinnedEditors?: { id: string; glyph: number }[]
 }
 
 export interface WindowRect {
@@ -130,6 +136,13 @@ export function fontFromStored(s: StoredFont): FontInstance {
   if (s.hideEmpty != null) font.hideEmpty.value = s.hideEmpty
   if (s.sourceContainerId) font.sourceContainerId = s.sourceContainerId
   if (s.charIndex) font.charIndex!.value = s.charIndex
+  // Glyph editor windows. Their ids embed the font's old id, so carry them over to its new one
+  const editorPrefix = s.id ? `editor-${s.id}` : null
+  const remapEditorId = (id: string) =>
+    editorPrefix && id.startsWith(editorPrefix) ? `editor-${font.id}${id.slice(editorPrefix.length)}` : id
+  if (s.editorOpen) font.editorOpen.value = true
+  if (s.trackerId) font.trackerId.value = remapEditorId(s.trackerId)
+  if (s.pinnedEditors) font.pinnedEditors.value = s.pinnedEditors.map(p => ({ id: remapEditorId(p.id), glyph: p.glyph }))
   font.savedSnapshot.value = new Uint8Array(data)
   font.dirty.value = false
   if (s.ascender != null) font.ascender.value = s.ascender
@@ -158,7 +171,7 @@ export function fontFromStored(s: StoredFont): FontInstance {
  * Restore fonts from localStorage. Fonts get fresh runtime ids, so `idMap`
  * maps each font's previous id to its new one (for remapping layouts/previews).
  */
-export function loadFontsFromStorage(): { fonts: FontInstance[]; idMap: Map<string, string> } | null {
+export function loadFontsFromStorage(): { fonts: FontInstance[]; idMap: Map<string, string>; editorKeys: Set<string> } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
@@ -167,7 +180,7 @@ export function loadFontsFromStorage(): { fonts: FontInstance[]; idMap: Map<stri
     const fonts = stored.map(fontFromStored)
     const idMap = new Map<string, string>()
     stored.forEach((s, i) => { if (s.id) idMap.set(s.id, fonts[i].id) })
-    return { fonts, idMap }
+    return { fonts, idMap, editorKeys: savedEditorKeys(stored) }
   } catch (e) {
     console.warn('Failed to restore fonts from localStorage:', e)
     return null
@@ -199,6 +212,9 @@ export function toStoredFonts(fontList: FontInstance[]): StoredFont[] {
     tracking: f.tracking.value,
     sourceContainerId: f.sourceContainerId,
     charIndex: f.charIndex?.value,
+    editorOpen: f.editorOpen.value,
+    trackerId: f.trackerId.value,
+    pinnedEditors: f.pinnedEditors.value.map(e => ({ id: e.id, glyph: e.glyph })),
   }))
 }
 
@@ -253,29 +269,42 @@ const FONT_WINDOW_KEY = /^(grid|editor)-(font-\d+)(-.*)?$/
  * Window layouts are keyed by runtime font ids ("grid-font-3"), but fonts are
  * given fresh ids whenever they are restored or imported. Rewrite the keys to
  * the new ids. Layouts of fonts that no longer exist are dropped, as are
- * layouts of extra glyph editors ("editor-font-3-2"): those windows are not
- * persisted, so their layouts would only be applied to unrelated windows.
+ * layouts of extra glyph editors ("editor-font-3-2") unless they are listed in
+ * `liveEditorKeys` (the editors saved with the fonts being restored), since
+ * otherwise their layouts would only be applied to unrelated windows.
  * Keys that don't belong to a font (app pane, containers, previews) are kept.
  */
 export function remapWindowLayouts(
   windows: Record<string, WindowRect>,
   idMap: Map<string, string>,
+  liveEditorKeys?: Set<string>,
 ): Record<string, WindowRect> {
   const out: Record<string, WindowRect> = {}
   for (const [key, rect] of Object.entries(windows)) {
-    const mapped = remapWindowKey(key, idMap)
+    const mapped = remapWindowKey(key, idMap, liveEditorKeys)
     if (mapped !== null) out[mapped] = rect
   }
   return out
 }
 
 /** Remap one window key (also used for the focused window id); null if it should be dropped. */
-export function remapWindowKey(key: string, idMap: Map<string, string>): string | null {
+export function remapWindowKey(key: string, idMap: Map<string, string>, liveEditorKeys?: Set<string>): string | null {
   const m = FONT_WINDOW_KEY.exec(key)
   if (!m) return key
   const newId = idMap.get(m[2])
-  if (!newId || m[3]) return null
-  return `${m[1]}-${newId}`
+  if (!newId) return null
+  if (m[3] && !liveEditorKeys?.has(key)) return null
+  return `${m[1]}-${newId}${m[3] ?? ''}`
+}
+
+/** Old window ids of the tracking and extra glyph editors saved with these fonts. */
+export function savedEditorKeys(stored: StoredFont[]): Set<string> {
+  const keys = new Set<string>()
+  for (const s of stored) {
+    if (s.trackerId) keys.add(s.trackerId)
+    for (const p of s.pinnedEditors ?? []) keys.add(p.id)
+  }
+  return keys
 }
 
 // --- Workspace export/import ---
@@ -347,6 +376,9 @@ export function setupFontAutoSave(getFonts: () => FontInstance[]) {
       f.tracking.value
       f.populatedGlyphs.value
       f.charIndex?.value
+      f.editorOpen.value
+      f.trackerId.value
+      f.pinnedEditors.value
     }
     saveFontsToStorage(allFonts)
   })
