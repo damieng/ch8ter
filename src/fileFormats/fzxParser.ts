@@ -78,7 +78,10 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
 
   for (let i = 0; i < numChars; i++) {
     const c = chars[i]
-    if (c.absDataPos < 0) continue
+    if (c.absDataPos < 0) {
+      glyphMeta[i] = { dwidth: [c.kern + c.width + tracking, 0] }
+      continue
+    }
 
     // End of this glyph's data = the next glyph that actually has data
     // (an offset-0 blank entry has none, so look past it), or the final word.
@@ -88,11 +91,13 @@ export function parseFzx(buf: ArrayBuffer): FzxParseResult {
     }
     const dataLen = nextAbsPos - c.absDataPos
 
-    if (dataLen <= 0) continue
-
     const charBytesPerRow = c.width <= 8 ? 1 : 2
-    const numRows = Math.floor(dataLen / charBytesPerRow)
-    if (numRows === 0) continue
+    const numRows = dataLen > 0 ? Math.floor(dataLen / charBytesPerRow) : 0
+    if (numRows === 0) {
+      // A glyph with no bitmap rows (a space) still has an advance width
+      glyphMeta[i] = { dwidth: [c.kern + c.width + tracking, 0] }
+      continue
+    }
 
     populated.add(i)
     const glyphOffset = i * bpg

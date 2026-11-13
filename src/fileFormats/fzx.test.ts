@@ -67,3 +67,13 @@ describe('writeFzx metrics come from pixels and advance width', () => {
     expect([...again]).toEqual([...writeFzx(f)])
   })
 })
+
+describe('parseFzx glyphs without bitmap rows', () => {
+  it('keeps the advance width of a space', () => {
+    const f = blankFont(8, 8)
+    f.plot(1, 0, 3)
+    f.glyphMeta = [{ dwidth: [5, 0] }, null, null] // glyph 0 is the (blank) space, 5px wide
+    const r = parseFzx(writeFzx(f).buffer as ArrayBuffer)
+    expect(r.glyphMeta[0]?.dwidth?.[0]).toBe(5)
+  })
+})
