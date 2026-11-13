@@ -956,7 +956,8 @@ export function fontToConversionData(font: FontInstance): import('./fontLoad').F
     populated: font.populatedGlyphs.value,
     fontName: font.fontName.value || baseName(font.fileName.value),
     spacingMode: font.spacing.value,
-    detectedCharset: '',
+    // The active codepage, so formats that record one (CPI) write the right number
+    detectedCharset: charset.value,
     useCalcMissing: false,
     ascender: font.ascender.value >= 0 ? font.ascender.value : undefined,
     descender: font.descender.value >= 0 ? font.descender.value : undefined,
