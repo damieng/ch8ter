@@ -330,7 +330,7 @@ function parseAccelerators(view: DataView, entry: TocEntry): AccelData {
   return { fontAscent, fontDescent, maxOverallWidth, minLeftBearing }
 }
 
-function parseEncodings(view: DataView, entry: TocEntry): Map<number, number> {
+export function parseEncodings(view: DataView, entry: TocEntry): Map<number, number> {
   let pos = entry.offset
   const format = view.getInt32(pos, true)
   pos += 4
@@ -345,9 +345,11 @@ function parseEncodings(view: DataView, entry: TocEntry): Map<number, number> {
   const map = new Map<number, number>()
   for (let byte1 = minByte1; byte1 <= maxByte1; byte1++) {
     for (let byte2 = minCharOrByte2; byte2 <= maxCharOrByte2; byte2++) {
-      const glyphIdx = getInt16(view, pos, be)
+      // Glyph indices are unsigned 16-bit; 0xFFFF means "no glyph". (Reading them as signed
+      // turned every index from 32768 up into a negative number and dropped it.)
+      const glyphIdx = view.getUint16(pos, !be)
       pos += 2
-      if (glyphIdx !== -1 && (glyphIdx & 0xFFFF) !== 0xFFFF) {
+      if (glyphIdx !== 0xFFFF) {
         const encoding = byte1 > 0 ? (byte1 << 8) | byte2 : byte2
         map.set(encoding, glyphIdx)
       }
