@@ -49,14 +49,17 @@ export function writeCpi({ fontData, glyphWidth, glyphHeight, startChar, glyphCo
 
   // --- FontFileHeader ---
   out[0] = 0xFF
-  out.set(new TextEncoder().encode('FONT.CPI'), 1)
+  out.set(new TextEncoder().encode('FONT   '), 1)    // 7-byte id, space-padded; 0x08..0x0F stay zero
+  view.setUint16(0x10, 1, true)                      // pnum: pointer count
+  out[0x12] = 1                                      // ptyp: pointer type
   view.setUint32(0x13, fihOffset, true)
 
   // --- FontInfoHeader ---
   view.setUint16(fihOffset, 1, true) // numCodepages
 
   // --- CodePageEntryHeader ---
-  view.setUint32(cpehOffset + 0x00, 0, true)       // no next entry
+  view.setUint16(cpehOffset + 0x00, 0x1C, true)    // cpeh_size
+  view.setUint32(cpehOffset + 0x02, 0, true)       // next_cpeh_offset: none (last entry)
   view.setUint16(cpehOffset + 0x06, 1, true)       // device type: screen
   out.set(new TextEncoder().encode('EGA     '), cpehOffset + 0x08)
   view.setUint16(cpehOffset + 0x10, codepage, true)
@@ -65,13 +68,12 @@ export function writeCpi({ fontData, glyphWidth, glyphHeight, startChar, glyphCo
   // --- CodePageInfoHeader ---
   view.setUint16(cpihOffset + 0x00, 1, true)       // version-ish reserved word
   view.setUint16(cpihOffset + 0x02, 1, true)       // numFonts
-  view.setUint16(cpihOffset + 0x04, 0, true)
+  view.setUint16(cpihOffset + 0x04, 6 + bitmapSize, true) // size: ScreenFontHeader + bitmap
 
   // --- ScreenFontHeader ---
   out[sfhOffset + 0] = glyphHeight
   out[sfhOffset + 1] = glyphWidth
-  out[sfhOffset + 2] = glyphHeight                 // aspect: pixel height
-  out[sfhOffset + 3] = glyphWidth                  // aspect: pixel width
+  // bytes 2-3 (yaspect/xaspect) are unused and stay zero
   view.setUint16(sfhOffset + 4, numChars, true)
 
   // --- Bitmap (already MSBit-first packed rows, same as internal format) ---

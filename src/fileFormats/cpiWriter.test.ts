@@ -55,6 +55,22 @@ describe('writeCpi', () => {
     expect(() => writeCpi(sampleFont({ startChar: 254 }))).toThrow('0..255')
   })
 
+  it('fills the headers as docs/formats/CPI.md specifies', () => {
+    const buf = writeCpi(sampleFont())
+    const v = new DataView(buf.buffer)
+    expect(new TextDecoder().decode(buf.subarray(1, 8))).toBe('FONT   ')
+    expect([...buf.subarray(8, 16)]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]) // reserved
+    expect(v.getUint16(0x10, true)).toBe(1)  // pnum
+    expect(buf[0x12]).toBe(1)                // ptyp
+    const cpeh = v.getUint32(0x13, true) + 2
+    expect(v.getUint16(cpeh, true)).toBe(0x1C) // cpeh_size
+    expect(v.getUint32(cpeh + 2, true)).toBe(0) // last entry
+    const cpih = v.getUint32(cpeh + 0x18, true)
+    expect(v.getUint16(cpih + 4, true)).toBe(6 + 4 * 8) // ScreenFontHeader + bitmap
+    const sfh = cpih + 6
+    expect([buf[sfh + 2], buf[sfh + 3]]).toEqual([0, 0]) // unused aspect bytes
+  })
+
   it('defaults the codepage to 437 without a cpN charset', () => {
     const buf = writeCpi(sampleFont({ detectedCharset: undefined }))
     const parsed = parseCpi(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer)
