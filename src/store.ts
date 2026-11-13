@@ -211,13 +211,23 @@ export function minimizeWindow(id: string) {
   const current = layouts[id]
   let iconX = current?.iconX
   let iconY = current?.iconY
-  if (iconX == null || iconY == null) {
-    // First free slot along the bottom edge of the desktop
+  const taken = (x: number, y: number) => Object.entries(layouts).some(([k, r]) =>
+    k !== id && r.minimized && r.iconX != null && r.iconY != null &&
+    Math.abs(r.iconX - x) < ICON_W && Math.abs(r.iconY - y) < ICON_H)
+  // Reuse where this icon was last put, unless another icon has since taken that spot
+  if (iconX == null || iconY == null || taken(iconX, iconY)) {
+    // First free slot along the bottom edge of the desktop, wrapping upwards
+    const viewW = typeof window !== 'undefined' ? window.innerWidth : 1200
     const viewH = typeof window !== 'undefined' ? window.innerHeight : 800
-    iconY = Math.max(0, viewH - ICON_H - ICON_GAP * 2)
-    const taken = Object.entries(layouts).filter(([k, r]) => k !== id && r.minimized)
     iconX = ICON_GAP * 2
-    while (taken.some(([, r]) => r.iconX === iconX && r.iconY === iconY)) iconX += ICON_W + ICON_GAP
+    iconY = Math.max(0, viewH - ICON_H - ICON_GAP * 2)
+    while (taken(iconX, iconY) && iconY > 0) {
+      iconX += ICON_W + ICON_GAP
+      if (iconX + ICON_W > viewW) {
+        iconX = ICON_GAP * 2
+        iconY = Math.max(0, iconY - ICON_H - ICON_GAP)
+      }
+    }
   }
   updateWindowLayout(id, { minimized: true, iconX, iconY })
   if (storedFocusedId.value === id) storedFocusedId.value = ''

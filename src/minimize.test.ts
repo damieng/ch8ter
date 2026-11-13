@@ -29,6 +29,19 @@ describe('minimized windows', () => {
     expect(b.iconX! - a.iconX!).toBeGreaterThanOrEqual(ICON_W)
   })
 
+  it('does not stack a restored icon back onto a slot another icon has since taken', () => {
+    updateWindowLayout('a', { x: 0, y: 0, w: 1, h: 1 })
+    updateWindowLayout('b', { x: 0, y: 0, w: 1, h: 1 })
+    minimizeWindow('a')
+    restoreWindow('a')
+    minimizeWindow('b') // takes the slot a used to have
+    minimizeWindow('a')
+    const a = windowLayouts.value['a']
+    const b = windowLayouts.value['b']
+    const overlap = Math.abs(a.iconX! - b.iconX!) < ICON_W && Math.abs(a.iconY! - b.iconY!) < 76
+    expect(overlap).toBe(false)
+  })
+
   it('remembers where the icon was dragged to across minimize cycles', () => {
     updateWindowLayout('a', { x: 0, y: 0, w: 1, h: 1 })
     minimizeWindow('a')
