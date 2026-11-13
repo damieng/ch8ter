@@ -33,3 +33,13 @@ describe('writeGdosFont advance widths', () => {
     expect(new DataView(bytes.buffer).getUint32(68, true)).toBe(0)
   })
 })
+
+describe('parseGdosFont offset validation', () => {
+  it('rejects a character offset beyond the raster instead of allocating for it', () => {
+    const bytes = writeGdosFont(font())
+    const v = new DataView(bytes.buffer)
+    const charTable = v.getUint32(72, true)
+    v.setUint16(charTable + 2 * 2, 65535, true) // an offset far past the raster
+    expect(() => parseGdosFont(toBuf(bytes))).toThrow('beyond')
+  })
+})

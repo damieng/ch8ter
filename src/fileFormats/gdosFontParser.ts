@@ -147,6 +147,15 @@ export function parseGdosFont(buf: ArrayBuffer): GdosFontParseResult {
     throw new Error('GDOS FNT: font data out of bounds')
   const raster = bytes.slice(fontDataPos, fontDataPos + rasterSize)
 
+  // Every offset must lie inside the raster. Otherwise a single bogus entry (65535) makes the
+  // widest "character" 65535px and the glyph grid allocated below hundreds of megabytes.
+  const rasterWidthPx = formWidth * 8
+  for (let i = 0; i <= numChars; i++) {
+    if (charOffsets[i] > rasterWidthPx) {
+      throw new Error(`GDOS FNT: character offset ${charOffsets[i]} is beyond the ${rasterWidthPx}px raster`)
+    }
+  }
+
   // Standard byte access works for both LE and BE font files on disk.
   // The byte-swap flag is only relevant for in-memory 68000 WORD access.
 
