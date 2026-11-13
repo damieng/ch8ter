@@ -254,20 +254,20 @@ export function amigaFontBaseName(fontName: string): string {
 }
 
 /**
- * Write the `.font` directory file (FontDirHeader + TFontContents entries)
+ * Write the `.font` directory file (FontContentsHeader + FontContents entry)
  * that references the size-suffixed hunk font. diskfont.library reads this
- * to enumerate the font; layout is big-endian:
+ * to enumerate the font; see docs/formats/Amiga-font.md. Big-endian:
  *
- *   ULONG FileID            = $0F00
- *   UWORD numEntries
- *   TFontContents[numEntries] (84 bytes each):
- *     Message (20 bytes) + TextFont fields + char fileName[32]
+ *   UWORD fch_FileID     = $0F00
+ *   UWORD fch_NumEntries
+ *   FontContents[fch_NumEntries] (260 bytes each):
+ *     char  fc_FileName[256]   null-terminated, relative to FONTS:
+ *     UWORD fc_YSize
+ *     UBYTE fc_Style
+ *     UBYTE fc_Flags
  */
 export function writeAmigaFontIndex(params: FontWriteData): Uint8Array {
-  const {
-    glyphWidth, glyphHeight, startChar, glyphCount,
-    glyphMeta, baseline, fontName,
-  } = params
+  const { glyphWidth, glyphHeight, startChar, glyphCount, glyphMeta, fontName } = params
 
   if (glyphCount < 1) throw new Error('Amiga font index requires at least one glyph')
   const hiChar = startChar + glyphCount - 1
@@ -279,32 +279,20 @@ export function writeAmigaFontIndex(params: FontWriteData): Uint8Array {
   const entryPath = `${baseName}/${glyphHeight}`
   const isProportional = (glyphMeta?.some(g => g?.dwidth?.[0] != null && g.dwidth[0] !== glyphWidth)) ?? false
 
-  const HEADER_SIZE = 6      // ULONG FileID + UWORD numEntries
-  const ENTRY_SIZE = 84      // 20-byte Message + TextFont fields + 32-char name
+  const HEADER_SIZE = 4      // UWORD fch_FileID + UWORD fch_NumEntries
+  const NAME_SIZE = 256      // fc_FileName (MAXFONTPATH)
+  const ENTRY_SIZE = NAME_SIZE + 4
   const out = new Uint8Array(HEADER_SIZE + ENTRY_SIZE)
   const view = new DataView(out.buffer)
 
-  view.setUint32(0, 0x0F00, false)          // FileID
-  view.setUint16(4, 1, false)               // numEntries
+  view.setUint16(0, 0x0F00, false)          // fch_FileID (FCH_ID)
+  view.setUint16(2, 1, false)               // fch_NumEntries
 
-  const e = HEADER_SIZE                     // TFontContents at offset 6
-  // tf_Message (20 bytes) stays zero
-  view.setUint16(e + 20, glyphHeight, false)                    // tf_YSize
-  out[e + 22] = 0                                               // tf_Style
-  out[e + 23] = (isProportional ? 0x20 : 0x00) | 0x40 | 0x02    // tf_Flags
-  view.setUint16(e + 24, glyphWidth, false)                     // tf_XSize
-  view.setUint16(e + 26, baseline + 1, false)                   // tf_Baseline (1-indexed)
-  view.setUint16(e + 28, 1, false)                              // tf_BoldSmear
-  view.setUint16(e + 30, 0, false)                              // tf_Accessors
-  out[e + 32] = startChar                                       // tf_LoChar
-  out[e + 33] = hiChar                                          // tf_HiChar
-  view.setUint32(e + 34, 0, false)                              // tf_CharData (resolved on load)
-  view.setUint16(e + 38, 0, false)                              // tf_Modulo
-  view.setUint32(e + 40, 0, false)                              // tf_CharLoc
-  view.setUint32(e + 44, 0, false)                              // tf_CharSpace
-  view.setUint32(e + 48, 0, false)                              // tf_CharKern
-  const pathBytes = new TextEncoder().encode(entryPath.slice(0, 32))
-  out.set(pathBytes, e + 52)                                    // tf_FileName[32]
+  const e = HEADER_SIZE
+  out.set(new TextEncoder().encode(entryPath.slice(0, NAME_SIZE - 1)), e)  // fc_FileName, null-terminated
+  view.setUint16(e + NAME_SIZE, glyphHeight, false)                        // fc_YSize
+  out[e + NAME_SIZE + 2] = 0                                               // fc_Style
+  out[e + NAME_SIZE + 3] = (isProportional ? 0x20 : 0x00) | 0x40 | 0x02    // fc_Flags: PROPORTIONAL?, DESIGNED, DISKFONT
 
   return out
 }

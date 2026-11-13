@@ -47,9 +47,9 @@ describe('amiga .lha packaging', () => {
       'Fonts/TestFont.font',
       'Fonts/TestFont/8',
     ])
-    // .font index magic $0F00 (ULONG big-endian)
-    expect(parsed.entries[0].data[0]).toBe(0x00)
-    expect(parsed.entries[0].data[2]).toBe(0x0F)
+    // .font index magic $0F00 (UWORD big-endian)
+    expect(parsed.entries[0].data[0]).toBe(0x0F)
+    expect(parsed.entries[0].data[1]).toBe(0x00)
     // hunk font starts with HUNK_HEADER
     expect(parsed.entries[1].data[0]).toBe(0x00)
     expect(parsed.entries[1].data[2]).toBe(0x03)
