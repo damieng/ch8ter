@@ -2,13 +2,13 @@
 //
 // Emits the classic FONT variant (MS-DOS / PC-DOS / Windows 9x) with a single
 // screen-font codepage entry — the simplest and most widely accepted form.
-// CPI screen fonts are indexed from character code 0, so the glyph array is
-// written in stored order (callers remap before saving where needed).
+// CPI screen fonts are indexed from character code 0, so a font that starts
+// higher is padded with blank glyphs and each glyph lands on its character code.
 
 import type { FontWriteData } from '../fontSave'
 import { bpr } from '../bitUtils'
 
-export function writeCpi({ fontData, glyphWidth, glyphHeight, glyphCount, fontName, detectedCharset }: FontWriteData): Uint8Array {
+export function writeCpi({ fontData, glyphWidth, glyphHeight, startChar, glyphCount, fontName, detectedCharset }: FontWriteData): Uint8Array {
   if (glyphCount < 1 || glyphCount > 256) {
     throw new Error(`CPI fonts hold 1..256 characters (got ${glyphCount})`)
   }
@@ -16,12 +16,19 @@ export function writeCpi({ fontData, glyphWidth, glyphHeight, glyphCount, fontNa
     throw new Error(`CPI cell dimensions must fit in a byte (got ${glyphWidth}x${glyphHeight})`)
   }
 
+  const lastCode = startChar + glyphCount - 1
+  if (startChar < 0 || lastCode > 255) {
+    throw new Error(`CPI fonts hold character codes 0..255 (got ${startChar}..${lastCode})`)
+  }
+  const numChars = lastCode + 1 // codes 0..lastCode, the ones below startChar left blank
+
   // Derive the codepage number from the detected charset (cp437 -> 437)
   const cpMatch = /^cp(\d{3,4})$/.exec(detectedCharset ?? '')
   const codepage = cpMatch ? parseInt(cpMatch[1], 10) : 437
 
   const bytesPerRow = bpr(glyphWidth)
-  const bitmapSize = glyphCount * glyphHeight * bytesPerRow
+  const bytesPerGlyph = glyphHeight * bytesPerRow
+  const bitmapSize = numChars * bytesPerGlyph
 
   // --- Layout ---
   // 0x00 FontFileHeader (23 bytes)
@@ -65,10 +72,10 @@ export function writeCpi({ fontData, glyphWidth, glyphHeight, glyphCount, fontNa
   out[sfhOffset + 1] = glyphWidth
   out[sfhOffset + 2] = glyphHeight                 // aspect: pixel height
   out[sfhOffset + 3] = glyphWidth                  // aspect: pixel width
-  view.setUint16(sfhOffset + 4, glyphCount, true)
+  view.setUint16(sfhOffset + 4, numChars, true)
 
   // --- Bitmap (already MSBit-first packed rows, same as internal format) ---
-  out.set(fontData.subarray(0, bitmapSize), bitmapOffset)
+  out.set(fontData.subarray(0, glyphCount * bytesPerGlyph), bitmapOffset + startChar * bytesPerGlyph)
 
   // --- Trailing copyright notice ---
   out.set(new TextEncoder().encode(copyright), bitmapOffset + bitmapSize)
