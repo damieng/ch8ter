@@ -108,6 +108,13 @@ export function writeFzx(params: FontWriteData): Uint8Array {
       throw new Error('FZX export supports per-glyph widths from 1 to 16 pixels')
     }
 
+    // The vertical shift field is 4 bits. A glyph that starts lower than row 15 keeps
+    // shift 15 and stores its leading blank rows as data, rather than being moved up
+    if (shift > 15) {
+      topBlank -= shift - 15
+      shift = 15
+    }
+
     const numRows = glyphHeight - topBlank - bottomBlank
     if (numRows <= 0) {
       charData.push(new Uint8Array(0))
@@ -133,7 +140,7 @@ export function writeFzx(params: FontWriteData): Uint8Array {
     }
 
     charData.push(data)
-    charInfo.push({ shift: Math.min(shift, 15), width })
+    charInfo.push({ shift, width })
   }
 
   // Calculate file layout
