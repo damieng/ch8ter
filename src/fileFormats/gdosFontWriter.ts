@@ -3,9 +3,9 @@
 // Output layout:
 //   88-byte header (little-endian)
 //   Character offset table: (numChars + 1) little-endian WORDs
+//   Horizontal offset table: numChars signed WORDs (only when an advance differs
+//     from the bitmap width, i.e. for monospaced cells or explicit DWIDTHs)
 //   Font raster data (standard byte access)
-//
-// No horizontal offset table is written.
 
 import { bpr, getBit, setBit } from '../bitUtils'
 import type { FontWriteData } from '../fontSave'
@@ -52,6 +52,16 @@ export function writeGdosFont(params: FontWriteData): Uint8Array {
     }
   }
 
+  // Advance width per character: the glyph's own DWIDTH when it has one, otherwise the
+  // full cell. (The offset table alone makes the advance equal the bitmap width, which
+  // collapses a space to 1px and packs a monospaced font tight.)
+  const horizOffsets: number[] = []
+  for (let i = 0; i < glyphCount; i++) {
+    const advance = glyphMeta?.[i]?.dwidth?.[0] ?? glyphWidth
+    horizOffsets.push(Math.max(1, advance) - charWidths[i])
+  }
+  const hasHorizTable = horizOffsets.some(o => o !== 0)
+
   // Character offset table — cumulative pixel offsets
   const charOffsets: number[] = []
   let xPos = 0
@@ -88,7 +98,9 @@ export function writeGdosFont(params: FontWriteData): Uint8Array {
   const HEADER_SIZE     = 88
   const charTableOffset = HEADER_SIZE
   const charTableSize   = (glyphCount + 1) * 2
-  const fontDataOffset  = (charTableOffset + charTableSize + 1) & ~1  // WORD-aligned
+  const horizTableOffset = (charTableOffset + charTableSize + 1) & ~1   // WORD-aligned
+  const horizTableSize  = hasHorizTable ? glyphCount * 2 : 0
+  const fontDataOffset  = (horizTableOffset + horizTableSize + 1) & ~1  // WORD-aligned
 
   const out  = new Uint8Array(fontDataOffset + raster.length)
   const view = new DataView(out.buffer)
@@ -138,9 +150,10 @@ export function writeGdosFont(params: FontWriteData): Uint8Array {
   view.setUint16(64, 0x5555,       LE)  // skewing mask
 
   // Flags: bit 2 clear = font data is little-endian (Intel format)
-  view.setUint16(66, 0x00, LE)
+  // bit 1 set = horizontal offset table present
+  view.setUint16(66, hasHorizTable ? 0x02 : 0x00, LE)
 
-  view.setUint32(68, 0,                LE)  // horizontal offset table (0 = not present)
+  view.setUint32(68, hasHorizTable ? horizTableOffset : 0, LE)  // horizontal offset table (0 = not present)
   view.setUint32(72, charTableOffset,  LE)  // character offset table
   view.setUint32(76, fontDataOffset,   LE)  // font data
   view.setUint16(80, formWidth,        LE)  // form width in bytes
@@ -150,6 +163,13 @@ export function writeGdosFont(params: FontWriteData): Uint8Array {
   // --- Character offset table (little-endian) ---
   for (let i = 0; i <= glyphCount; i++) {
     view.setUint16(charTableOffset + i * 2, charOffsets[i], LE)
+  }
+
+  // --- Horizontal offset table (signed WORDs: advance = bitmap width + offset) ---
+  if (hasHorizTable) {
+    for (let i = 0; i < glyphCount; i++) {
+      view.setInt16(horizTableOffset + i * 2, horizOffsets[i], LE)
+    }
   }
 
   // --- Font raster ---
