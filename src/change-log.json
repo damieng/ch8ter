@@ -1,5 +1,25 @@
 [
   {
+    "version": "0.10.0",
+    "date": "2026-11-13",
+    "changes": [
+      "Minimize any window to a draggable desktop icon (click to restore); font windows show \"AZ\" set in the font itself",
+      "Double-click a glyph to open an extra glyph editor pinned to that glyph; the new editor keeps tracking the selection",
+      "Glyph editors now come to the front when you click a glyph, and extra editors survive reloads and workspace export",
+      "Pop-up menus and pickers always appear above every window",
+      "Text preview maps Unicode through the active codepage, so box-drawing and other codepage characters render (e.g. Amstrad CP/M Plus)",
+      "Codepage coverage sample pages in the preview",
+      "Show the Unicode name of the glyph in the editor title",
+      "Workspace export records the active codepage and import restores it",
+      "Fixed window layouts and minimized state going to the wrong font after importing a workspace or reloading",
+      "Fixed codepage switches leaving pinned editors and rotation buffers pointing at the wrong glyphs",
+      "Fixed TAP import of standard tapes; TAP export now writes the standard block layout",
+      "Fixed Amiga .font index, FZX metrics, CPI glyph placement and codepage, GDOS advance widths and Windows .fon resource ids and font directory on save",
+      "Fixed YAFF stacked labels and cell size, PCF fonts with more than 32768 glyphs or negative left bearings, and PSF2/PSF unicode table handling on load",
+      "Corrupt GDOS, PSF2 and Windows FNT headers are rejected with a clear error"
+    ]
+  },
+  {
     "version": "0.9.14",
     "date": "2026-10-28",
     "changes": [
