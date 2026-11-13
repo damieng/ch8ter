@@ -172,6 +172,7 @@ import {
   loadContainersFromStorage,
   setupFontAutoSave, setupLayoutAutoSave, setupContainerAutoSave,
   buildWorkspaceFile, parseWorkspaceFile, fontFromStored, containerFromStored,
+  remapWindowLayouts, remapWindowKey,
 } from './persistence'
 export type { WindowRect, StoredPreview } from './persistence'
 
@@ -510,13 +511,15 @@ export function importWorkspace(json: string): void {
   activeFontId.value = newFonts.length > 0 ? newFonts[0].id : ''
   containers.value = newContainers
 
-  windowLayouts.value = file.layout.windows ?? {}
+  // Window layouts and the focused window are keyed by font id, so they
+  // need the same old-id to new-id remapping as the previews
+  windowLayouts.value = remapWindowLayouts(file.layout.windows ?? {}, idMap)
   storedPreviews.value = (file.layout.previews ?? []).map(p => ({
     ...p,
     fontId: remapFontId(p.fontId),
     selectedFontId: p.selectedFontId ? remapFontId(p.selectedFontId) : undefined,
   }))
-  storedFocusedId.value = file.layout.focusedId ?? ''
+  storedFocusedId.value = remapWindowKey(file.layout.focusedId ?? '', idMap) ?? ''
   previews.value = storedPreviews.value.map(p => ({ id: p.id, fontId: p.fontId }))
 
   // Keep the runtime ID counters ahead of the restored ids so new

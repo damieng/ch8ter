@@ -4,7 +4,7 @@ import {
   removeAllFontsAndContainers, fonts,
   exportWorkspace, importWorkspace, addContainer, createContainerId, containers,
   previews, windowLayouts, updateWindowLayout, openPreview,
-  openGlyphEditor, openNewGlyphEditor, closePinnedEditor,
+  openGlyphEditor, openNewGlyphEditor, closePinnedEditor, storedFocusedId,
 } from './store'
 import { execSetAdvances } from './undoHistory'
 
@@ -106,6 +106,31 @@ describe('workspace export/import', () => {
     // New containers must not collide with imported ids
     const newId = createContainerId()
     expect(containers.value.some(c => c.id === newId)).toBe(false)
+  })
+
+  it('remaps window layouts and focus to the imported fonts\' fresh ids', () => {
+    const a = createFont(new Uint8Array(8), 'a.bin', 32, 8, 8)
+    const b = createFont(new Uint8Array(8), 'b.bin', 32, 8, 8)
+    addFont(a)
+    fonts.value = [a, b]
+    updateWindowLayout(`grid-${a.id}`, { x: 11, y: 12, w: 300, h: 200, minimized: true, iconX: 5, iconY: 6 })
+    updateWindowLayout(`editor-${b.id}`, { x: 21, y: 22, w: 380, h: 440 })
+    updateWindowLayout(`editor-${b.id}-7`, { x: 1, y: 1, w: 1, h: 1 }) // pinned editor: not persisted
+    updateWindowLayout('ch8ter', { x: 3, y: 4, w: 0, h: 0 })
+    storedFocusedId.value = `grid-${a.id}`
+    const json = exportWorkspace()
+
+    // Importing into a session whose id counter has moved on gives fresh ids
+    importWorkspace(json)
+
+    const [na, nb] = fonts.value
+    expect(na.id).not.toBe(a.id)
+    expect(windowLayouts.value[`grid-${na.id}`]).toMatchObject({ x: 11, y: 12, minimized: true, iconX: 5 })
+    expect(windowLayouts.value[`editor-${nb.id}`]).toMatchObject({ x: 21, y: 22 })
+    expect(windowLayouts.value['ch8ter']).toMatchObject({ x: 3, y: 4 })
+    expect(windowLayouts.value[`grid-${a.id}`]).toBeUndefined()
+    expect(Object.keys(windowLayouts.value).some(k => /^editor-font-\d+-/.test(k))).toBe(false)
+    expect(storedFocusedId.value).toBe(`grid-${na.id}`)
   })
 
   it('records the codepage and restores it without remapping glyphs', () => {

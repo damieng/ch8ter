@@ -238,6 +238,39 @@ export function toStoredLayout(
   }
 }
 
+// --- Remapping layout keys after fonts get fresh runtime ids ---
+
+const FONT_WINDOW_KEY = /^(grid|editor)-(font-\d+)(-.*)?$/
+
+/**
+ * Window layouts are keyed by runtime font ids ("grid-font-3"), but fonts are
+ * given fresh ids whenever they are restored or imported. Rewrite the keys to
+ * the new ids. Layouts of fonts that no longer exist are dropped, as are
+ * layouts of extra glyph editors ("editor-font-3-2"): those windows are not
+ * persisted, so their layouts would only be applied to unrelated windows.
+ * Keys that don't belong to a font (app pane, containers, previews) are kept.
+ */
+export function remapWindowLayouts(
+  windows: Record<string, WindowRect>,
+  idMap: Map<string, string>,
+): Record<string, WindowRect> {
+  const out: Record<string, WindowRect> = {}
+  for (const [key, rect] of Object.entries(windows)) {
+    const mapped = remapWindowKey(key, idMap)
+    if (mapped !== null) out[mapped] = rect
+  }
+  return out
+}
+
+/** Remap one window key (also used for the focused window id); null if it should be dropped. */
+export function remapWindowKey(key: string, idMap: Map<string, string>): string | null {
+  const m = FONT_WINDOW_KEY.exec(key)
+  if (!m) return key
+  const newId = idMap.get(m[2])
+  if (!newId || m[3]) return null
+  return `${m[1]}-${newId}`
+}
+
 // --- Workspace export/import ---
 
 /** Bundle all persisted state into a portable workspace file. */
