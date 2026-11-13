@@ -42,15 +42,19 @@ export function parseYaff(text: string): YaffParseResult {
     const hexMatch = key.match(/^0x([0-9a-fA-F]+)$/)
     const uniMatch = key.match(/^u\+([0-9a-fA-F]+)$/i)
 
+    // Several labels may be stacked over one bitmap (0x41: / u+0041: / A:). A label that
+    // follows another with no rows yet joins its glyph by sharing its row list.
+    const sharedRows: string[] = currentGlyph && currentGlyph.rows.length === 0 ? currentGlyph.rows : []
+
     if (hexMatch) {
-      currentGlyph = { codepoint: parseInt(hexMatch[1], 16), label: key, rows: [] }
+      currentGlyph = { codepoint: parseInt(hexMatch[1], 16), label: key, rows: sharedRows }
       glyphs.push(currentGlyph)
     } else if (uniMatch) {
-      currentGlyph = { codepoint: parseInt(uniMatch[1], 16), label: key, rows: [] }
+      currentGlyph = { codepoint: parseInt(uniMatch[1], 16), label: key, rows: sharedRows }
       glyphs.push(currentGlyph)
     } else if (value === '' && !key.includes(' ')) {
       // Named glyph (like "default:", "placeholder_d7:")
-      currentGlyph = { codepoint: null, label: key, rows: [] }
+      currentGlyph = { codepoint: null, label: key, rows: sharedRows }
       glyphs.push(currentGlyph)
     } else {
       // Metadata
