@@ -154,13 +154,20 @@ export function fontFromStored(s: StoredFont): FontInstance {
   return font
 }
 
-export function loadFontsFromStorage(): FontInstance[] | null {
+/**
+ * Restore fonts from localStorage. Fonts get fresh runtime ids, so `idMap`
+ * maps each font's previous id to its new one (for remapping layouts/previews).
+ */
+export function loadFontsFromStorage(): { fonts: FontInstance[]; idMap: Map<string, string> } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const stored: StoredFont[] = JSON.parse(raw)
     if (!Array.isArray(stored) || stored.length === 0) return null
-    return stored.map(fontFromStored)
+    const fonts = stored.map(fontFromStored)
+    const idMap = new Map<string, string>()
+    stored.forEach((s, i) => { if (s.id) idMap.set(s.id, fonts[i].id) })
+    return { fonts, idMap }
   } catch (e) {
     console.warn('Failed to restore fonts from localStorage:', e)
     return null

@@ -227,7 +227,8 @@ export function updatePreviewSettings(id: string, settings: Partial<StoredPrevie
 }
 
 // --- Global state ---
-const restored = loadFontsFromStorage()
+const restoredState = loadFontsFromStorage()
+const restored = restoredState?.fonts ?? null
 const restoredContainers = loadContainersFromStorage()
 const needsBlankFont = !restored && (!restoredContainers || restoredContainers.length === 0)
 export const fonts = signal<FontInstance[]>(restored ?? (needsBlankFont ? [createFont()] : []))
@@ -440,9 +441,20 @@ export function closePreview(id: string) {
 // Restore previews and layout from localStorage
 const restoredLayout = loadLayoutFromStorage()
 if (restoredLayout) {
-  if (restoredLayout.windows) windowLayouts.value = restoredLayout.windows
-  if (restoredLayout.previews) storedPreviews.value = restoredLayout.previews
-  if (restoredLayout.focusedId) storedFocusedId.value = restoredLayout.focusedId
+  // Fonts were given fresh ids on restore; bring everything keyed by the old
+  // ids (window layouts, focus, preview fonts) across, and drop what no longer exists
+  const idMap = restoredState?.idMap ?? new Map<string, string>()
+  const fallbackFontId = restored?.[0]?.id ?? ''
+  const remapFontId = (id: string | undefined) => (id && idMap.get(id)) || fallbackFontId
+  if (restoredLayout.windows) windowLayouts.value = remapWindowLayouts(restoredLayout.windows, idMap)
+  if (restoredLayout.previews) {
+    storedPreviews.value = restoredLayout.previews.map(p => ({
+      ...p,
+      fontId: remapFontId(p.fontId),
+      selectedFontId: p.selectedFontId ? remapFontId(p.selectedFontId) : undefined,
+    }))
+  }
+  if (restoredLayout.focusedId) storedFocusedId.value = remapWindowKey(restoredLayout.focusedId, idMap) ?? ''
 }
 const restoredPreviews = storedPreviews.value
 if (restoredPreviews.length > 0) {
