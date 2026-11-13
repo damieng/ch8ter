@@ -692,6 +692,14 @@ function remapFontForCharset(font: FontInstance, oldCs: Charset, newCs: Charset)
   const activeNewIdx = Math.max(0, activeNewCp - newStart)
   font.selectedGlyphs.value = new Set([activeNewIdx])
   font.lastClickedGlyph.value = activeNewIdx
+
+  // Pinned glyph editors follow their glyph's character the same way
+  if (font.pinnedEditors.value.length > 0) {
+    font.pinnedEditors.value = font.pinnedEditors.value.map(ed => {
+      const cp = reverse.get(cpToUnicode(oldStart + ed.glyph, oldCs)) ?? oldStart + ed.glyph
+      return { ...ed, glyph: Math.max(0, cp - newStart) }
+    })
+  }
   font.undoHistory.clear()
 }
 
