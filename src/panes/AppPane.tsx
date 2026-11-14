@@ -17,16 +17,10 @@ import {
   fonts,
 } from "../store"
 import { parseWorkspaceFile } from "../persistence"
-import { loadFontFile, UnknownFormatError, type FontConversionData } from "../fontLoad"
-import { openCom } from "../fileFormats/comOpener"
-import { parseCpi } from "../fileFormats/cpiParser"
-import { decompressCpx } from "../fileFormats/cpxDecoder"
-import { parseFon } from "../fileFormats/fonParser"
-import { parseSbit, isSbitFont } from "../fileFormats/sbitParser"
+import { type FontConversionData } from "../fontLoad"
+import { describeOpenedFile } from "../openFile"
 import { addContainer, createContainerId, type ContainerFont } from "../store"
-import { extractTapFonts } from "../fileFormats/tapParser"
-import { parseGeosCvt } from "../fileFormats/geosParser"
-import { isBmFontText, parseBmFont, buildFontFromPage } from "../fileFormats/bmFontParser"
+import { parseBmFont, buildFontFromPage, isBmFontText } from "../fileFormats/bmFontParser"
 import { imageToData } from "../fileFormats/pngImport"
 import { IconBtn } from "../components/IconBtn"
 import { NewFontDialog } from "../dialogs/NewFontDialog"
@@ -38,27 +32,6 @@ import CHANGELOG from "../change-log.json"
 import { Dropdown } from "../components/Dropdown"
 
 const ICON = 18
-
-/** Map Windows dfCharSet value to a codepage number for display. */
-function winCharsetToCodepage(cs: number): number {
-  switch (cs) {
-    case 0: return 1252    // ANSI
-    case 177: return 1255  // HEBREW
-    case 178: return 1256  // ARABIC
-    case 161: return 1253  // GREEK
-    case 162: return 1254  // TURKISH
-    case 186: return 1257  // BALTIC
-    case 204: return 1251  // RUSSIAN
-    case 238: return 1250  // EASTEUROPE
-    case 222: return 874   // THAI
-    case 128: return 932   // SHIFTJIS
-    case 129: return 949   // HANGUL
-    case 134: return 936   // GB2312
-    case 136: return 950   // CHINESEBIG5
-    case 255: return 437   // OEM
-    default: return 0      // DEFAULT/SYMBOL/unknown
-  }
-}
 
 const APP_VERSION = __APP_VERSION__
 
@@ -206,248 +179,32 @@ export function AppPane() {
     addFont(font)
   }
 
+  /**
+   * Open a file's bytes as fonts. Deciding what the file contains is done by
+   * describeOpenedFile, which is pure; this only applies the outcome.
+   */
   function openFontBuffer(name: string, buf: ArrayBuffer) {
-    const lower = name.toLowerCase()
-
-    // .fon files are NE executables containing FNT font resources
-    if (lower.endsWith(".fon")) {
-      try {
-        const result = parseFon(buf)
-        const fonts: ContainerFont[] = result.fonts.map(f => ({
-          label: `${f.fnt.glyphWidth}x${f.fnt.glyphHeight}`,
-          codepage: winCharsetToCodepage(parseInt(f.fnt.meta?.properties?.CHARSET ?? '1')),
-          deviceName: '',
-          deviceType: 1,
-          startChar: f.fnt.startChar,
-          width: f.fnt.glyphWidth,
-          height: f.fnt.glyphHeight,
-          numChars: f.fnt.fontData.length / (f.fnt.glyphHeight * Math.ceil(f.fnt.glyphWidth / 8)),
-          fontData: f.fnt.fontData,
-          baseline: f.fnt.baseline,
-          meta: f.fnt.meta,
-          glyphMeta: f.fnt.glyphMeta,
-          populated: f.fnt.populated,
-          spacingMode: f.fnt.glyphMeta?.some(g => g?.dwidth && g.dwidth[0] > 0 && g.dwidth[0] !== f.fnt.glyphWidth) ? 'proportional' : 'monospace',
-        }))
-        addContainer({
-          id: createContainerId(),
-          fileName: name,
-          format: 'Windows FON (NE)',
-          meta: null,
-          fonts,
-        })
-      } catch (e) {
-        setError({ title: 'Failed to open FON', message: (e as Error).message })
-      }
-      return
-    }
-
-    // .cpx files are UPX-compressed .cpi  —  decompress and handle as .cpi
-    if (lower.endsWith(".cpx")) {
-      try {
-        const cpiData = decompressCpx(new Uint8Array(buf))
-        openFontBuffer(name.replace(/\.cpx$/i, '.cpi'), cpiData.buffer as ArrayBuffer)
-      } catch (e) {
-        setError({ title: 'Failed to decompress CPX', message: (e as Error).message })
-      }
-      return
-    }
-
-    // .cpi files are font containers  —  show in container pane
-    if (lower.endsWith(".cpi")) {
-      try {
-        const result = parseCpi(buf)
-        if (result.fonts.length === 0) {
-          setError({ title: 'No bitmap data', message: `${name} contains no bitmap font data.\n\nThis CPI file only contains escape sequences for selecting built-in printer fonts  —  there are no downloadable character bitmaps to edit.` })
-          return
-        }
-        const fonts: ContainerFont[] = result.fonts.map(f => ({
-          label: `CP${f.codepage} ${f.width}x${f.height} (${f.deviceName})`,
-          codepage: f.codepage,
-          deviceName: f.deviceName,
-          deviceType: f.deviceType,
-          startChar: 0,
-          width: f.width,
-          height: f.height,
-          numChars: f.numChars,
-          fontData: f.fontData,
-        }))
-        addContainer({
-          id: createContainerId(),
-          fileName: name,
-          format: `CPI (${result.variant})`,
-          meta: { properties: result.properties },
-          fonts,
-        })
-      } catch (e) {
-        setError({ title: 'Failed to open CPI', message: (e as Error).message })
-      }
-      return
-    }
-
-    // TAP files are ZX Spectrum tape images; extract font-sized CODE blocks
-    if (lower.endsWith(".tap")) {
-      try {
-        const entries = extractTapFonts(new Uint8Array(buf))
-        if (entries.length === 0) {
-          setError({ title: 'No fonts in TAP', message: `${name} contains no font-sized CODE blocks (768/1024/2048 bytes of 8x8 glyphs).` })
-          return
-        }
-        const fonts: ContainerFont[] = entries.map(f => ({
-          label: f.label,
-          codepage: 0,
-          deviceName: '',
-          deviceType: 1,
-          startChar: 0,
-          width: 8,
-          height: 8,
-          numChars: f.numChars,
-          fontData: f.fontData,
-          charsetKey: 'zx',
-        }))
-        addContainer({
-          id: createContainerId(),
-          fileName: name,
-          format: 'ZX Spectrum TAP',
-          meta: null,
-          fonts,
-        })
-      } catch (e) {
-        setError({ title: 'Failed to open TAP', message: (e as Error).message })
-      }
-      return
-    }
-
-    // CVT files are C64 GEOS fonts  —  one point size per VLIR record
-    if (lower.endsWith(".cvt")) {
-      try {
-        const sets = parseGeosCvt(new Uint8Array(buf))
-        if (sets.length === 0) {
-          setError({ title: 'No fonts in CVT', message: `${name} contains no glyph data.` })
-          return
-        }
-        const fonts: ContainerFont[] = sets.map(s => ({
-          label: s.size > 0 ? `${s.size} pt` : 'mega',
-          codepage: 0,
-          deviceName: '',
-          deviceType: 1,
-          startChar: 0x20,
-          width: s.glyphWidth,
-          height: s.glyphHeight,
-          numChars: s.populated.size,
-          fontData: s.fontData,
-          baseline: s.ascent,
-          glyphMeta: s.glyphMeta,
-          populated: s.populated,
-          spacingMode: 'proportional',
-          charsetKey: 'iso8859_1',
-        }))
-        addContainer({
-          id: createContainerId(),
-          fileName: name,
-          format: 'C64 GEOS font',
-          meta: null,
-          fonts,
-        })
-      } catch (e) {
-        setError({ title: 'Failed to open GEOS font', message: (e as Error).message })
-      }
-      return
-    }
-
-    // TTF/OTF files  —  check for embedded bitmaps
-    if (lower.endsWith(".ttf") || lower.endsWith(".otf")) {
-      if (!isSbitFont(buf)) {
-        setError({ title: 'No bitmap data', message: 'This TTF/OTF font contains only vector outlines  —  no embedded bitmaps found.' })
+    const outcome = describeOpenedFile(name, buf)
+    switch (outcome.kind) {
+      case 'error':
+        setError({ title: outcome.title, message: outcome.message })
+        return
+      case 'raw':
+        setRawFile(new File([outcome.buffer], outcome.name))
+        return
+      case 'container': {
+        const { fileName, format, meta, fonts } = outcome.descriptor
+        addContainer({ id: createContainerId(), fileName, format, meta, fonts })
         return
       }
-      try {
-        const result = parseSbit(buf)
-        if (result.strikes.length === 1) {
-          // Single strike  —  open as regular font
-          const s = result.strikes[0]
-          const font = createFont(
-            s.fontData, name, s.startChar, s.glyphWidth, s.glyphHeight,
-            {
-              meta: s.meta ?? undefined,
-              baseline: s.baseline,
-              glyphMeta: s.glyphMeta ?? undefined,
-              spacing: s.spacingMode,
-            },
-          )
-          font.populatedGlyphs.value = s.populated
-          recalcMetrics(font)
-          calcMissingMetrics(font)
-          addFont(font)
-        } else {
-          // Multiple strikes  —  show as container
-          const fonts: ContainerFont[] = result.strikes.map(s => ({
-            label: `${s.ppemX}×${s.ppemY}`,
-            codepage: 0,
-            deviceName: '',
-            deviceType: 1,
-            startChar: s.startChar,
-            width: s.glyphWidth,
-            height: s.glyphHeight,
-            numChars: s.populated.size,
-            fontData: s.fontData,
-            baseline: s.baseline,
-            meta: s.meta,
-            glyphMeta: s.glyphMeta,
-            populated: s.populated,
-            spacingMode: s.spacingMode,
-          }))
-          addContainer({
-            id: createContainerId(),
-            fileName: name,
-            format: 'TTF sbit',
-            meta: null,
-            fonts,
-          })
-        }
-      } catch (e) {
-        setError({ title: 'Failed to open TTF', message: (e as Error).message })
-      }
-      return
-    }
-
-    // .com files can contain multiple fonts  —  handle separately
-    if (lower.endsWith(".com")) {
-      try {
-        const results = openCom(buf)
-        const charsetKey = results[0].source === "cpm" ? "cpm" : "cp437"
-        defaultCharset.value = charsetKey
-        for (const result of results) {
-          const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''
-          const font = createFont(
-            result.fontData, name + suffix, result.startChar,
-            result.glyphWidth, result.glyphHeight,
-            { charset: charsetKey },
-          )
-          recalcMetrics(font)
-          addFont(font)
-        }
-      } catch (e) {
-        setError({ title: 'Failed to open font', message: (e as Error).message })
-      }
-      return
-    }
-
-    // BMFont text descriptors need their PNG pages; tell the user how to open them
-    if (lower.endsWith(".fnt") && isBmFontText(buf)) {
-      setError({ title: 'BMFont descriptor', message: `${name} is an AngelCode BMFont descriptor.\n\nDrop the .fnt file together with its PNG texture page(s) to open it.` })
-      return
-    }
-
-    try {
-      const result = loadFontFile(name, buf)
-      applyLoadResult(name, result)
-    } catch (e) {
-      if (e instanceof UnknownFormatError) {
-        setRawFile(new File([buf], name))
-      } else {
-        setError({ title: 'Failed to open font', message: (e as Error).message })
-      }
+      case 'fonts':
+        // Several fonts in one file, all sharing a codepage
+        if (isCharset(outcome.charsetKey)) defaultCharset.value = outcome.charsetKey
+        for (const d of outcome.descriptors) applyLoadResult(d.name, d.result)
+        return
+      case 'font':
+        applyLoadResult(outcome.descriptor.name, outcome.descriptor.result)
+        return
     }
   }
 
