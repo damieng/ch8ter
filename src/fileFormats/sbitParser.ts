@@ -96,6 +96,15 @@ function parseCmapSubtable(view: DataView, bytes: Uint8Array, off: number): Map<
 // Cap on total cmap mappings to bound work on malformed tables.
 const MAX_CMAP_MAPPINGS = 1 << 20
 
+/**
+ * Cap on the glyph buffer a single strike may produce. A cmap spanning a wide
+ * codepoint range is allocated as one slot per codepoint, so a font with a
+ * sparse mapping across, say, the whole BMP at 128 ppem would ask for hundreds
+ * of megabytes. Nothing legitimate needs that: real strikes are small. Refuse
+ * rather than attempt the allocation.
+ */
+const MAX_STRIKE_BYTES = 64 * 1024 * 1024
+
 function parseCmapFormat4(view: DataView, bytes: Uint8Array, off: number): Map<number, number> {
   // glyphID → codepoint (reverse map)
   const map = new Map<number, number>()
@@ -510,6 +519,8 @@ function layoutStrike(
   const totalSlots = maxCp - minCp + 1
   const outBpr = bpr(cellW)
   const outBpg = cellH * outBpr
+  // Refuse an implausible allocation rather than attempting it
+  if (totalSlots * outBpg > MAX_STRIKE_BYTES) return null
   const fontData = new Uint8Array(totalSlots * outBpg)
   const glyphMeta: (GlyphMeta | null)[] = new Array(totalSlots).fill(null)
   const populated = new Set<number>()
