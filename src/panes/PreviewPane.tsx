@@ -5,7 +5,7 @@ import { isFixedWidth } from '../unicodeRanges'
 import { glyphCodeForChar } from '../charsets'
 import { sampleTexts } from '../sampleTexts'
 import { COLOR_SYSTEMS } from '../colorSystems'
-import { wrapText, wrapTextProportional, cursorPosition, selectedCells } from '../textLayout'
+import { wrapText, wrapTextProportional, cursorPosition, selectedCells, offsetAtPoint, wordBounds as wordBoundsIn } from '../textLayout'
 import { renderText } from '../previewRenderer'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { bpr } from '../bitUtils'
@@ -167,59 +167,39 @@ export function PreviewPane({ previewId, initialFontId }: Props) {
   function hitTest(clientX: number, clientY: number): number {
     if (!canvasRef.current) return 0
     const rect = canvasRef.current.getBoundingClientRect()
-    const rowH = gh * zoom
-    const clickRow = Math.floor((clientY - rect.top) / rowH)
-    const clickX = clientX - rect.left
 
-    const row = Math.max(0, Math.min(clickRow, wrappedLines.length - 1))
-    if (wrappedLines.length === 0) return 0
-
-    if (!proportional) {
-      const clickCol = Math.floor(clickX / (gw * zoom))
-      const col = Math.min(Math.max(0, clickCol), offsets[row]?.length ?? 0)
-      if (col < (offsets[row]?.length ?? 0)) {
-        return offsets[row][col]
-      } else if (offsets[row]?.length > 0) {
-        return offsets[row][offsets[row].length - 1] + 1
-      }
-    } else {
+    // Proportional fonts advance per glyph, so measure each character there;
+    // monospace uses the fixed cell width and needs no measuring function.
+    let advanceOf: ((ch: string) => number) | undefined
+    if (proportional) {
       const start = font?.startChar.value ?? 32
       const rowBytes = bpr(gw)
       const bpg = gh * rowBytes
       const data = font?.fontData.value
       const gc = data && bpg > 0 ? Math.floor(data.length / bpg) : 0
-      const line = Array.from(wrappedLines[row]) // one entry per code point
-      let xPos = 0
-      for (let col = 0; col < line.length; col++) {
-        const gi = glyphCodeForChar(line[col], font?.charset.value ?? 'zx') - start
-        const advance = (isFixedWidth(line[col].codePointAt(0)!) ? gw : (font && gi >= 0 && gi < gc ? glyphAdvance(font, gi) : gw)) * zoom
-        if (clickX < xPos + advance / 2) {
-          if (col < (offsets[row]?.length ?? 0)) return offsets[row][col]
-          break
-        }
-        xPos += advance
-      }
-      if (offsets[row]?.length > 0) {
-        return offsets[row][offsets[row].length - 1] + 1
+      const cs = font?.charset.value ?? 'zx'
+      advanceOf = (ch: string) => {
+        if (isFixedWidth(ch.codePointAt(0)!)) return gw
+        const gi = glyphCodeForChar(ch, cs) - start
+        return (font && gi >= 0 && gi < gc) ? glyphAdvance(font, gi) : gw
       }
     }
 
-    let offset = text.length
-    let lineCount = 0
-    for (let i = 0; i <= text.length; i++) {
-      if (lineCount === row) { offset = i; break }
-      if (text[i] === '\n') lineCount++
-    }
-    return offset
+    return offsetAtPoint({
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+      lines: wrappedLines,
+      offsets,
+      glyphWidth: gw,
+      zoom,
+      lineHeight: gh,
+      advanceOf,
+      text,
+    })
   }
 
   function wordBounds(offset: number): [number, number] {
-    const wordChars = /[a-zA-Z0-9_']/
-    let start = offset, end = offset
-    while (start > 0 && wordChars.test(text[start - 1])) start--
-    while (end < text.length && wordChars.test(text[end])) end++
-    if (start === end && offset < text.length) { end = offset + 1 }
-    return [start, end]
+    return wordBoundsIn(text, offset)
   }
 
   function handleCanvasMouseDown(e: MouseEvent) {

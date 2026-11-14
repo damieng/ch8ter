@@ -208,3 +208,90 @@ export function propCharAdvance(
   }
   return 1 + gap
 }
+
+/**
+ * Characters treated as part of a word for double-click selection. Letters,
+ * digits, underscore and apostrophe, so "don't" selects as one word.
+ */
+const WORD_CHAR = /[a-zA-Z0-9_']/
+
+/** The word around `offset`, as a [start, end) text range. */
+export function wordBounds(text: string, offset: number): [number, number] {
+  let start = offset
+  let end = offset
+  while (start > 0 && WORD_CHAR.test(text[start - 1])) start--
+  while (end < text.length && WORD_CHAR.test(text[end])) end++
+  // Clicking a separator selects just that one character, so a double-click
+  // always selects something visible
+  if (start === end && offset < text.length) end = offset + 1
+  return [start, end]
+}
+
+/** How to measure a character's width, for proportional hit testing. */
+export type AdvanceOf = (ch: string) => number
+
+/**
+ * Map a click inside the rendered text to a text offset.
+ *
+ * Pure: the caller supplies the already-wrapped lines and their offsets, the
+ * cell size, and (for proportional fonts) a way to measure each character.
+ * Returns the offset of the character the click landed on, or the offset just
+ * past the last character of the line when it lands beyond it.
+ */
+export function offsetAtPoint(
+  opts: {
+    /** Click position in canvas pixels, relative to the canvas origin. */
+    x: number
+    y: number
+    /** Wrapped lines and their source offsets, as returned by wrapText. */
+    lines: string[]
+    offsets: number[][]
+    /** Cell width in font pixels. */
+    glyphWidth: number
+    zoom: number
+    /** Preview line height in font pixels. */
+    lineHeight: number
+    /** Character advance in font pixels; required for proportional fonts. */
+    advanceOf?: AdvanceOf
+    /** The preview text, used to find the offset when the click misses a line. */
+    text: string
+  },
+): number {
+  const { x, y, lines, offsets, glyphWidth, zoom, lineHeight, advanceOf, text } = opts
+  if (lines.length === 0) return 0
+
+  const rowH = lineHeight * zoom
+  const clickRow = Math.floor(y / rowH)
+  const row = Math.max(0, Math.min(clickRow, lines.length - 1))
+
+  if (!advanceOf) {
+    const clickCol = Math.floor(x / (glyphWidth * zoom))
+    const rowOffsets = offsets[row] ?? []
+    const col = Math.min(Math.max(0, clickCol), rowOffsets.length)
+    if (col < rowOffsets.length) return rowOffsets[col]
+    if (rowOffsets.length > 0) return rowOffsets[rowOffsets.length - 1] + 1
+  } else {
+    // One entry per code point, matching how the text is rendered
+    const line = Array.from(lines[row])
+    const rowOffsets = offsets[row] ?? []
+    let xPos = 0
+    for (let col = 0; col < line.length; col++) {
+      const advance = advanceOf(line[col]) * zoom
+      if (x < xPos + advance / 2) {
+        if (col < rowOffsets.length) return rowOffsets[col]
+        break
+      }
+      xPos += advance
+    }
+    if (rowOffsets.length > 0) return rowOffsets[rowOffsets.length - 1] + 1
+  }
+
+  // Fall back to the start of the requested line
+  let offset = text.length
+  let lineCount = 0
+  for (let i = 0; i <= text.length; i++) {
+    if (lineCount === row) { offset = i; break }
+    if (text[i] === '\n') lineCount++
+  }
+  return offset
+}

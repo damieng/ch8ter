@@ -8,6 +8,10 @@ import { DialogHeader } from '../components/DialogHeader'
 import { SizeField } from '../components/SizeField'
 import { NumField } from '../components/NumField'
 import { useClickOutside } from '../hooks/useClickOutside'
+import {
+  exportLayout, exportGlyphPosition, loadExportSettings, saveExportSettings,
+  type ExportSettings,
+} from '../pngExportLayout'
 
 interface Props {
   font: FontInstance
@@ -111,20 +115,6 @@ function FgBgControl({ fg, bg, bgTransparent, divisionColor, borderColor, onFg, 
   )
 }
 
-interface ExportSettings {
-  scale: number
-  gapX: number
-  gapY: number
-  borderX: number
-  borderY: number
-  fg: string
-  bg: string
-  bgTransparent: boolean
-  divisionColor: string
-  borderColor: string
-  cols: number
-}
-
 function renderExport(
   font: FontInstance,
   settings: ExportSettings,
@@ -134,15 +124,9 @@ function renderExport(
   const gh = font.glyphHeight.value
   const bpr = bytesPerRow(font)
   const count = glyphCount(font)
-  const { scale, gapX, gapY, borderX, borderY, fg, bg, bgTransparent, divisionColor, borderColor, cols: settingsCols } = settings
+  const { scale, gapX, gapY, borderX, borderY, fg, bg, bgTransparent, divisionColor, borderColor } = settings
 
-  const cols = Math.min(settingsCols, count)
-  const rows = Math.ceil(count / cols)
-
-  const cellW = gw * scale + gapX
-  const cellH = gh * scale + gapY
-  const imgW = borderX * 2 + cols * cellW - gapX
-  const imgH = borderY * 2 + rows * cellH - gapY
+  const { cols, rows, cellW, cellH, imgW, imgH } = exportLayout(count, gw, gh, settings)
 
   const canvas = document.createElement('canvas')
   canvas.width = imgW
@@ -189,52 +173,23 @@ function renderExport(
   ctx.fillStyle = fg
   const bpg = gh * bpr
   for (let g = 0; g < count; g++) {
-    const col = g % cols
-    const row = Math.floor(g / cols)
-    const ox = borderX + col * cellW
-    const oy = borderY + row * cellH
-    const glyphBase = g * bpg
-
-    drawGlyphToCtx(ctx, data, glyphBase, gw, gh, bpr, ox, oy, scale, scale)
+    const { x: ox, y: oy } = exportGlyphPosition({ cols, rows, cellW, cellH, imgW, imgH }, g, settings)
+    drawGlyphToCtx(ctx, data, g * bpg, gw, gh, bpr, ox, oy, scale, scale)
   }
 
   return { canvas, cols, rows }
-}
-
-const STORAGE_KEY = 'ch8ter-png-export'
-
-function loadSettings(defaultCols: number): ExportSettings {
-  const defaults: ExportSettings = {
-    scale: 1, gapX: 1, gapY: 1, borderX: 1, borderY: 1,
-    fg: '#000000', bg: '#ffffff', bgTransparent: false,
-    divisionColor: '#b3d4fc', borderColor: '#cccccc', cols: defaultCols,
-  }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const saved = JSON.parse(raw)
-      return { ...defaults, ...saved, cols: saved.cols ?? defaultCols }
-    }
-  } catch { /* ignore */ }
-  return defaults
-}
-
-function saveSettings(settings: ExportSettings) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-  } catch { /* ignore */ }
 }
 
 export function PngExportDialog({ font, onClose }: Props) {
   const previewRef = useRef<HTMLCanvasElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(2)
-  const [settings, setSettings] = useState<ExportSettings>(() => loadSettings(32))
+  const [settings, setSettings] = useState<ExportSettings>(() => loadExportSettings(32))
 
   const update = useCallback((patch: Partial<ExportSettings>) => {
     setSettings(s => {
       const next = { ...s, ...patch }
-      saveSettings(next)
+      saveExportSettings(next)
       return next
     })
   }, [])
