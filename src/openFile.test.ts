@@ -147,6 +147,40 @@ describe('describeOpenedFile: FZX', () => {
   })
 })
 
+describe('describeOpenedFile: routing', () => {
+  it('routes each extension to its own handler', () => {
+    // Each of these should be recognised as its own format, not fall through
+    // to the generic loader or the raw import dialog.
+    const cases: [string, Uint8Array, string][] = [
+      ['a.cpi', writeCpi(fontData({ detectedCharset: 'cp437' }) as never), 'container'],
+      ['a.tap', writeTap(fontData() as never), 'container'],
+      ['a.cvt', new Uint8Array(0), 'error'],
+      ['a.com', writeEgaCom(fontData() as never), 'fonts'],
+      ['a.fzx', writeFzx(fontData() as never), 'font'],
+      ['a.ch8', glyphData(), 'font'],
+    ]
+    for (const [name, bytes, expected] of cases) {
+      const out = describeOpenedFile(name, toBuffer(bytes))
+      expect(out.kind, name).toBe(expected)
+    }
+  })
+
+  it('is case-insensitive about the extension', () => {
+    const buf = toBuffer(glyphData())
+    expect(describeOpenedFile('THING.CH8', buf).kind).toBe('font')
+    expect(describeOpenedFile('Thing.Ch8', buf).kind).toBe('font')
+  })
+
+  it('prefers the BMFont hint over the generic .fnt path', () => {
+    // A textual .fnt is an AngelCode descriptor needing PNG pages; a binary
+    // one is a Windows FNT. Both share the extension and must not collide.
+    const text = new TextEncoder().encode('info face="X" size=8\ncommon lineHeight=8\n')
+    const out = describeOpenedFile('page.fnt', toBuffer(text))
+    expect(out.kind).toBe('error')
+    if (out.kind === 'error') expect(out.title).toBe('BMFont descriptor')
+  })
+})
+
 describe('describeOpenedFile: .com images', () => {
   it('returns each font separately, all on the image\'s codepage', () => {
     const buf = writeEgaCom(fontData() as never)
