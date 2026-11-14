@@ -2,8 +2,9 @@
 
 import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
-import type { FontInstance, SpacingMode, FontContainer, ContainerMeta } from './store'
-import { createFont } from './store'
+import type { FontInstance, SpacingMode } from './fontModel'
+import { createFont } from './fontModel'
+import type { FontContainer, ContainerMeta } from './store'
 import { isCharset } from './charsets'
 import { bpr } from './bitUtils'
 import { calcAllMetrics, buildGlyphLookup } from './charMetrics'
