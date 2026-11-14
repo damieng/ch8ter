@@ -345,10 +345,10 @@ export function execSetAdvances(font: FontInstance, updates: Map<number, number>
   font.undoHistory.push(cmd)
 }
 
-export function undo(font: FontInstance) {
-  font.undoHistory.undo()
+export function undo(font: FontInstance): boolean {
+  return font.undoHistory.undo()
 }
 
-export function redo(font: FontInstance) {
-  font.undoHistory.redo()
+export function redo(font: FontInstance): boolean {
+  return font.undoHistory.redo()
 }
