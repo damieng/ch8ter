@@ -42,19 +42,24 @@ describe('charset switching', () => {
     const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1, { charset: 'cpm' })
     addFont(first)
     addFont(second)
-    // Give each font a distinct glyph so a stray remap would be visible
-    first.fontData.value[0x41] = 0xAA
-    second.fontData.value[0x41] = 0xBB
-    second.fontData.value[0x41] = 0xBB
+    // 0x7F is '0' in Amstrad CP/M Plus but '0' sits at 0x30 in Amiga, so a
+    // remap would move this glyph. 'A' at 0x41 would not move between these
+    // two codepages, which made an earlier version of this test vacuous.
+    first.fontData.value[0x7F] = 0xAA
+    second.fontData.value[0x7F] = 0xBB
 
     switchCharset(first, 'amiga')
 
     expect(first.charset.value).toBe('amiga')
+    // The switched font followed its character to the new position
+    expect(first.fontData.value[0x30]).toBe(0xAA)
+    expect(first.fontData.value[0x7F]).toBe(0)
+    // The other font keeps its codepage, layout and pixel data untouched
     expect(second.charset.value).toBe('cpm')
-    // The other font keeps its codepage, start position and pixel data untouched
     expect(second.startChar.value).toBe(0)
     expect(glyphCount(second)).toBe(256)
-    expect(second.fontData.value[0x41]).toBe(0xBB)
+    expect(second.fontData.value[0x7F]).toBe(0xBB)
+    expect(second.fontData.value[0x30]).toBe(0)
     expect(second.undoHistory.undo()).toBe(false)
   })
 
