@@ -1,6 +1,6 @@
 import { type ComponentChildren } from 'preact'
 import { useState, useRef, useEffect } from 'preact/hooks'
-import { createFont, addFont, recalcMetrics } from '../store'
+import { openFont } from '../store'
 import { CHARSETS } from '../charsets'
 import { NumField } from '../components/NumField'
 import { CharsetSelect } from '../components/CharsetSelect'
@@ -226,7 +226,7 @@ export function RawImportDialog({ file, onClose }: Props) {
   function handleImport() {
     if (activeCount === 0) return
     const activeData = copyGlyphWindow(result.fontData, activeStart, activeCount, outBytesPerGlyph)
-    const font = createFont(
+    openFont(
       activeData,
       file.name,
       settings.startChar,
@@ -234,8 +234,6 @@ export function RawImportDialog({ file, onClose }: Props) {
       settings.glyphHeight,
       { charset: codepage },
     )
-    recalcMetrics(font)
-    addFont(font)
     onClose()
   }
 

@@ -9,7 +9,7 @@ import {
   charsetGlyphFilter as charsetGlyphFilterImpl,
   cpToUnicode, buildUnicodeReverse,
 } from './charsets'
-import { type FontInstance, type SpacingMode, createFont, bytesPerRow, bytesPerGlyph } from './fontModel'
+import { type FontInstance, type FontOptions, type SpacingMode, createFont, bytesPerRow, bytesPerGlyph } from './fontModel'
 
 // The font model lives in its own module; re-exported so the many existing
 // `from './store'` imports keep working.
@@ -183,6 +183,60 @@ export function addFont(font: FontInstance) {
   }
   activeFontId.value = font.id
   storedFocusedId.value = `grid-${font.id}`
+}
+
+/** Per-font values applied when opening, on top of the font's own options. */
+export interface OpenFontSpec extends FontOptions {
+  /** Glyph slots that were actually populated in the source file. */
+  populated?: Set<number> | null
+  /** Fill in only metrics still at their default (-1), using BDF properties. */
+  useCalcMissing?: boolean
+  /** Container this font was opened from, if any. */
+  sourceContainerId?: string
+  /** Vertical metrics the source recorded, which metric detection must not overwrite. */
+  ascender?: number
+  descender?: number
+  /** Override whether blank glyph slots are hidden in the grid. */
+  hideEmpty?: boolean
+}
+
+/**
+ * Build a font, settle its metrics and open it.
+ *
+ * Every entry point used to repeat this by hand (create, set populated, maybe
+ * set vertical metrics, recalc, add), and the steps had to stay in that order:
+ * vertical metrics must be set before detection runs, or detection overwrites
+ * them. Keeping the order in one place means a new caller cannot get it wrong.
+ */
+export function openFont(
+  data: Uint8Array | undefined,
+  name: string,
+  start: number,
+  width: number,
+  height: number,
+  spec: OpenFontSpec = {},
+): FontInstance {
+  const {
+    populated, useCalcMissing, sourceContainerId,
+    ascender, descender, hideEmpty, ...fontOptions
+  } = spec
+
+  const font = createFont(data, name, start, width, height, fontOptions)
+  if (populated) font.populatedGlyphs.value = populated
+  if (sourceContainerId) font.sourceContainerId = sourceContainerId
+  if (hideEmpty !== undefined) font.hideEmpty.value = hideEmpty
+
+  if (useCalcMissing) calcMissingMetrics(font)
+  else recalcMetrics(font)
+
+  // Apply source-recorded vertical metrics *after* detection, so they always
+  // win. Setting them first would silently lose them whenever the source also
+  // asked for a full recalculation, which overwrites whatever is there.
+  if (ascender !== undefined && ascender >= 0) font.ascender.value = ascender
+  if (descender !== undefined && descender >= 0) font.descender.value = descender
+
+  addFont(font)
+  return font
 }
 
 export function openGlyphEditor(font: FontInstance) {

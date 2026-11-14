@@ -4,8 +4,7 @@ import { getBit, setBit, bpr as calcBpr } from './bitUtils'
 import { shearGlyphBytes } from './glyphTransforms'
 import { isFixedWidth } from './unicodeRanges'
 import {
-  type FontInstance, createFont, addFont, recalcMetrics,
-  glyphCount, bytesPerRow, bytesPerGlyph,
+  type FontInstance, openFont, glyphCount, bytesPerRow, bytesPerGlyph,
 } from './store'
 import type { GlyphMeta } from './fileFormats/bdfParser'
 
@@ -46,9 +45,7 @@ export function createBoldVariant(font: FontInstance) {
     bold.set(glyphBold, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-bold$1')
-  const newFont = createFont(bold, name, font.startChar.value, w, h, { charset: font.charset.value })
-  recalcMetrics(newFont)
-  addFont(newFont)
+  openFont(bold, name, font.startChar.value, w, h, { charset: font.charset.value })
 }
 
 // Outline variant — set pixels become the border of the original shape
@@ -79,9 +76,7 @@ export function createOutlineVariant(font: FontInstance) {
     outline.set(glyphOut, offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-outline$1')
-  const newFont = createFont(outline, name, font.startChar.value, w, h, { charset: font.charset.value })
-  recalcMetrics(newFont)
-  addFont(newFont)
+  openFont(outline, name, font.startChar.value, w, h, { charset: font.charset.value })
 }
 
 export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
@@ -97,9 +92,7 @@ export function createObliqueVariant(font: FontInstance, angleDegrees: number) {
     oblique.set(shearGlyphBytes(bytes, angleDegrees, w, h), offset)
   }
   const name = font.fileName.value.replace(/(\.\w+)$/, '-oblique$1')
-  const newFont = createFont(oblique, name, font.startChar.value, w, h, { charset: font.charset.value })
-  recalcMetrics(newFont)
-  addFont(newFont)
+  openFont(oblique, name, font.startChar.value, w, h, { charset: font.charset.value })
 }
 
 // Proportional variant — shift each non-fixed-width glyph left to the pixel edge,
@@ -155,9 +148,7 @@ export function createProportionalVariant(font: FontInstance) {
   }
 
   const name = font.fileName.value.replace(/(\.\w+)$/, '-proportional$1')
-  const newFont = createFont(out, name, start, w, h, { glyphMeta: meta, spacing: 'proportional', charset: font.charset.value })
-  recalcMetrics(newFont)
-  addFont(newFont)
+  openFont(out, name, start, w, h, { glyphMeta: meta, spacing: 'proportional', charset: font.charset.value })
 }
 
 // Monospace variant — places each glyph's pixels into a fixed-width cell using the chosen anchor.
@@ -213,7 +204,5 @@ export function createMonospaceVariant(
   }
 
   const name = font.fileName.value.replace(/(\.\w+)$/, '-monospace$1')
-  const newFont = createFont(out, name, start, newW, h, { spacing: 'monospace', charset: font.charset.value })
-  recalcMetrics(newFont)
-  addFont(newFont)
+  openFont(out, name, start, newW, h, { spacing: 'monospace', charset: font.charset.value })
 }

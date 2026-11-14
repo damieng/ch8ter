@@ -3,10 +3,9 @@ import { signal } from "@preact/signals"
 import { FilePlus, FolderOpen, MoreVertical } from "lucide-preact"
 import { theme, toggleTheme } from "../theme"
 import {
-  createFont,
-  addFont,
-  recalcMetrics,
-  calcMissingMetrics,
+  openFont,
+  addContainer,
+  createContainerId,
   defaultCharset,
   isCharset,
   sortedCharsets,
@@ -15,11 +14,11 @@ import {
   exportWorkspace,
   importWorkspace,
   fonts,
+  type ContainerFont,
 } from "../store"
 import { parseWorkspaceFile } from "../persistence"
 import { type FontConversionData } from "../fontLoad"
 import { describeOpenedFile } from "../openFile"
-import { addContainer, createContainerId, type ContainerFont } from "../store"
 import { parseBmFont, buildFontFromPage, isBmFontText } from "../fileFormats/bmFontParser"
 import { imageToData } from "../fileFormats/pngImport"
 import { IconBtn } from "../components/IconBtn"
@@ -152,7 +151,10 @@ export function AppPane() {
 
   function applyLoadResult(name: string, result: FontConversionData) {
     const charsetKey = result.detectedCharset
-    const font = createFont(
+    const options = isCharset(charsetKey) ? charsetKey : undefined
+    // Only this font's codepage is set; other open fonts keep theirs
+    if (options) defaultCharset.value = options
+    openFont(
       result.fontData, name, result.startChar,
       result.glyphWidth, result.glyphHeight,
       {
@@ -162,21 +164,14 @@ export function AppPane() {
         glyphMeta: result.glyphMeta ?? undefined,
         spacing: result.spacingMode,
         tracking: result.tracking,
-        charset: isCharset(charsetKey) ? charsetKey : undefined,
+        charset: options,
+        populated: result.populated,
+        useCalcMissing: result.useCalcMissing,
+        // GDOS files record their own vertical metrics; detection must not win
+        ascender: result.source === 'gdos' ? result.ascender : undefined,
+        descender: result.source === 'gdos' ? result.descender : undefined,
       },
     )
-    if (result.populated) font.populatedGlyphs.value = result.populated
-    if (result.source === 'gdos' && result.ascender !== undefined) {
-      font.ascender.value = result.ascender
-    }
-    if (result.source === 'gdos' && result.descender !== undefined) {
-      font.descender.value = result.descender
-    }
-    // Only this font's codepage is set; other open fonts keep theirs
-    if (isCharset(charsetKey)) defaultCharset.value = charsetKey
-    if (result.useCalcMissing) calcMissingMetrics(font)
-    else recalcMetrics(font)
-    addFont(font)
   }
 
   /**

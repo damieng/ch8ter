@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
-  createFont, addFont, recalcMetrics, isCharset, containers,
+  openFont, isCharset, containers,
   type FontContainer, type ContainerFont, type ContainerMeta,
 } from '../store'
 import { ContainerPropertiesDialog } from '../dialogs/ContainerPropertiesDialog'
@@ -76,7 +76,7 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  function openFont(cf: ContainerFont) {
+  function openContainerFont(cf: ContainerFont) {
     const parts: string[] = []
     if (cf.codepage > 0) parts.push(String(cf.codepage))
     parts.push(`${cf.width}x${cf.height}`)
@@ -87,7 +87,7 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
     if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
     const cpKey = cf.charsetKey ?? `cp${cf.codepage}`
-    const font = createFont(
+    openFont(
       // Copy: createFont stores the buffer by reference and pixel edits
       // mutate it in place, so sharing would corrupt the container's copy
       // (and any other instance opened from the same entry).
@@ -99,12 +99,10 @@ export function ContainerPane({ container }: { container: FontContainer }) {
         glyphMeta: cf.glyphMeta ? [...cf.glyphMeta] : undefined,
         spacing: cf.spacingMode ?? 'monospace',
         charset: isCharset(cpKey) ? cpKey : undefined,
+        populated: cf.populated,
+        sourceContainerId: container.id,
       },
     )
-    if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
-    font.sourceContainerId = container.id
-    recalcMetrics(font)
-    addFont(font)
   }
 
   const hasName = container.fonts.some(f => fontName(f) !== '')
@@ -157,7 +155,7 @@ export function ContainerPane({ container }: { container: FontContainer }) {
               <td class="py-1.5 text-right">
                 <button
                   class="px-2 py-0.5 bg-gray-100 hover:bg-blue-100 rounded border border-gray-200 text-gray-700"
-                  onClick={() => openFont(cf)}
+                  onClick={() => openContainerFont(cf)}
                 >
                   Open
                 </button>
