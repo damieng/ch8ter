@@ -58,7 +58,7 @@ export function NewFontDialog({ onClose }: Props) {
     const data = new Uint8Array(cp.glyphCount * bpg)
     const font = createFont(
       data, 'untitled', cp.startChar, width, height,
-      undefined, undefined, undefined, undefined, undefined, 0, codepage,
+      { charset: codepage },
     )
     font.hideEmpty.value = false
     addFont(font)

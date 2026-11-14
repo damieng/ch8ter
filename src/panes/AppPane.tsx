@@ -182,10 +182,15 @@ export function AppPane() {
     const font = createFont(
       result.fontData, name, result.startChar,
       result.glyphWidth, result.glyphHeight,
-      result.meta ?? undefined, result.encodings ?? undefined,
-      result.baseline, result.glyphMeta ?? undefined,
-      result.spacingMode, result.tracking,
-      charsetKey in CHARSETS ? charsetKey : undefined,
+      {
+        meta: result.meta ?? undefined,
+        encodings: result.encodings ?? undefined,
+        baseline: result.baseline,
+        glyphMeta: result.glyphMeta ?? undefined,
+        spacing: result.spacingMode,
+        tracking: result.tracking,
+        charset: charsetKey in CHARSETS ? charsetKey : undefined,
+      },
     )
     if (result.populated) font.populatedGlyphs.value = result.populated
     if (result.source === 'gdos' && result.ascender !== undefined) {
@@ -363,7 +368,12 @@ export function AppPane() {
           const s = result.strikes[0]
           const font = createFont(
             s.fontData, name, s.startChar, s.glyphWidth, s.glyphHeight,
-            s.meta, undefined, s.baseline, s.glyphMeta, s.spacingMode,
+            {
+              meta: s.meta ?? undefined,
+              baseline: s.baseline,
+              glyphMeta: s.glyphMeta ?? undefined,
+              spacing: s.spacingMode,
+            },
           )
           font.populatedGlyphs.value = s.populated
           recalcMetrics(font)
@@ -412,8 +422,7 @@ export function AppPane() {
           const font = createFont(
             result.fontData, name + suffix, result.startChar,
             result.glyphWidth, result.glyphHeight,
-            undefined, undefined, undefined, undefined,
-            undefined, undefined, charsetKey,
+            { charset: charsetKey },
           )
           recalcMetrics(font)
           addFont(font)

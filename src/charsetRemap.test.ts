@@ -10,7 +10,7 @@ describe('switching a font\'s codepage', () => {
 
   // zx covers 32-127, cp437 covers 0-255, so switching shifts every glyph index
   function zxFont() {
-    const f = createFont(new Uint8Array(96 * 8), 'x.bin', 32, 8, 8, undefined, undefined, undefined, undefined, 'monospace', 0, 'zx')
+    const f = createFont(new Uint8Array(96 * 8), 'x.bin', 32, 8, 8, { charset: 'zx' })
     // 'A' (0x41) gets a distinctive pattern: top-left pixel plus a pixel on row 3
     f.fontData.value[(0x41 - 32) * 8] = 0x80
     f.fontData.value[(0x41 - 32) * 8 + 3] = 0x40

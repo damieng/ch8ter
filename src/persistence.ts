@@ -127,14 +127,16 @@ export function fontFromStored(s: StoredFont): FontInstance {
     s.startChar,
     s.glyphWidth ?? 8,
     s.glyphHeight ?? 8,
-    s.meta ?? undefined,
-    s.encodings ?? undefined,
-    s.baseline,
-    s.glyphMeta ?? undefined,
-    s.spacing ?? 'monospace',
-    s.tracking ?? 0,
-    // Saved before codepages were per font: fall back to the remembered default
-    s.charset && s.charset in CHARSETS ? (s.charset as Charset) : undefined,
+    {
+      meta: s.meta ?? undefined,
+      encodings: s.encodings ?? undefined,
+      baseline: s.baseline,
+      glyphMeta: s.glyphMeta ?? undefined,
+      spacing: s.spacing ?? 'monospace',
+      tracking: s.tracking ?? 0,
+      // Saved before codepages were per font: fall back to the remembered default
+      charset: s.charset && s.charset in CHARSETS ? (s.charset as Charset) : undefined,
+    },
   )
   if (s.fontName) font.fontName.value = s.fontName
   if (s.populatedGlyphs) font.populatedGlyphs.value = new Set(s.populatedGlyphs)

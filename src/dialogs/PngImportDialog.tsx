@@ -145,8 +145,7 @@ export function PngImportDialog({ file, onClose }: Props) {
     const result = extractGlyphs(imgData, settings, mapping || undefined)
     const font = createFont(
       result.fontData, file.name.replace(/\.png$/i, '.ch8'), result.startChar, result.glyphWidth, result.glyphHeight,
-      undefined, undefined, undefined, undefined, undefined, 0,
-      mapping ? 'iso8859_1' : codepage,
+      { charset: mapping ? 'iso8859_1' : codepage },
     )
     font.populatedGlyphs.value = result.populated
     recalcMetrics(font)

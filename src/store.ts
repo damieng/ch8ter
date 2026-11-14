@@ -95,20 +95,31 @@ function nameFromFile(filename: string): string {
 
 let nextFontId = 1
 
+/** Everything about a font that isn't implied by its bitmap data and name. */
+export interface FontOptions {
+  meta?: FontMeta
+  encodings?: number[]
+  /** Baseline row, overriding the default of `height - 1`. */
+  baseline?: number
+  glyphMeta?: (GlyphMeta | null)[]
+  spacing?: SpacingMode
+  tracking?: number
+  /** Codepage the font's byte positions map through; defaults to the remembered one. */
+  charset?: Charset
+}
+
 export function createFont(
   data?: Uint8Array,
   name?: string,
   start?: number,
   width?: number,
   height?: number,
-  meta?: FontMeta,
-  encodings?: number[],
-  baselineOverride?: number,
-  glyphMeta?: (GlyphMeta | null)[],
-  spacingMode: SpacingMode = 'monospace',
-  tracking = 0,
-  charsetKey?: Charset,
+  options: FontOptions = {},
 ): FontInstance {
+  const {
+    meta, encodings, baseline: baselineOverride, glyphMeta,
+    spacing: spacingMode = 'monospace', tracking = 0, charset: charsetKey,
+  } = options
   const id = `font-${nextFontId++}`
   const w = width ?? 8
   const h = height ?? 8

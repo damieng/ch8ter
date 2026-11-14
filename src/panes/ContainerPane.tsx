@@ -94,13 +94,13 @@ export function ContainerPane({ container }: { container: FontContainer }) {
       // (and any other instance opened from the same entry).
       new Uint8Array(cf.fontData), container.fileName + suffix, cf.startChar,
       cf.width, cf.height,
-      meta,
-      undefined,
-      cf.baseline,
-      cf.glyphMeta ? [...cf.glyphMeta] : undefined,
-      cf.spacingMode ?? 'monospace',
-      0,
-      charsetKey,
+      {
+        meta,
+        baseline: cf.baseline,
+        glyphMeta: cf.glyphMeta ? [...cf.glyphMeta] : undefined,
+        spacing: cf.spacingMode ?? 'monospace',
+        charset: charsetKey,
+      },
     )
     if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
     font.sourceContainerId = container.id

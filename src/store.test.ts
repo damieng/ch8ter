@@ -18,7 +18,7 @@ describe('charset switching', () => {
     data[0x30] = 0x30
     data[0x7F] = 0x7F
 
-    const font = createFont(data, 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    const font = createFont(data, 'cpm.bin', 0, 8, 1, { charset: 'cpm' })
     addFont(font)
 
     switchCharset(font, 'amiga')
@@ -38,8 +38,8 @@ describe('charset switching', () => {
   })
 
   it('only remaps the font whose codepage changed', () => {
-    const first = createFont(new Uint8Array(256), 'first.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
-    const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    const first = createFont(new Uint8Array(256), 'first.bin', 0, 8, 1, { charset: 'cpm' })
+    const second = createFont(new Uint8Array(256), 'second.bin', 0, 8, 1, { charset: 'cpm' })
     addFont(first)
     addFont(second)
     // Give each font a distinct glyph so a stray remap would be visible
@@ -61,13 +61,13 @@ describe('charset switching', () => {
   // Opened fonts carry the codepage they were detected as, so loading one never
   // disturbs the codepages of fonts already open next to it.
   it('keeps every open font on its own codepage when a new font is opened', () => {
-    const cpm = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    const cpm = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, { charset: 'cpm' })
     addFont(cpm)
     cpm.fontData.value[0x30] = 0x30 // '0' at its CP/M position
 
     // What AppPane does for a newly loaded .ch8: build the font with the codepage
     // it was detected as, without touching the fonts already open
-    const zx = createFont(new Uint8Array(96), 'spectrum.ch8', 32, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'zx')
+    const zx = createFont(new Uint8Array(96), 'spectrum.ch8', 32, 8, 1, { charset: 'zx' })
     addFont(zx)
 
     expect(zx.charset.value).toBe('zx')
@@ -78,7 +78,7 @@ describe('charset switching', () => {
   })
 
   it('remembers the codepage of the font switched last as the default for new fonts', () => {
-    const font = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm')
+    const font = createFont(new Uint8Array(256), 'cpm.bin', 0, 8, 1, { charset: 'cpm' })
     addFont(font)
 
     switchCharset(font, 'amiga')
@@ -179,7 +179,7 @@ describe('workspace export/import', () => {
   it('round-trips each font\'s own codepage without remapping glyphs', () => {
     const font = createFont(
       new Uint8Array([0xAA, 0, 0, 0, 0, 0, 0, 0]), 'cpm.bin', 0, 8, 8,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm',
+      { charset: 'cpm' },
     )
     addFont(font)
     const json = exportWorkspace()
@@ -196,11 +196,11 @@ describe('workspace export/import', () => {
   it('keeps a workspace\'s mixed codepages separate on import', () => {
     const cpm = createFont(
       new Uint8Array(256), 'cpm.bin', 0, 8, 1,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm',
+      { charset: 'cpm' },
     )
     const zx = createFont(
       new Uint8Array(96), 'spectrum.ch8', 32, 8, 1,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'zx',
+      { charset: 'zx' },
     )
     addFont(cpm)
     addFont(zx)

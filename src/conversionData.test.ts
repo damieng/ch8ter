@@ -7,7 +7,7 @@ describe('fontToConversionData', () => {
   it('carries the font\'s own codepage so a CPI export records it', () => {
     const font = createFont(
       new Uint8Array(8 * 4), 'x.bin', 0, 8, 8,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'cp850',
+      { charset: 'cp850' },
     )
     const data = fontToConversionData(font)
     expect(data.detectedCharset).toBe('cp850')
@@ -19,11 +19,11 @@ describe('fontToConversionData', () => {
   it('exports the codepage of the font being saved, not of another open font', () => {
     const cpm = createFont(
       new Uint8Array(256), 'cpm.bin', 0, 8, 1,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'cpm',
+      { charset: 'cpm' },
     )
     const cp850 = createFont(
       new Uint8Array(8 * 4), 'dos.bin', 0, 8, 8,
-      undefined, undefined, undefined, undefined, 'monospace', 0, 'cp850',
+      { charset: 'cp850' },
     )
     expect(fontToConversionData(cpm).detectedCharset).toBe('cpm')
     expect(fontToConversionData(cp850).detectedCharset).toBe('cp850')

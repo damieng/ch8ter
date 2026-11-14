@@ -232,7 +232,7 @@ export function RawImportDialog({ file, onClose }: Props) {
       settings.startChar,
       glyphWidth,
       settings.glyphHeight,
-      undefined, undefined, undefined, undefined, undefined, 0, codepage,
+      { charset: codepage },
     )
     recalcMetrics(font)
     addFont(font)
