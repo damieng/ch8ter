@@ -48,6 +48,11 @@ export function parseCpi(buffer: ArrayBuffer): CpiParseResult {
   else
     throw new Error(`Not a CPI file: unrecognized signature "${idStr}"`)
 
+  // The FontInfoHeader offset lives at the end of the 23-byte FontFileHeader;
+  // a file truncated inside it would otherwise fail with a bare RangeError.
+  if (bytes.length < 23)
+    throw new Error('Not a CPI file: header is truncated')
+
   const fihOffset = view.getUint32(0x13, true)
 
   // --- DRFONT extended header ---
@@ -57,14 +62,25 @@ export function parseCpi(buffer: ArrayBuffer): CpiParseResult {
 
   if (variant === 'DRFONT') {
     const extOff = 23 // immediately after FontFileHeader
-    drFontsPerCp = bytes[extOff]
-    for (let i = 0; i < drFontsPerCp; i++)
+    // The counts and offsets are read from the file, so bound them by what is
+    // actually present rather than trusting the header
+    drFontsPerCp = bytes.length > extOff ? bytes[extOff] : 0
+    for (let i = 0; i < drFontsPerCp; i++) {
+      if (extOff + 1 + i >= bytes.length) break
       drCellSizes.push(bytes[extOff + 1 + i])
-    for (let i = 0; i < drFontsPerCp; i++)
-      drDataOffsets.push(view.getUint32(extOff + 1 + drFontsPerCp + i * 4, true))
+    }
+    for (let i = 0; i < drFontsPerCp; i++) {
+      const off = extOff + 1 + drFontsPerCp + i * 4
+      if (off + 4 > bytes.length) break
+      drDataOffsets.push(view.getUint32(off, true))
+    }
   }
 
   // --- FontInfoHeader ---
+  // The offset is read from the file, so a corrupt or truncated file can point
+  // outside it; read defensively rather than letting DataView throw.
+  if (fihOffset + 2 > bytes.length)
+    throw new Error('Not a CPI file: font info header offset is out of range')
   const numCodepages = view.getUint16(fihOffset, true)
 
   // --- Walk codepage entry chain ---
@@ -72,7 +88,8 @@ export function parseCpi(buffer: ArrayBuffer): CpiParseResult {
   let cpehOffset = fihOffset + 2 // first CodePageEntryHeader follows FontInfoHeader
 
   for (let cp = 0; cp < numCodepages; cp++) {
-    if (cpehOffset === 0 || cpehOffset >= bytes.length) break
+    // A CodePageEntryHeader is 28 bytes; reading its fields needs all of them
+    if (cpehOffset === 0 || cpehOffset + 28 > bytes.length) break
 
     const deviceType = view.getUint16(cpehOffset + 0x06, true)
     const deviceName = readAscii(bytes, cpehOffset + 0x08, 8).trim()
@@ -291,7 +308,12 @@ function extractCopyright(bytes: Uint8Array): string {
 
 function readAscii(bytes: Uint8Array, offset: number, length: number): string {
   let s = ''
-  for (let i = 0; i < length; i++)
-    s += String.fromCharCode(bytes[offset + i])
+  for (let i = 0; i < length; i++) {
+    const b = bytes[offset + i]
+    // These are fixed-width fields padded with NULs; String.trim() would not
+    // remove those, so stop at the terminator instead
+    if (b === 0) break
+    s += String.fromCharCode(b)
+  }
   return s
 }
