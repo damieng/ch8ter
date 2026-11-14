@@ -7,7 +7,7 @@
 // against hand-computed bytes.
 
 import { describe, it, expect } from 'vitest'
-import { buildTable, buildSingleSymbol, decode, type HuffTable } from './lhaHuffman'
+import { buildTable, buildSingleSymbol, decode } from './lhaHuffman'
 import { LhaBitReader } from './lhaBitReader'
 import { AdaptiveHuffTree } from './lhaAdaptiveHuff'
 
