@@ -4,6 +4,8 @@ import { writeCpi } from './fileFormats/cpiWriter'
 import { writeTap } from './fileFormats/tapWriter'
 import { writeFzx } from './fileFormats/fzxWriter'
 import { writeEgaCom } from './fileFormats/egaComWriter'
+import { writeFon } from './fileFormats/fonWriter'
+import { writeGeosCvt } from './fileFormats/geosWriter'
 
 function toBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
@@ -178,6 +180,37 @@ describe('describeOpenedFile: routing', () => {
     const out = describeOpenedFile('page.fnt', toBuffer(text))
     expect(out.kind).toBe('error')
     if (out.kind === 'error') expect(out.title).toBe('BMFont descriptor')
+  })
+})
+
+describe('describeOpenedFile: FON containers', () => {
+  it('opens a Windows FON as a container and reports its codepage', () => {
+    const buf = writeFon(fontData() as never)
+    const out = describeOpenedFile('test.fon', toBuffer(buf))
+    expect(out.kind).toBe('container')
+    if (out.kind !== 'container') return
+    expect(out.descriptor.format).toBe('Windows FON (NE)')
+    expect(out.descriptor.fonts.length).toBeGreaterThan(0)
+    const font = out.descriptor.fonts[0]
+    expect(font.width).toBe(8)
+    expect(font.height).toBe(8)
+    // A numeric codepage or 0 for DEFAULT/SYMBOL, never undefined
+    expect(typeof font.codepage).toBe('number')
+  })
+})
+
+describe('describeOpenedFile: C64 GEOS (.cvt)', () => {
+  it('opens each point size as a separate container entry', () => {
+    const buf = writeGeosCvt(fontData({ spacingMode: 'proportional' }) as never)
+    const out = describeOpenedFile('geos.cvt', toBuffer(buf))
+    expect(out.kind).toBe('container')
+    if (out.kind !== 'container') return
+    expect(out.descriptor.format).toBe('C64 GEOS font')
+    for (const f of out.descriptor.fonts) {
+      expect(f.charsetKey).toBe('iso8859_1')
+      expect(f.spacingMode).toBe('proportional')
+      expect(f.label.length).toBeGreaterThan(0)
+    }
   })
 })
 
