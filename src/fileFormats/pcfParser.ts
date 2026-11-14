@@ -57,6 +57,11 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
   const view = new DataView(buffer)
   const bytes = new Uint8Array(buffer)
 
+  // The magic is the first four bytes; without them this is not a PCF file
+  // (and reading them would throw a RangeError on a short buffer)
+  if (bytes.length < 8) {
+    throw new Error('Not a valid PCF file')
+  }
   if (view.getUint32(0, true) !== PCF_MAGIC) {
     throw new Error('Not a valid PCF file')
   }
@@ -65,6 +70,8 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
   const toc = new Map<number, TocEntry>()
   for (let i = 0; i < tableCount; i++) {
     const off = 8 + i * 16
+    // A truncated table of contents must stop the walk, not crash it
+    if (off + 16 > bytes.length) break
     const entry: TocEntry = {
       type: view.getInt32(off, true),
       format: view.getInt32(off + 4, true),
@@ -79,6 +86,16 @@ export function parsePcf(buffer: ArrayBuffer): PcfParseResult {
   const bitmapsEntry = toc.get(PCF_BITMAPS)
   if (!metricsEntry || !bitmapsEntry) {
     throw new Error('PCF file missing required METRICS or BITMAPS table')
+  }
+
+  // Every table offset and size comes from the file, so a truncated or corrupt
+  // file can point outside it. Validate up front rather than letting the table
+  // parsers trip over an out-of-range DataView read.
+  for (const entry of toc.values()) {
+    if (entry.offset < 0 || entry.size < 0 ||
+        entry.offset + entry.size > bytes.length) {
+      throw new Error('PCF table extends past the end of the file')
+    }
   }
 
   // Parse metrics

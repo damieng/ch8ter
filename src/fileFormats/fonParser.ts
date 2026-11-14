@@ -21,7 +21,7 @@ export function parseFon(buffer: ArrayBuffer): FonParseResult {
   const view = new DataView(buffer)
 
   // --- MZ header ---
-  if (bytes[0] !== 0x4D || bytes[1] !== 0x5A) // "MZ"
+  if (bytes.length < 0x40 || bytes[0] !== 0x4D || bytes[1] !== 0x5A) // "MZ"
     throw new Error('Not a valid FON file: missing MZ signature')
 
   const neOffset = view.getUint32(0x3C, true)

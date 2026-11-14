@@ -60,7 +60,9 @@ export interface PdbFontParseResult {
 
 export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
   const bytes = new Uint8Array(buf)
-  if (bytes.length < 80)
+  // The database header is 78 bytes, then the first record entry is a uint32
+  // at offset 78 - so a usable file needs at least 82 bytes.
+  if (bytes.length < 82)
     throw new Error('File too small to be a PDB file')
 
   const view = new DataView(buf)
@@ -81,8 +83,12 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
   if (recOffset >= bytes.length)
     throw new Error('Record offset out of bounds')
 
-  // Determine record size
-  const recEnd = numRecords > 1 ? view.getUint32(86, false) : bytes.length
+  // Determine record size. A second record entry starts at 86, so only read it
+  // when the header actually reaches that far.
+  const hasSecondEntry = numRecords > 1 && bytes.length >= 90
+  const recEnd = hasSecondEntry ? view.getUint32(86, false) : bytes.length
+  if (recEnd > bytes.length || recEnd < recOffset)
+    throw new Error('Record bounds out of range')
   const rec = bytes.subarray(recOffset, recEnd)
   const rv = new DataView(buf, recOffset, recEnd - recOffset)
 
@@ -121,6 +127,10 @@ export function parsePdbFont(buf: ArrayBuffer): PdbFontParseResult {
   const bitmapSize = rowWords * 2 * fRectHeight
   const locTableStart = bitmapStart + bitmapSize
   const owtOffset = 16 + owTLoc * 2
+
+  // The raster itself is read with getBit below, so it too must fit
+  if (bitmapStart + bitmapSize > rec.length)
+    throw new Error('Glyph raster out of bounds')
 
   // Read location table
   if (locTableStart + numEntries * 2 > rec.length)
