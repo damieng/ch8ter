@@ -30,7 +30,10 @@ interface TableEntry { offset: number; length: number }
 
 function readTableDirectory(view: DataView, bytes: Uint8Array): Map<string, TableEntry> {
   const sfnt = view.getUint32(0)
-  if (sfnt !== 0x00010000 && sfnt !== 0x4F54544F)
+  // 0x00010000 = TrueType, 'OTTO' = CFF outlines, 'true' = Apple's older
+  // TrueType tag used by bitmap-only fonts (which carry bhed/bloc/bdat rather
+  // than head/EBLC/EBDT). The table walk below already accepts both layouts.
+  if (sfnt !== 0x00010000 && sfnt !== 0x4F54544F && sfnt !== 0x74727565)
     throw new Error('Not a valid TTF/OTF file')
 
   const numTables = view.getUint16(4)
@@ -575,7 +578,9 @@ export function isSbitFont(buf: ArrayBuffer): boolean {
   if (buf.byteLength < 16) return false
   const view = new DataView(buf)
   const sfnt = view.getUint32(0)
-  if (sfnt !== 0x00010000 && sfnt !== 0x4F54544F) return false
+  // Same sfnt versions readTableDirectory accepts, including Apple's 'true'
+  // tag that bitmap-only fonts use
+  if (sfnt !== 0x00010000 && sfnt !== 0x4F54544F && sfnt !== 0x74727565) return false
   const bytes = new Uint8Array(buf)
   const tables = readTableDirectory(view, bytes)
   return tables.has('EBLC') || tables.has('bloc')
