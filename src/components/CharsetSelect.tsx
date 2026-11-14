@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-preact'
-import { CHARSETS, type Charset } from '../store'
+import { CHARSETS, sortedCharsets, type Charset } from '../store'
 import { Dropdown } from './Dropdown'
 
 interface Props {
@@ -17,7 +17,7 @@ export function CharsetSelect({ value, onChange }: Props) {
       popupClass="w-52 max-h-64 overflow-y-auto"
     >
       {(close) => (
-        Object.entries(CHARSETS).sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true })).map(([key, def]) => (
+        sortedCharsets().map(([key, def]) => (
           <button
             key={key}
             class={`flex items-center gap-2 w-full px-3 py-1 text-left text-xs hover:bg-blue-50 ${

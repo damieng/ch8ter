@@ -7,9 +7,9 @@ import {
   addFont,
   recalcMetrics,
   calcMissingMetrics,
-  CHARSETS,
   defaultCharset,
   isCharset,
+  sortedCharsets,
   removeAllFonts,
   removeAllFontsAndContainers,
   exportWorkspace,
@@ -915,14 +915,12 @@ export function AppPane() {
           )}
           {helpTab.value === 'codepages' && (
             <table class="text-xs w-full">
-              {Object.entries(CHARSETS)
-                .sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true }))
-                .map(([key, def]) => (
-                  <tr key={key}>
-                    <td class="py-0.5 text-gray-600">{def.label}</td>
-                    <td class="py-0.5 text-gray-500 font-mono text-right">{key}</td>
-                  </tr>
-                ))}
+              {sortedCharsets().map(([key, def]) => (
+                <tr key={key}>
+                  <td class="py-0.5 text-gray-600">{def.label}</td>
+                  <td class="py-0.5 text-gray-500 font-mono text-right">{key}</td>
+                </tr>
+              ))}
             </table>
           )}
         </div>

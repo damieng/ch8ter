@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
-import { type FontInstance, glyphCount, switchCharset, CHARSETS, type Charset } from '../store'
+import { type FontInstance, glyphCount, switchCharset, sortedCharsets, type Charset } from '../store'
 import { FontPropertiesDialog } from '../dialogs/FontPropertiesDialog'
 
 export function FontStatusBar({ font }: { font: FontInstance }) {
@@ -29,7 +29,7 @@ export function FontStatusBar({ font }: { font: FontInstance }) {
         onChange={(e) => { switchCharset(font, (e.target as HTMLSelectElement).value as Charset) }}
         title="Codepage for this font"
       >
-        {Object.entries(CHARSETS).sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true })).map(([key, def]) => (
+        {sortedCharsets().map(([key, def]) => (
           <option key={key} value={key}>{def.label}</option>
         ))}
       </select>

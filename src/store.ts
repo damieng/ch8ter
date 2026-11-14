@@ -657,7 +657,7 @@ export function importWorkspace(json: string): void {
 
 // --- Charset (re-exported from charsets.ts) ---
 
-export { type Charset, type CharsetDef, CHARSETS, defaultCharset, isCharset, charLabel, charCodeFromKey } from './charsets'
+export { type Charset, type CharsetDef, CHARSETS, defaultCharset, isCharset, sortedCharsets, charLabel, charCodeFromKey } from './charsets'
 
 export function charsetGlyphFilter(font: FontInstance): ((index: number) => boolean) | null {
   const def = CHARSETS[font.charset.value]

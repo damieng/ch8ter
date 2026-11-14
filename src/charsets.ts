@@ -543,6 +543,12 @@ function resolveCharsets(raw: Record<string, CharsetDefRaw>): Record<string, Cha
 
 export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RAW) as Record<Charset, CharsetDef>
 
+/** Codepage keys and definitions ordered by label, for menus and pickers. */
+export function sortedCharsets(): [Charset, CharsetDef][] {
+  return (Object.entries(CHARSETS) as [Charset, CharsetDef][])
+    .sort((a, b) => a[1].label.localeCompare(b[1].label, undefined, { numeric: true }))
+}
+
 // --- Default charset + persistence ---
 
 export function isCharset(key: string | undefined | null): key is Charset {
