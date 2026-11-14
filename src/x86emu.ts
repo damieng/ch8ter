@@ -514,6 +514,53 @@ export class X86Emu {
         break
       }
 
+      // Shift r/m16 by imm8 (C1): ROL/ROR/RCL/RCR/SHL/SHR/SAR
+      case 0xC1: {
+        const m = this.decodeModRM(this.fetchU8())
+        const count = this.fetchU8() & 0x1F
+        const val = this.getRM16(m)
+        let result = val
+        if (count > 0) {
+          switch (m.reg) {
+            case 0: { // ROL
+              const c = count % 16
+              result = c === 0 ? val : ((val << c) | (val >>> (16 - c))) & 0xFFFF
+              this.cf = (result & 1) !== 0
+              break
+            }
+            case 1: { // ROR
+              const c = count % 16
+              result = c === 0 ? val : ((val >>> c) | (val << (16 - c))) & 0xFFFF
+              this.cf = (result & 0x8000) !== 0
+              break
+            }
+            case 2: case 3: // RCL/RCR - rotate through carry
+            case 4: { // SHL
+              result = (val << count) & 0xFFFF
+              this.cf = ((val << (count - 1)) & 0x8000) !== 0
+              break
+            }
+            case 5: { // SHR
+              result = (val >>> count) & 0xFFFF
+              this.cf = ((val >>> (count - 1)) & 1) !== 0
+              break
+            }
+            case 7: { // SAR - arithmetic, sign preserving
+              const signed = toSigned16(val)
+              result = (signed >> count) & 0xFFFF
+              this.cf = ((signed >> (count - 1)) & 1) !== 0
+              break
+            }
+            default:
+              throw new Error(`Unimplemented C1 /${m.reg}`)
+          }
+        }
+        this.zf = (result & 0xFFFF) === 0
+        this.sf = (result & 0x8000) !== 0
+        this.setRM16(m, result)
+        break
+      }
+
       // ADD r/m16, r16 (01)
       case 0x01: {
         const m = this.decodeModRM(this.fetchU8())
