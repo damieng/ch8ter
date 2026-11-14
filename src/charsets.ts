@@ -545,6 +545,12 @@ export const CHARSETS: Record<Charset, CharsetDef> = resolveCharsets(CHARSETS_RA
 
 // --- Default charset + persistence ---
 
+export function isCharset(key: string | undefined | null): key is Charset {
+  // Object.hasOwn, not `in`: the latter walks the prototype chain, so keys like
+  // "toString" would pass and resolve to a function instead of a charset.
+  return key != null && Object.hasOwn(CHARSETS_RAW, key)
+}
+
 const CHARSET_KEY = 'ch8ter-charset'
 // The CLI runs under Node where localStorage is unavailable; persistence is a no-op there.
 const hasLocalStorage = typeof localStorage !== 'undefined'
@@ -552,7 +558,7 @@ function loadDefaultCharset(): Charset {
   if (!hasLocalStorage) return 'zx'
   try {
     const stored = localStorage.getItem(CHARSET_KEY)
-    if (stored && stored in CHARSETS_RAW) return stored as Charset
+    if (isCharset(stored)) return stored
   } catch { /* ignore */ }
   return 'zx'
 }

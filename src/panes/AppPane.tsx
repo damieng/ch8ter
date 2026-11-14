@@ -9,7 +9,7 @@ import {
   calcMissingMetrics,
   CHARSETS,
   defaultCharset,
-  type Charset,
+  isCharset,
   removeAllFonts,
   removeAllFontsAndContainers,
   exportWorkspace,
@@ -178,7 +178,7 @@ export function AppPane() {
   } | null>(null)
 
   function applyLoadResult(name: string, result: FontConversionData) {
-    const charsetKey = result.detectedCharset as Charset
+    const charsetKey = result.detectedCharset
     const font = createFont(
       result.fontData, name, result.startChar,
       result.glyphWidth, result.glyphHeight,
@@ -189,7 +189,7 @@ export function AppPane() {
         glyphMeta: result.glyphMeta ?? undefined,
         spacing: result.spacingMode,
         tracking: result.tracking,
-        charset: charsetKey in CHARSETS ? charsetKey : undefined,
+        charset: isCharset(charsetKey) ? charsetKey : undefined,
       },
     )
     if (result.populated) font.populatedGlyphs.value = result.populated
@@ -200,7 +200,7 @@ export function AppPane() {
       font.descender.value = result.descender
     }
     // Only this font's codepage is set; other open fonts keep theirs
-    if (charsetKey in CHARSETS) defaultCharset.value = charsetKey
+    if (isCharset(charsetKey)) defaultCharset.value = charsetKey
     if (result.useCalcMissing) calcMissingMetrics(font)
     else recalcMetrics(font)
     addFont(font)
@@ -415,7 +415,7 @@ export function AppPane() {
     if (lower.endsWith(".com")) {
       try {
         const results = openCom(buf)
-        const charsetKey = (results[0].source === "cpm" ? "cpm" : "cp437") as Charset
+        const charsetKey = results[0].source === "cpm" ? "cpm" : "cp437"
         defaultCharset.value = charsetKey
         for (const result of results) {
           const suffix = results.length > 1 ? ` (${result.glyphWidth}×${result.glyphHeight})` : ''

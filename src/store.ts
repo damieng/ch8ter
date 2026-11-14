@@ -6,7 +6,7 @@ import { baseName } from './fontLoad'
 import { raiseWindow } from './windowStack'
 import { calcAllMetrics, calcAscender, calcCapHeight, calcXHeight, calcNumericHeight, calcDescender, buildGlyphLookup } from './charMetrics'
 import {
-  type Charset, CHARSETS, defaultCharset,
+  type Charset, CHARSETS, defaultCharset, isCharset,
   charsetGlyphFilter as charsetGlyphFilterImpl,
   cpToUnicode, buildUnicodeReverse,
 } from './charsets'
@@ -606,8 +606,8 @@ export function importWorkspace(json: string): void {
   // The workspace codepage seeds fonts that don't record their own (files
   // exported before codepages were per font). It is not applied to fonts that
   // do, and never remaps glyphs  —  the stored data is already laid out for it.
-  if (file.charset && file.charset in CHARSETS) {
-    defaultCharset.value = file.charset as Charset
+  if (isCharset(file.charset)) {
+    defaultCharset.value = file.charset
   }
 
   const newFonts = file.fonts.map(fontFromStored)
@@ -657,7 +657,7 @@ export function importWorkspace(json: string): void {
 
 // --- Charset (re-exported from charsets.ts) ---
 
-export { type Charset, type CharsetDef, CHARSETS, defaultCharset, charLabel, charCodeFromKey } from './charsets'
+export { type Charset, type CharsetDef, CHARSETS, defaultCharset, isCharset, charLabel, charCodeFromKey } from './charsets'
 
 export function charsetGlyphFilter(font: FontInstance): ((index: number) => boolean) | null {
   const def = CHARSETS[font.charset.value]

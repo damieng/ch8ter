@@ -4,7 +4,7 @@ import { effect } from '@preact/signals'
 import type { FontMeta, GlyphMeta } from './fileFormats/bdfParser'
 import type { FontInstance, SpacingMode, FontContainer, ContainerMeta } from './store'
 import { createFont } from './store'
-import { CHARSETS, type Charset } from './charsets'
+import { isCharset } from './charsets'
 import { bpr } from './bitUtils'
 import { calcAllMetrics, buildGlyphLookup } from './charMetrics'
 
@@ -135,7 +135,7 @@ export function fontFromStored(s: StoredFont): FontInstance {
       spacing: s.spacing ?? 'monospace',
       tracking: s.tracking ?? 0,
       // Saved before codepages were per font: fall back to the remembered default
-      charset: s.charset && s.charset in CHARSETS ? (s.charset as Charset) : undefined,
+      charset: isCharset(s.charset) ? s.charset : undefined,
     },
   )
   if (s.fontName) font.fontName.value = s.fontName

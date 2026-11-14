@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import {
-  createFont, addFont, recalcMetrics, CHARSETS, containers,
-  type FontContainer, type ContainerFont, type ContainerMeta, type Charset,
+  createFont, addFont, recalcMetrics, isCharset, containers,
+  type FontContainer, type ContainerFont, type ContainerMeta,
 } from '../store'
 import { ContainerPropertiesDialog } from '../dialogs/ContainerPropertiesDialog'
 import { bpr } from '../bitUtils'
@@ -87,7 +87,6 @@ export function ContainerPane({ container }: { container: FontContainer }) {
     if (cf.deviceName) meta.properties.CPI_DEVICE = cf.deviceName
     if (cf.deviceType === 2) meta.properties.CPI_DEVICE_TYPE = 'printer'
     const cpKey = cf.charsetKey ?? `cp${cf.codepage}`
-    const charsetKey = cpKey in CHARSETS ? (cpKey as Charset) : undefined
     const font = createFont(
       // Copy: createFont stores the buffer by reference and pixel edits
       // mutate it in place, so sharing would corrupt the container's copy
@@ -99,7 +98,7 @@ export function ContainerPane({ container }: { container: FontContainer }) {
         baseline: cf.baseline,
         glyphMeta: cf.glyphMeta ? [...cf.glyphMeta] : undefined,
         spacing: cf.spacingMode ?? 'monospace',
-        charset: charsetKey,
+        charset: isCharset(cpKey) ? cpKey : undefined,
       },
     )
     if (cf.populated) font.populatedGlyphs.value = new Set(cf.populated)
