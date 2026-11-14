@@ -3,6 +3,7 @@
 import { getBit, setBit, bpr as calcBpr } from './bitUtils'
 import { shearGlyphBytes } from './glyphTransforms'
 import { isFixedWidth } from './unicodeRanges'
+import { cpToUnicode } from './charsets'
 import {
   type FontInstance, openFont, glyphCount, bytesPerRow, bytesPerGlyph,
 } from './store'
@@ -111,9 +112,12 @@ export function createProportionalVariant(font: FontInstance) {
   for (let g = 0; g < count; g++) {
     const offset = g * bpg
     const bytes = src.slice(offset, offset + bpg)
+    // isFixedWidth tests Unicode codepoints; the glyph slot is a byte offset
+    // into the font's codepage, so map it through that codepage first
     const charCode = start + g
+    const unicode = cpToUnicode(charCode, font.charset.value)
 
-    if (isFixedWidth(charCode)) {
+    if (isFixedWidth(unicode.codePointAt(0)!)) {
       out.set(bytes, offset)
       meta.push({ dwidth: [w, 0] })
       continue
